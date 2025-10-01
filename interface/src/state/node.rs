@@ -4,7 +4,7 @@ use crate::{
     error::DropsetError,
     state::{
         sector::{LeSectorIndex, SectorIndex},
-        transmutable::Transmutable,
+        transmutable::{load_unchecked, load_unchecked_mut, Transmutable},
     },
 };
 
@@ -12,19 +12,21 @@ pub const NODE_PAYLOAD_SIZE: usize = 48;
 
 #[repr(C)]
 pub struct Node {
-    /// The little endian bytes representing the physical sector index of `prev`.
-    /// Sector indexes map directly to the byte offset in memory, where the exact offset is the
-    /// index multiplied by the size of the node in bytes.
-    prev: LeSectorIndex,
     /// The little endian bytes representing the physical sector index of `next`.
     /// Sector indexes map directly to the byte offset in memory, where the exact offset is the
     /// index multiplied by the size of the node in bytes.
     next: LeSectorIndex,
+    /// The little endian bytes representing the physical sector index of `prev`.
+    /// Sector indexes map directly to the byte offset in memory, where the exact offset is the
+    /// index multiplied by the size of the node in bytes.
+    /// NOTE: This field is entirely unused in the free stack of Nodes implementation and should be
+    /// considered as random, meaningless bytes.
+    prev: LeSectorIndex,
     /// Either an in-use `MarketEscrow` or zeroed bytes.
     payload: [u8; NODE_PAYLOAD_SIZE],
 }
 
-/// Market trait to indicate that the type can be stored in the payload of a `Node`.
+/// Marker trait to indicate that the type can be stored in the payload of a `Node`.
 pub trait NodePayload: Transmutable {}
 
 unsafe impl Transmutable for Node {
@@ -43,8 +45,8 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn set_prev(&mut self, amount: SectorIndex) {
-        self.prev.set(amount)
+    pub fn set_prev(&mut self, index: SectorIndex) {
+        self.prev.set(index)
     }
 
     #[inline(always)]
@@ -53,8 +55,20 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn set_next(&mut self, amount: SectorIndex) {
-        self.next.set(amount)
+    pub fn set_next(&mut self, index: SectorIndex) {
+        self.next.set(index)
+    }
+
+    #[inline(always)]
+    pub fn load_payload<T: NodePayload>(&self) -> &T {
+        // Safety: All `NodePayload` implementations should have a length of `NODE_PAYLOAD_SIZE`.
+        unsafe { load_unchecked::<T>(&self.payload) }
+    }
+
+    #[inline(always)]
+    pub fn load_payload_mut<T: NodePayload>(&mut self) -> &mut T {
+        // Safety: All `NodePayload` implementations should have a length of `NODE_PAYLOAD_SIZE`.
+        unsafe { load_unchecked_mut::<T>(&mut self.payload) }
     }
 
     #[inline(always)]
@@ -66,7 +80,7 @@ impl Node {
             return Err(DropsetError::InvalidSectorIndex);
         }
         let capacity = sectors.len() / Self::LEN;
-        let i = usize::from(index.0);
+        let i = index.0 as usize;
         if i >= capacity {
             return Err(DropsetError::IndexOutOfBounds);
         }
@@ -87,7 +101,7 @@ impl Node {
         sectors: &mut [u8],
         index: SectorIndex,
     ) -> &mut Self {
-        let i = usize::from(index.0);
+        let i = index.0 as usize;
         let byte_offset = i * Self::LEN;
         // Safety:
         // - Caller guarantees the sector index is in-bounds.
