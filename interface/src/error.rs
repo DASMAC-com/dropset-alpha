@@ -8,6 +8,10 @@ pub enum DropsetError {
     UninitializedData,
     InvalidAccountDiscriminant,
     UnallocatedAccountData,
+    MismatchedDataLengths,
+    UnalignedData,
+    InvalidSectorIndex,
+    IndexOutOfBounds,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -25,6 +29,10 @@ impl From<DropsetError> for &'static str {
             DropsetError::UninitializedData => "Data passed was not initialized",
             DropsetError::InvalidAccountDiscriminant => "Invalid account discriminant",
             DropsetError::UnallocatedAccountData => "Account data hasn't been properly allocated",
+            DropsetError::MismatchedDataLengths => "Account data length doesn't match header data",
+            DropsetError::UnalignedData => "Account data is unaligned",
+            DropsetError::InvalidSectorIndex => "Invalid sector index passed",
+            DropsetError::IndexOutOfBounds => "Index out of bounds",
         }
     }
 }
@@ -35,8 +43,5 @@ impl core::fmt::Display for DropsetError {
         write!(f, "{:?}", self)
     }
 }
-
-#[cfg(not(target_os = "solana"))]
-impl std::error::Error for DropsetError {}
 
 pub type DropsetResult = Result<(), DropsetError>;
