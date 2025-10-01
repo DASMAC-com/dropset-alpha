@@ -3,7 +3,7 @@ use crate::state::U32_SIZE;
 pub const SECTOR_SIZE: usize = 56;
 
 #[repr(transparent)]
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 /// The physical sector index of some slab of bytes. Sectors correspond directly to the byte offset
 /// as a factor of the sector type's size.
 pub struct SectorIndex(pub u32);
@@ -33,11 +33,14 @@ pub struct LeSectorIndex(pub [u8; U32_SIZE]);
 
 impl LeSectorIndex {
     #[inline(always)]
+    /// A helper function to convert an `LeSectorIndex`'s inner bytes to a `SectorIndex`.
     pub fn get(&self) -> SectorIndex {
         SectorIndex(u32::from_le_bytes(self.0))
     }
 
     #[inline(always)]
+    /// A helper function to set the inner bytes of an `LeSectorIndex` to the bytes of a passed
+    /// `SectorIndex`.
     pub fn set(&mut self, index: SectorIndex) {
         self.0 = index.0.to_le_bytes();
     }
