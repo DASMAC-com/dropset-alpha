@@ -22,8 +22,6 @@ pub struct MarketHeader {
     discriminant: [u8; 8],
     /// The total number of fully initialized seats, a u32 stored as little-endian bytes.
     num_seats: [u8; U32_SIZE],
-    /// The total number of account bytes allocated past the market header.
-    sector_bytes: [u8; U32_SIZE],
     /// The sector index of the top (first) node in the stack of free nodes.
     free_stack_top: LeSectorIndex,
     /// The sector index of the head (first) node in the doubly linked list of seat nodes.
@@ -36,7 +34,7 @@ pub struct MarketHeader {
     quote_mint: Pubkey,
     pub market_bump: u8,
     // Ensure alignment 8 for the data that comes after header.
-    _padding: [u8; 3],
+    _padding: [u8; 7],
 }
 
 unsafe impl Transmutable for MarketHeader {
@@ -48,14 +46,13 @@ impl MarketHeader {
         MarketHeader {
             discriminant: MARKET_ACCOUNT_DISCRIMINANT.to_le_bytes(),
             num_seats: [0; U32_SIZE],
-            sector_bytes: [0; U32_SIZE],
             free_stack_top: NIL_LE,
             seat_dll_head: NIL_LE,
             seat_dll_tail: NIL_LE,
             base_mint: *base_mint,
             quote_mint: *quote_mint,
             market_bump,
-            _padding: [0; 3],
+            _padding: [0; 7],
         }
     }
 
@@ -80,16 +77,6 @@ impl MarketHeader {
     #[inline(always)]
     pub fn set_num_seats(&mut self, amount: u32) {
         self.num_seats = amount.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn sector_bytes(&self) -> u32 {
-        u32::from_le_bytes(self.sector_bytes)
-    }
-
-    #[inline(always)]
-    pub fn set_sector_bytes(&mut self, num_bytes: u32) {
-        self.sector_bytes = num_bytes.to_le_bytes();
     }
 
     #[inline(always)]
