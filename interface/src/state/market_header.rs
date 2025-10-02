@@ -80,6 +80,16 @@ impl MarketHeader {
     }
 
     #[inline(always)]
+    pub fn increment_num_seats(&mut self) {
+        self.num_seats = self.num_seats().saturating_add(1).to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn decrement_num_seats(&mut self) {
+        self.num_seats = self.num_seats().saturating_sub(1).to_le_bytes();
+    }
+
+    #[inline(always)]
     pub fn free_stack_top_mut_ref(&mut self) -> &mut LeSectorIndex {
         &mut self.free_stack_top
     }
