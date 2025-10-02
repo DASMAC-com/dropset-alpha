@@ -1,9 +1,13 @@
+use pinocchio::{
+    memory::{sol_memcpy, sol_memset},
+    syscalls::{sol_memcpy_, sol_memset_},
+};
 use static_assertions::const_assert_eq;
 
 use crate::{
     error::DropsetError,
     state::{
-        sector::{LeSectorIndex, SectorIndex},
+        sector::{LeSectorIndex, NonNilSectorIndex, SectorIndex},
         transmutable::{load_unchecked, load_unchecked_mut, Transmutable},
     },
 };
@@ -60,6 +64,25 @@ impl Node {
     }
 
     #[inline(always)]
+    pub fn set_payload(&mut self, payload: &[u8; NODE_PAYLOAD_SIZE]) {
+        // Safety: both payloads are exactly `NODE_PAYLOAD_SIZE` long, and the incoming payload
+        // should never overlap with the existing payload due to aliasing rules.
+        unsafe {
+            sol_memcpy_(
+                self.payload.as_mut_ptr(),
+                payload.as_ptr(),
+                NODE_PAYLOAD_SIZE as u64,
+            );
+        }
+    }
+
+    #[inline(always)]
+    pub fn zero_out_payload(&mut self) {
+        // Safety: `payload` is exactly `NODE_PAYLOAD_SIZE` bytes long.
+        unsafe { sol_memset_(self.payload.as_mut_ptr(), 0, NODE_PAYLOAD_SIZE as u64) };
+    }
+
+    #[inline(always)]
     pub fn load_payload<T: NodePayload>(&self) -> &T {
         // Safety: All `NodePayload` implementations should have a length of `NODE_PAYLOAD_SIZE`.
         unsafe { load_unchecked::<T>(&self.payload) }
@@ -79,6 +102,7 @@ impl Node {
         if index.is_nil() {
             return Err(DropsetError::InvalidSectorIndex);
         }
+
         let capacity = sectors.len() / Self::LEN;
         let i = index.0 as usize;
         if i >= capacity {
@@ -90,6 +114,23 @@ impl Node {
         // Safety:
         // - `byte_offset..byte_offset + Self::LEN` is in-bounds.
         // - The elided lifetime of `sectors` is tied to the reference this function returns.
+        Ok(unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) })
+    }
+
+    #[inline(always)]
+    pub fn from_non_nil_sector_index_mut(
+        sectors: &mut [u8],
+        index: NonNilSectorIndex,
+    ) -> Result<&mut Self, DropsetError> {
+        let capacity = sectors.len() / Self::LEN;
+        let i = index.get().0 as usize;
+        if i >= capacity {
+            return Err(DropsetError::IndexOutOfBounds);
+        }
+
+        let byte_offset = i * Self::LEN;
+        // Safety: A `ValidatedSectorIndex` has been verified as not NIL, and in-bounds was just
+        // checked.
         Ok(unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) })
     }
 
