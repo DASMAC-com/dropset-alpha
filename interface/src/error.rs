@@ -12,6 +12,7 @@ pub enum DropsetError {
     UnalignedData,
     InvalidSectorIndex,
     IndexOutOfBounds,
+    NoFreeNodesLeft,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -33,6 +34,7 @@ impl From<DropsetError> for &'static str {
             DropsetError::UnalignedData => "Account data is unaligned",
             DropsetError::InvalidSectorIndex => "Invalid sector index passed",
             DropsetError::IndexOutOfBounds => "Index out of bounds",
+            DropsetError::NoFreeNodesLeft => "There are no free stack nodes left",
         }
     }
 }
