@@ -14,6 +14,7 @@ pub enum DropsetError {
     IndexOutOfBounds,
     NoFreeNodesLeft,
     InvalidPackedDataLength,
+    InvalidIndexHint,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -37,6 +38,7 @@ impl From<DropsetError> for &'static str {
             DropsetError::IndexOutOfBounds => "Index out of bounds",
             DropsetError::NoFreeNodesLeft => "There are no free stack nodes left",
             DropsetError::InvalidPackedDataLength => "Invalid packed data length",
+            DropsetError::InvalidIndexHint => "Invalid index hint",
         }
     }
 }

@@ -1,4 +1,4 @@
-use pinocchio::pubkey::Pubkey;
+use pinocchio::pubkey::{pubkey_eq, Pubkey};
 
 use crate::{
     error::DropsetError,
@@ -147,14 +147,37 @@ impl<'a> LinkedList<'a> {
         }
     }
 
+    /// Find a node given an index hint.
+    ///
+    /// Returns an Err if the hint provided is invalid.
+    pub fn find_node_with_hint(
+        &mut self,
+        hint: NonNilSectorIndex,
+        trader: &Pubkey,
+    ) -> Result<&mut Node, DropsetError> {
+        let node = Node::from_non_nil_sector_index_mut(self.sectors, hint)?;
+        let seat = node.load_payload_mut::<MarketSeat>();
+        if pubkey_eq(trader, &seat.trader) {
+            Ok(node)
+        } else {
+            Err(DropsetError::InvalidIndexHint)
+        }
+    }
+
     /// Returns the index a node should be inserted before.
     ///
-    /// 0     => Insert at the front of the list
-    /// 1..n  => Insert at n - 1
-    /// NIL   => Insert at the end of the list
+    /// ### NOTE: This function does not check for duplicates.
+    /// This function does not check for the trader already being registered in the seat
+    /// list. This *will* insert duplicates without prior checks!
+    ///
+    /// - `0` => Insert at the front of the list
+    /// - `1..n` => Insert at `n - 1`, where `n` is an in-bounds index
+    /// - `NIL` => Insert at the end of the list
     pub fn find_insert_index(&self, trader: &Pubkey) -> SectorIndex {
         for (index, node) in self.iter_seats() {
             let seat = node.load_payload::<MarketSeat>();
+            // A trader that already exists in the seat list should never be passed.
+            debug_assert_ne!(trader, &seat.trader);
             if trader < &seat.trader {
                 // At 0, this inserts at front.
                 return index.get();
