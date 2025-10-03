@@ -1,4 +1,3 @@
-use pinocchio::syscalls::sol_memset_;
 use static_assertions::const_assert_eq;
 
 use crate::{
@@ -9,7 +8,7 @@ use crate::{
     },
 };
 
-pub const NODE_PAYLOAD_SIZE: usize = 48;
+pub const NODE_PAYLOAD_SIZE: usize = 64;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -24,7 +23,7 @@ pub struct Node {
     /// NOTE: This field is entirely unused in the free stack of Nodes implementation and should be
     /// considered as random, meaningless bytes.
     prev: LeSectorIndex,
-    /// Either an in-use `MarketEscrow` or zeroed bytes.
+    /// Either an in-use [MarketSeat][crate::state::market_seat::MarketSeat] or zeroed bytes.
     payload: [u8; NODE_PAYLOAD_SIZE],
 }
 
@@ -32,7 +31,7 @@ pub struct Node {
 pub trait NodePayload: Transmutable {}
 
 unsafe impl Transmutable for Node {
-    const LEN: usize = 56;
+    const LEN: usize = NODE_PAYLOAD_SIZE + 4 + 4;
 }
 
 // This check guarantees raw pointer dereferences to `Node` are always aligned.
@@ -67,7 +66,7 @@ impl Node {
         // should never overlap with the existing payload due to aliasing rules.
         unsafe {
             #[cfg(target_os = "solana")]
-            sol_memcpy_(
+            pinocchio::syscalls::sol_memcpy_(
                 self.payload.as_mut_ptr(),
                 payload.as_ptr(),
                 NODE_PAYLOAD_SIZE as u64,
@@ -87,7 +86,11 @@ impl Node {
         // Safety: `payload` is exactly `NODE_PAYLOAD_SIZE` bytes long and align 1.
         unsafe {
             #[cfg(target_os = "solana")]
-            sol_memset_(self.payload.as_mut_ptr(), 0, NODE_PAYLOAD_SIZE as u64);
+            pinocchio::syscalls::sol_memset_(
+                self.payload.as_mut_ptr(),
+                0,
+                NODE_PAYLOAD_SIZE as u64,
+            );
 
             #[cfg(not(target_os = "solana"))]
             core::ptr::write_bytes(self.payload.as_mut_ptr(), 0, NODE_PAYLOAD_SIZE);

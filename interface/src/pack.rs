@@ -61,7 +61,7 @@ pub trait Pack<const LEN: usize>: Sized {
 /// ```
 ///
 /// From pinocchio's `[no_std]` library:
-/// https://github.com/anza-xyz/pinocchio/blob/3044aaf5ea7eac01adc754d4bdf93c21c6e54d42/programs/token/src/lib.rs#L13`
+/// <https://github.com/anza-xyz/pinocchio/blob/3044aaf5ea7eac01adc754d4bdf93c21c6e54d42/programs/token/src/lib.rs#L13>
 #[inline(always)]
 pub fn write_bytes(dst: &mut [MaybeUninit<u8>], src: &[u8]) {
     for (d, s) in dst.iter_mut().zip(src.iter()) {
