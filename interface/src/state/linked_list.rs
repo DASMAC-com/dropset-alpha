@@ -1,14 +1,19 @@
+use pinocchio::pubkey::Pubkey;
+
 use crate::{
     error::DropsetError,
+    pack::Pack,
     state::{
         free_stack::Stack,
         market_header::MarketHeader,
+        market_seat::MarketSeat,
         node::{Node, NODE_PAYLOAD_SIZE},
-        sector::NonNilSectorIndex,
+        sector::{NonNilSectorIndex, SectorIndex, NIL},
     },
 };
 
 /// A sorted, doubly linked list.
+#[derive(Debug)]
 pub struct LinkedList<'a> {
     header: &'a mut MarketHeader,
     sectors: &'a mut [u8],
@@ -19,16 +24,80 @@ impl<'a> LinkedList<'a> {
         LinkedList { header, sectors }
     }
 
+    /// Helper method to pop a node from the free stack. Returns the node's sector index.
+    fn acquire_free_node(&mut self) -> Result<NonNilSectorIndex, DropsetError> {
+        let mut free_stack =
+            Stack::new_from_parts(self.header.free_stack_top_mut_ref(), self.sectors);
+        free_stack.remove_free_node()
+    }
+
+    pub fn push_front(
+        &mut self,
+        payload: &[u8; NODE_PAYLOAD_SIZE],
+    ) -> Result<NonNilSectorIndex, DropsetError> {
+        let new_index = self.acquire_free_node()?;
+        let head_index = self.header.seat_dll_head();
+
+        // Create the new node with the incoming payload. It has no `prev` and its `next` node is
+        // the current head.
+        let new_node = Node::from_non_nil_sector_index_mut(self.sectors, new_index)?;
+        new_node.set_payload(payload);
+        new_node.set_prev(NIL);
+        new_node.set_next(head_index);
+
+        if let Ok(head_index) = NonNilSectorIndex::new(head_index) {
+            // If the head is a non-NIL sector index, set its `prev` to the new head index.
+            Node::from_non_nil_sector_index_mut(self.sectors, head_index)?
+                .set_prev(new_index.get());
+        } else {
+            // If the head is NIL, the new node is the only node and is thus also the tail.
+            self.header.set_seat_dll_tail(new_index.get());
+        }
+
+        // Update the head to the new index and increment the number of seats.
+        self.header.set_seat_dll_head(new_index.get());
+        self.header.increment_num_seats();
+
+        Ok(new_index)
+    }
+
+    pub fn push_back(
+        &mut self,
+        payload: &[u8; NODE_PAYLOAD_SIZE],
+    ) -> Result<NonNilSectorIndex, DropsetError> {
+        let new_index = self.acquire_free_node()?;
+        let tail_index = self.header.seat_dll_tail();
+
+        // Create the new node with the incoming payload. It has no `next` and its `prev` node is
+        // the current tail.
+        let new_node = Node::from_non_nil_sector_index_mut(self.sectors, new_index)?;
+        new_node.set_payload(payload);
+        new_node.set_prev(tail_index);
+        new_node.set_next(NIL);
+
+        if let Ok(tail_index) = NonNilSectorIndex::new(tail_index) {
+            // If the tail is a non-NIL sector index, set its `next` to the new tail index.
+            Node::from_non_nil_sector_index_mut(self.sectors, tail_index)?
+                .set_next(new_index.get());
+        } else {
+            // If the tail is NIL, the new node is the only node and is thus also the head.
+            self.header.set_seat_dll_head(new_index.get());
+        }
+
+        // Update the tail to the new index and increment the number of seats.
+        self.header.set_seat_dll_tail(new_index.get());
+        self.header.increment_num_seats();
+
+        Ok(new_index)
+    }
+
     pub fn insert_before(
         &mut self,
         // The sector index of the node to insert a new node before.
         next_index: NonNilSectorIndex,
         payload: &[u8; NODE_PAYLOAD_SIZE],
     ) -> Result<NonNilSectorIndex, DropsetError> {
-        // Allocate a new node from the free stack.
-        let mut free_stack =
-            Stack::new_from_parts(self.header.free_stack_top_mut_ref(), self.sectors);
-        let new_index = free_stack.remove_free_node()?;
+        let new_index = self.acquire_free_node()?;
 
         // Store the next node's `prev` index.
         let next_node = Node::from_non_nil_sector_index_mut(self.sectors, next_index)?;
@@ -57,41 +126,62 @@ impl<'a> LinkedList<'a> {
         Ok(new_index)
     }
 
-    pub fn insert_after(
+    pub fn iter_seats(&self) -> LinkedListIter<'_> {
+        LinkedListIter {
+            curr: self.header.seat_dll_head(),
+            sectors: self.sectors,
+        }
+    }
+
+    pub fn insert_market_seat(
         &mut self,
-        // The sector index of the node to insert a new node after.
-        prev_index: NonNilSectorIndex,
-        payload: &[u8; NODE_PAYLOAD_SIZE],
+        seat: MarketSeat,
     ) -> Result<NonNilSectorIndex, DropsetError> {
-        // Allocate a new node from the free stack.
-        let mut free_stack =
-            Stack::new_from_parts(self.header.free_stack_top_mut_ref(), self.sectors);
-        let new_index = free_stack.remove_free_node()?;
+        let insert_index = self.find_insert_index(&seat.trader);
+        // Safety: MarketSeat adheres to all layout, alignment, and size constraints.
+        let seat_bytes = unsafe { seat.as_bytes() };
+        match insert_index {
+            SectorIndex(0) => self.push_front(seat_bytes),
+            NIL => self.push_back(seat_bytes),
+            i => self.insert_before(NonNilSectorIndex::new_unchecked(i), seat_bytes),
+        }
+    }
 
-        // Store the previous node's `next` index.
-        let prev_node = Node::from_non_nil_sector_index_mut(self.sectors, prev_index)?;
-        let next_index = prev_node.next();
-        // Set `prev_node`'s `next` to the new node.
-        prev_node.set_next(new_index.get());
+    /// Returns the index a node should be inserted before.
+    ///
+    /// 0     => Insert at the front of the list
+    /// 1..n  => Insert at n - 1
+    /// NIL   => Insert at the end of the list
+    pub fn find_insert_index(&self, trader: &Pubkey) -> SectorIndex {
+        for (index, node) in self.iter_seats() {
+            let seat = node.load_payload::<MarketSeat>();
+            if trader < &seat.trader {
+                // At 0, this inserts at front.
+                return index.get();
+            }
+        }
+        // Insert at back.
+        NIL
+    }
+}
 
-        // Create the new node.
-        let new_node = Node::from_non_nil_sector_index_mut(self.sectors, new_index)?;
-        new_node.set_prev(prev_index.get());
-        new_node.set_next(next_index);
-        new_node.set_payload(payload);
+pub struct LinkedListIter<'a> {
+    curr: SectorIndex,
+    sectors: &'a [u8],
+}
 
-        if let Ok(next_index) = NonNilSectorIndex::new(next_index) {
-            // If `next_index` is non-NIL, set its `prev` to the new index.
-            Node::from_non_nil_sector_index_mut(self.sectors, next_index)?
-                .set_prev(new_index.get());
-        } else {
-            // If `next_index` is NIL, then `prev_index` was the tail prior to this insertion, and
-            // the head needs to be updated to the new node's index.
-            self.header.set_seat_dll_tail(new_index.get());
+impl<'a> Iterator for LinkedListIter<'a> {
+    type Item = (NonNilSectorIndex, &'a Node);
+
+    fn next(&mut self) -> Option<(NonNilSectorIndex, &'a Node)> {
+        if self.curr.is_nil() {
+            return None;
         }
 
-        self.header.increment_num_seats();
+        let curr_non_nil = NonNilSectorIndex::new_unchecked(self.curr);
+        let node = Node::from_non_nil_sector_index(self.sectors, curr_non_nil).ok()?;
 
-        Ok(new_index)
+        self.curr = node.next();
+        Some((curr_non_nil, node))
     }
 }
