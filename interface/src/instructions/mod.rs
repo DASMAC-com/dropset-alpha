@@ -2,6 +2,9 @@ use pinocchio::program_error::ProgramError;
 
 use crate::error::DropsetError;
 
+pub mod amount;
+pub mod num_sectors;
+
 #[repr(u8)]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]

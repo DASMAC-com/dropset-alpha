@@ -1,5 +1,5 @@
 use crate::instructions::*;
-use dropset_interface::{error::DropsetError, instruction::InstructionTag};
+use dropset_interface::{error::DropsetError, instructions::InstructionTag};
 use pinocchio::{account_info::AccountInfo, pubkey::Pubkey, ProgramResult};
 
 #[inline(always)]

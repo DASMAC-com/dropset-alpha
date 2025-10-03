@@ -1,7 +1,7 @@
 #![no_std]
 
 pub mod error;
-pub mod instruction;
+pub mod instructions;
 pub mod pack;
 pub mod state;
 
