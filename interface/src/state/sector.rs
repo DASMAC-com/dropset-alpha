@@ -1,6 +1,6 @@
 use crate::{error::DropsetError, state::U32_SIZE};
 
-pub const SECTOR_SIZE: usize = 56;
+pub const SECTOR_SIZE: usize = 72;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Eq, PartialEq)]

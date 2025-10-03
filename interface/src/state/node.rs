@@ -3,7 +3,7 @@ use static_assertions::const_assert_eq;
 use crate::{
     error::DropsetError,
     state::{
-        sector::{LeSectorIndex, NonNilSectorIndex, SectorIndex},
+        sector::{LeSectorIndex, NonNilSectorIndex, SectorIndex, SECTOR_SIZE},
         transmutable::{load_unchecked, load_unchecked_mut, Transmutable},
     },
 };
@@ -31,7 +31,7 @@ pub struct Node {
 pub trait NodePayload: Transmutable {}
 
 unsafe impl Transmutable for Node {
-    const LEN: usize = NODE_PAYLOAD_SIZE + 4 + 4;
+    const LEN: usize = SECTOR_SIZE;
 }
 
 // This check guarantees raw pointer dereferences to `Node` are always aligned.
