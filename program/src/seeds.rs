@@ -39,34 +39,26 @@ pub mod event_authority {
 }
 
 pub mod market {
-    use pinocchio::pubkey::{find_program_address, Pubkey};
-
     pub const MARKET_SEED_STR: &[u8] = b"market";
-
-    pub fn find_market_address(base_mint: &Pubkey, quote_mint: &Pubkey) -> (Pubkey, u8) {
-        find_program_address(crate::market_seeds!(base_mint, quote_mint), &crate::ID)
-    }
 }
 
 #[macro_export]
-macro_rules! market_seeds {
-    ( $base_mint:expr, $quote_mint:expr ) => {
-        &[
-            $base_mint.as_ref(),
-            $quote_mint.as_ref(),
-            $crate::seeds::market::MARKET_SEED_STR,
-        ]
-    };
-}
-
-#[macro_export]
-macro_rules! market_seeds_with_bump {
+/// # Example
+///
+/// ```
+/// use dropset::market_signer;
+/// use pinocchio::instruction::Signer;
+///
+/// let bump: u8 = 0x10;
+/// let signer: Signer = crate::market_signer!(base_mint, quote_mint, bump);
+/// ```
+macro_rules! market_signer {
     ( $base_mint:expr, $quote_mint:expr, $bump:expr ) => {
-        &[&[
+        pinocchio::instruction::Signer::from(&pinocchio::seeds!(
             $base_mint.as_ref(),
             $quote_mint.as_ref(),
             $crate::seeds::market::MARKET_SEED_STR,
-            &[$bump],
-        ]]
+            &[$bump]
+        ))
     };
 }
