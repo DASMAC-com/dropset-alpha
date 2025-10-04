@@ -16,5 +16,8 @@ pinocchio-token-interface.workspace = true
 pinocchio-token-2022.workspace = true
 static_assertions.workspace = true
 
+[dev-dependencies]
+solana-pubkey.workspace = true
+
 [lints]
 workspace = true

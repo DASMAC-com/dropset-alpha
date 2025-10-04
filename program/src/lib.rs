@@ -5,6 +5,7 @@ use pinocchio::{no_allocator, nostd_panic_handler, program_entrypoint};
 mod context;
 mod entrypoint;
 mod instructions;
+mod seeds;
 mod shared;
 mod validation;
 
