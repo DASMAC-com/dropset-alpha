@@ -33,8 +33,12 @@ impl<'a> MarketRef<'a> {
     /// Returns immutable references to a Market's header and sectors slice.
     ///
     /// Checks:
-    /// 1. The data passed in is long enough to represent a Market.
-    /// 2. The discriminant in the header matches the expected one written during initialization.
+    /// - The data passed in is long enough to represent a Market.
+    /// - The discriminant in the header matches the expected one written during initialization.
+    ///
+    /// Implicit expectations:
+    /// - `data` is well-formed, initialized market data.
+    /// - if `data` is on-chain account data, the account is owned by the dropset program.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, DropsetError> {
         let (header_bytes, sectors) = data
             .split_at_checked(MARKET_HEADER_SIZE)
@@ -47,14 +51,39 @@ impl<'a> MarketRef<'a> {
 
         Ok(Self { header, sectors })
     }
+
+    /// Returns immutable references to a Market's header and sectors slice without checking the
+    /// account discriminant in the header.
+    ///
+    /// Checks:
+    /// - The data passed in is long enough to represent a Market.
+    ///
+    /// Implicit expectations:
+    /// - `data` is well-formed, initialized market data.
+    /// - if `data` is on-chain account data, the account is owned by the dropset program.
+    pub fn from_bytes_unchecked(data: &'a [u8]) -> Result<Self, DropsetError> {
+        let (header_bytes, sectors) = data
+            .split_at_checked(MARKET_HEADER_SIZE)
+            .ok_or(DropsetError::InsufficientByteLength)?;
+
+        // Safety: `split_at_*` ensures `header_bytes == MarketHeader::LEN`, and MarketHeaders are
+        // valid (no undefined behavior) for all bit patterns.
+        let header = unsafe { load_unchecked::<MarketHeader>(header_bytes) };
+
+        Ok(Self { header, sectors })
+    }
 }
 
 impl<'a> MarketRefMut<'a> {
     /// Returns mutable references to a Market's header and sectors slice.
     ///
     /// Checks:
-    /// 1. The data passed in is long enough to represent a Market.
-    /// 2. The discriminant in the header matches the expected one written during initialization.
+    /// - The data passed in is long enough to represent a Market.
+    /// - The discriminant in the header matches the expected one written during initialization.
+    ///
+    /// Implicit expectations:
+    /// - `data` is well-formed, initialized market data.
+    /// - if `data` is on-chain account data, the account is owned by the dropset program.
     pub fn from_bytes_mut(data: &'a mut [u8]) -> Result<Self, DropsetError> {
         let (header_bytes, sectors) = data
             .split_at_mut_checked(MARKET_HEADER_SIZE)
@@ -71,7 +100,9 @@ impl<'a> MarketRefMut<'a> {
 
     /// Returns mutable references to a Market's header and sectors slice without checking the data.
     ///
-    /// This function should only be called if `data` is well-formed, initialized market data.
+    /// Implicit expectations:
+    /// - `data` is well-formed, initialized market data.
+    /// - if `data` is on-chain account data, the account is owned by the dropset program.
     pub fn from_bytes_mut_unchecked(data: &'a mut [u8]) -> Result<Self, DropsetError> {
         let (header_bytes, sectors) = data
             .split_at_mut_checked(MARKET_HEADER_SIZE)
