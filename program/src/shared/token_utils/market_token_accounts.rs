@@ -3,7 +3,7 @@ use pinocchio::ProgramResult;
 use crate::context::register_market_context::RegisterMarketContext;
 
 /// Creates the base and quote associated token accounts for a market.
-pub fn create_market_token_accounts(ctx: RegisterMarketContext) -> ProgramResult {
+pub fn create_atas(ctx: &RegisterMarketContext) -> ProgramResult {
     for (mint, ata, token_program) in [
         (
             ctx.base_mint,

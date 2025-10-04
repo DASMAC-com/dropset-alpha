@@ -12,6 +12,7 @@ dropset-interface = { path = "../interface" }
 pinocchio.workspace = true
 pinocchio-associated-token-account.workspace = true
 pinocchio-pubkey.workspace = true
+pinocchio-system.workspace = true
 pinocchio-token.workspace = true
 pinocchio-token-interface.workspace = true
 pinocchio-token-2022.workspace = true

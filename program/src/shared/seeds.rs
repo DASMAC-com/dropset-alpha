@@ -57,7 +57,7 @@ macro_rules! market_signer {
         pinocchio::instruction::Signer::from(&pinocchio::seeds!(
             $base_mint.as_ref(),
             $quote_mint.as_ref(),
-            $crate::seeds::market::MARKET_SEED_STR,
+            $crate::shared::seeds::market::MARKET_SEED_STR,
             &[$bump]
         ))
     };

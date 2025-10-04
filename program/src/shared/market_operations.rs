@@ -3,7 +3,7 @@ use dropset_interface::{
     pack::Pack,
     state::{
         linked_list::LinkedList,
-        market::MarketRefMut,
+        market::{Market, MarketRefMut},
         market_header::{MarketHeader, MARKET_HEADER_SIZE},
         market_seat::MarketSeat,
         node::Node,
@@ -70,9 +70,9 @@ pub fn find_insert_index(list: &LinkedList, user: &Pubkey) -> SectorIndex {
 pub fn initialize_market_account_data<'a>(
     // This data should only have been initialized with zeroes, nothing else.
     zeroed_market_account_data: &'a mut [u8],
-    market_bump: u8,
     base_mint: &Pubkey,
     quote_mint: &Pubkey,
+    market_bump: u8,
 ) -> Result<MarketRefMut<'a>, DropsetError> {
     let account_data_len = zeroed_market_account_data.len();
     if account_data_len < MARKET_HEADER_SIZE {
@@ -86,7 +86,7 @@ pub fn initialize_market_account_data<'a>(
     }
 
     // Initialize the market header.
-    let mut market = MarketRefMut::from_bytes_mut_unchecked(zeroed_market_account_data)?;
+    let mut market = Market::from_bytes_mut_unchecked(zeroed_market_account_data)?;
     *market.header = MarketHeader::init(market_bump, base_mint, quote_mint);
 
     // Initialize all sectors by adding them to the free stack.
@@ -121,9 +121,9 @@ pub mod tests {
         let mut bytes = [0u8; MARKET_HEADER_SIZE + SECTOR_SIZE * N_SECTORS];
         let mut market = initialize_market_account_data(
             bytes.as_mut(),
-            202,
             &pubkey!("11111111111111111111111111111111111111111111"),
             &pubkey!("22222222222222222222222222222222222222222222"),
+            254,
         )
         .expect("Should initialize market data");
 
