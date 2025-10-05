@@ -50,8 +50,6 @@ pub fn process_register_market(accounts: &[AccountInfo], instruction_data: &[u8]
     // Create the market's base and quote associated token accounts.
     market_token_accounts::create_atas(&ctx)?;
 
-    // - Initialize the market header.
-    // - Initialize the sectors with all free stack nodes.
     initialize_market_account_data(
         // Safety: Single mutable borrow of the market account data for the init call.
         unsafe { ctx.market_account.info.borrow_mut_data_unchecked() },
