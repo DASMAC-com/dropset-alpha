@@ -3,9 +3,8 @@ use crate::{
     state::{
         market_header::MarketHeader,
         node::{Node, NodePayload, NODE_PAYLOAD_SIZE},
-        sector::{LeSectorIndex, NonNilSectorIndex, SectorIndex},
+        sector::{NonNilSectorIndex, SectorIndex},
         transmutable::Transmutable,
-        U32_SIZE,
     },
 };
 

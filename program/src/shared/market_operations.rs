@@ -10,13 +10,7 @@ use dropset_interface::{
         sector::{NonNilSectorIndex, SectorIndex, NIL, SECTOR_SIZE},
     },
 };
-use pinocchio::{
-    account_info::AccountInfo,
-    pubkey::{pubkey_eq, Pubkey},
-    ProgramResult,
-};
-
-use crate::validation::market_account_info::MarketAccountInfo;
+use pinocchio::pubkey::{pubkey_eq, Pubkey};
 
 pub fn insert_market_seat(
     list: &mut LinkedList,
