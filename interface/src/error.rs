@@ -26,6 +26,8 @@ pub enum DropsetError {
     InvalidMarketAccountOwner,
     InvalidMintAccount,
     InvalidNonZeroInteger,
+    InsufficientUserBalance,
+    AmountCannotBeZero,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -61,6 +63,8 @@ impl From<DropsetError> for &'static str {
             DropsetError::InvalidMarketAccountOwner => "Invalid market account owner",
             DropsetError::InvalidMintAccount => "Invalid mint account",
             DropsetError::InvalidNonZeroInteger => "Value passed must be greater than zero",
+            DropsetError::InsufficientUserBalance => "Insufficient user balance",
+            DropsetError::AmountCannotBeZero => "Amount can't be zero",
         }
     }
 }

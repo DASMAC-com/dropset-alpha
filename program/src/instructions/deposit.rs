@@ -1,4 +1,5 @@
 use dropset_interface::{
+    error::DropsetError,
     instructions::amount::AmountInstructionData,
     state::{market_seat::MarketSeat, node::Node, transmutable::load},
 };
@@ -16,10 +17,13 @@ use crate::{
 
 pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let ctx = DepositWithdrawContext::load(accounts)?;
-
     // Safety: All bit patterns are valid.
     let args = unsafe { load::<AmountInstructionData>(instruction_data) }?;
-    let amount = deposit_to_market(&ctx, args.amount())?;
+    let amount_deposited = deposit_to_market(&ctx, args.amount())?;
+
+    if amount_deposited == 0 {
+        return Err(DropsetError::AmountCannotBeZero.into());
+    }
 
     // Safety: Single immutable borrow of market account data.
     let market = unsafe { ctx.market_account.load_unchecked() }?;
@@ -43,7 +47,7 @@ pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pro
         Some(index) => {
             // Safety: Single mutable borrow of market account data, used to update the market seat.
             let market = unsafe { ctx.market_account.load_unchecked_mut() }?;
-            // Safety: `i` is an in-bounds, non-NIL sector index, as it was just found.
+            // Safety: The index is an in-bounds, non-NIL sector index, as it was just found.
             let seat = unsafe {
                 Node::from_sector_index_mut_unchecked(market.sectors, index.get())
                     .load_payload_mut::<MarketSeat>()
@@ -51,23 +55,23 @@ pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pro
             if ctx.mint.is_base_mint {
                 seat.set_base_available(
                     seat.base_available()
-                        .checked_add(amount)
+                        .checked_add(amount_deposited)
                         .ok_or(ProgramError::ArithmeticOverflow)?,
                 );
                 seat.set_base_deposited(
                     seat.base_deposited()
-                        .checked_add(amount)
+                        .checked_add(amount_deposited)
                         .ok_or(ProgramError::ArithmeticOverflow)?,
                 );
             } else {
                 seat.set_quote_available(
                     seat.quote_available()
-                        .checked_add(amount)
+                        .checked_add(amount_deposited)
                         .ok_or(ProgramError::ArithmeticOverflow)?,
                 );
                 seat.set_quote_deposited(
                     seat.quote_deposited()
-                        .checked_add(amount)
+                        .checked_add(amount_deposited)
                         .ok_or(ProgramError::ArithmeticOverflow)?,
                 );
             }
@@ -83,9 +87,9 @@ pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pro
             let mut market = unsafe { ctx.market_account.load_unchecked_mut() }?;
 
             let seat = if ctx.mint.is_base_mint {
-                MarketSeat::new(*ctx.user.key(), amount, 0)
+                MarketSeat::new(*ctx.user.key(), amount_deposited, 0)
             } else {
-                MarketSeat::new(*ctx.user.key(), 0, amount)
+                MarketSeat::new(*ctx.user.key(), 0, amount_deposited)
             };
 
             insert_market_seat(&mut market.seat_list(), seat)?;

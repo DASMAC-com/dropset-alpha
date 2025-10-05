@@ -63,11 +63,28 @@ pub fn find_seat_with_hint<'a>(
     market: MarketRef<'a>,
     hint: NonNilSectorIndex,
     user: &Pubkey,
-) -> Result<&'a Node, DropsetError> {
+) -> Result<&'a MarketSeat, DropsetError> {
     let node = Node::from_non_nil_sector_index(market.sectors, hint)?;
     let seat = node.load_payload::<MarketSeat>();
     if pubkey_eq(user, &seat.user) {
-        Ok(node)
+        Ok(seat)
+    } else {
+        Err(DropsetError::InvalidIndexHint)
+    }
+}
+
+/// Find a mutable market seat given an index hint.
+///
+/// Returns an Err if the hint provided is invalid.
+pub fn find_mut_seat_with_hint<'a>(
+    market: MarketRefMut<'a>,
+    hint: NonNilSectorIndex,
+    user: &Pubkey,
+) -> Result<&'a mut MarketSeat, DropsetError> {
+    let node = Node::from_non_nil_sector_index_mut(market.sectors, hint)?;
+    let seat = node.load_payload_mut::<MarketSeat>();
+    if pubkey_eq(user, &seat.user) {
+        Ok(seat)
     } else {
         Err(DropsetError::InvalidIndexHint)
     }

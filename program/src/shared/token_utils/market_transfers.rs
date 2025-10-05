@@ -3,6 +3,10 @@ use pinocchio::{program_error::ProgramError, ProgramResult};
 
 use crate::{context::deposit_withdraw_context::DepositWithdrawContext, market_signer};
 
+/// Transfers `amount` of token `ctx.mint` from the user to the market account.
+///
+/// # NOTE
+/// This does *not* update tracked balances, it merely transfers from user => market.
 pub fn deposit_to_market(ctx: &DepositWithdrawContext, amount: u64) -> Result<u64, ProgramError> {
     if ctx.token_program.is_spl_token {
         pinocchio_token::instructions::Transfer {
@@ -40,6 +44,10 @@ pub fn deposit_to_market(ctx: &DepositWithdrawContext, amount: u64) -> Result<u6
     }
 }
 
+/// Transfers `amount` of token `ctx.mint` from the market account to the user.
+///
+/// # NOTE
+/// This does *not* update tracked balances, it merely transfers from market => user.
 pub fn withdraw_from_market(ctx: &DepositWithdrawContext, amount: u64) -> ProgramResult {
     let (base_mint, quote_mint, market_bump) = {
         // Safety: Single immutable borrow to the market account data.
