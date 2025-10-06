@@ -1,1 +1,49 @@
+use pinocchio::program_error::ProgramError;
 
+use crate::error::DropsetError;
+
+pub mod amount;
+pub mod close;
+pub mod num_sectors;
+
+#[repr(u8)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
+pub enum InstructionTag {
+    RegisterMarket,
+    Deposit,
+    Withdraw,
+    Close,
+    FlushEvents,
+}
+
+impl TryFrom<u8> for InstructionTag {
+    type Error = ProgramError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            // SAFETY: A valid enum variant is guaranteed with the match pattern.
+            // All variants are checked in the exhaustive instruction tag test.
+            0..5 => Ok(unsafe { core::mem::transmute::<u8, Self>(value) }),
+            _ => Err(DropsetError::InvalidInstructionTag.into()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InstructionTag;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn test_instruction_tag_from_u8_exhaustive() {
+        for variant in InstructionTag::iter() {
+            let variant_u8 = variant.clone() as u8;
+            assert_eq!(
+                InstructionTag::from_repr(variant_u8).unwrap(),
+                InstructionTag::try_from(variant_u8).unwrap(),
+            );
+            assert_eq!(InstructionTag::try_from(variant_u8).unwrap(), variant);
+        }
+    }
+}
