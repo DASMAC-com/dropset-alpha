@@ -12,18 +12,19 @@ pub const NODE_PAYLOAD_SIZE: usize = 64;
 
 #[repr(C)]
 #[derive(Debug)]
+/// An untagged union of Solana account data as a node in a tree, where `payload` is some type `T`
+/// that implements `NodePayload`.
+///
+/// In the case of a free stack node, the payload is just zeroed bytes, with `next` pointing to the
+/// sector index representing the memory address of the next free node.
 pub struct Node {
-    /// The little endian bytes representing the physical sector index of `next`.
-    /// Sector indexes map directly to the byte offset in memory, where the exact offset is the
-    /// index multiplied by the size of the node in bytes.
+    /// The little endian bytes representing the `next` node's sector index.
     next: LeSectorIndex,
-    /// The little endian bytes representing the physical sector index of `prev`.
-    /// Sector indexes map directly to the byte offset in memory, where the exact offset is the
-    /// index multiplied by the size of the node in bytes.
-    /// NOTE: This field is entirely unused in the free stack of Nodes implementation and should be
-    /// considered as random, meaningless bytes.
+    /// The little endian bytes representing the `prev` node's sector index.
+    /// NOTE: This field is unused in the free stack node implementation and should be treated as
+    /// random, meaningless bytes.
     prev: LeSectorIndex,
-    /// Either an in-use [MarketSeat][crate::state::market_seat::MarketSeat] or zeroed bytes.
+    /// The raw payload bytes for a Node, representing some type `T` that implements `NodePayload`.
     payload: [u8; NODE_PAYLOAD_SIZE],
 }
 
