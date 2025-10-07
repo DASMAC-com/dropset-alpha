@@ -12,10 +12,6 @@ use crate::{
 
 pub struct Stack<'a> {
     header: &'a mut MarketHeader,
-    /// A mutable reference to the sector index as LE bytes for the node at the top of the stack.
-    // top: &'a mut LeSectorIndex,
-    /// A mutable reference to the total number of free sectors in the stack as LE bytes.
-    // num_free_sectors: &'a mut [u8; U32_SIZE],
     /// The slab of bytes where a Stack of FreeNodePayload exists, where sectors are untagged unions
     /// of (any possible Market account data type | FreeNodePayload).
     sectors: &'a mut [u8],
@@ -94,7 +90,7 @@ impl<'a> Stack<'a> {
         for i in (start..end).rev().map(SectorIndex) {
             let curr_top = self.top();
 
-            // Safety: caller guarantees the safety contract for this method.
+            // Safety: The safety contract guarantees `i` is always in-bounds.
             let node = unsafe { Node::from_sector_index_mut_unchecked(self.sectors, i) };
 
             debug_assert_eq!(
@@ -117,7 +113,12 @@ impl<'a> Stack<'a> {
 
         // The free node is the node at the top of the stack.
         let free_index = self.top();
-        let node_being_freed = Node::from_sector_index_mut(self.sectors, free_index)?;
+
+        Node::check_in_bounds(self.sectors, free_index)?;
+        // Safety: The free index was just checked as in-bounds.
+        let node_being_freed =
+            unsafe { Node::from_sector_index_mut_unchecked(self.sectors, free_index) };
+
         // Zero out the rest of the node by setting `next` to 0. The payload and `prev` were zeroed
         // out when adding to the free list.
         node_being_freed.set_next(SectorIndex(0));

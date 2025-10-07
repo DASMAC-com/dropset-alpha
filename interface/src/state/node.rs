@@ -122,73 +122,37 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn from_sector_index_mut(
-        sectors: &mut [u8],
-        index: SectorIndex,
-    ) -> Result<&mut Self, DropsetError> {
-        if index.is_nil() {
-            return Err(DropsetError::InvalidSectorIndex);
-        }
-
-        let capacity = sectors.len() / Self::LEN;
-        let i = index.0 as usize;
-        if i >= capacity {
+    pub fn check_in_bounds(sectors: &[u8], index: SectorIndex) -> DropsetResult {
+        let max_num_sectors = (sectors.len() / Self::LEN) as u32;
+        if index.0 >= max_num_sectors {
             return Err(DropsetError::IndexOutOfBounds);
-        }
+        };
 
-        let byte_offset = i * Self::LEN;
-
-        // Safety:
-        // - `byte_offset..byte_offset + Self::LEN` is in-bounds.
-        // - The elided lifetime of `sectors` is tied to the reference this function returns.
-        Ok(unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) })
+        Ok(())
     }
 
     #[inline(always)]
-    pub fn from_non_nil_sector_index(
-        sectors: &[u8],
-        index: NonNilSectorIndex,
-    ) -> Result<&Self, DropsetError> {
-        let capacity = sectors.len() / Self::LEN;
-        let i = index.0 .0 as usize;
-        if i >= capacity {
-            return Err(DropsetError::IndexOutOfBounds);
-        }
-
-        let byte_offset = i * Self::LEN;
-        // Safety: The index has been verified as not NIL, and in-bounds was just checked.
-        Ok(unsafe { &*(sectors.as_ptr().add(byte_offset) as *const Node) })
-    }
-
-    #[inline(always)]
-    pub fn from_non_nil_sector_index_mut(
-        sectors: &mut [u8],
-        index: NonNilSectorIndex,
-    ) -> Result<&mut Self, DropsetError> {
-        let capacity = sectors.len() / Self::LEN;
-        let i = index.0 .0 as usize;
-        if i >= capacity {
-            return Err(DropsetError::IndexOutOfBounds);
-        }
-
-        let byte_offset = i * Self::LEN;
-        // Safety: The index has been verified as not NIL, and in-bounds was just checked.
-        Ok(unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) })
-    }
-
-    #[inline(always)]
+    /// Convert a sector index to a Node without checking if the index is in-bounds.
+    ///
     /// # Safety
-    /// - Caller guarantees `index` has been verified as not `NIL`
-    /// - Caller guarantees `index * Self::LEN` is within the bounds of `sectors` bytes
+    ///
+    /// Caller guarantees `index * Self::LEN` is within the bounds of `sectors` bytes.
+    pub unsafe fn from_sector_index_unchecked(sectors: &mut [u8], index: SectorIndex) -> &mut Self {
+        let byte_offset = index.0 as usize * Self::LEN;
+        unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) }
+    }
+
+    #[inline(always)]
+    /// Convert a sector index to a mutable Node without checking if the index is in-bounds.
+    ///
+    /// # Safety
+    ///
+    /// Caller guarantees `index * Self::LEN` is within the bounds of `sectors` bytes.
     pub unsafe fn from_sector_index_mut_unchecked(
         sectors: &mut [u8],
         index: SectorIndex,
     ) -> &mut Self {
-        let i = index.0 as usize;
-        let byte_offset = i * Self::LEN;
-        // Safety:
-        // - Caller guarantees the sector index is in-bounds.
-        // - The elided lifetime of `sectors` is tied to the reference this function returns.
+        let byte_offset = index.0 as usize * Self::LEN;
         unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) }
     }
 }
