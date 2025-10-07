@@ -100,8 +100,10 @@ unsafe impl NodePayload for MarketSeat {}
 
 impl Pack<NODE_PAYLOAD_SIZE> for MarketSeat {
     fn pack_into_slice(&self, dst: &mut [core::mem::MaybeUninit<u8>; NODE_PAYLOAD_SIZE]) {
-        write_bytes(dst, &self.user);
-        write_bytes(dst, &self.base_deposited);
-        write_bytes(dst, &self.quote_deposited);
+        write_bytes(&mut dst[0..32], &self.user);
+        write_bytes(&mut dst[32..40], &self.base_deposited);
+        write_bytes(&mut dst[40..48], &self.quote_deposited);
+        write_bytes(&mut dst[48..56], &self.base_available);
+        write_bytes(&mut dst[56..64], &self.quote_available);
     }
 }
