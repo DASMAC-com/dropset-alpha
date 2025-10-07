@@ -61,7 +61,7 @@ impl<'a> Stack<'a> {
         let curr_top = self.top();
 
         // Safety: caller guarantees the safety contract for this method.
-        let node = unsafe { Node::from_sector_index_mut_unchecked(self.sectors, index) };
+        let node = unsafe { Node::from_sector_index_mut(self.sectors, index) };
         node.zero_out_payload();
 
         node.set_next(curr_top);
@@ -85,18 +85,21 @@ impl<'a> Stack<'a> {
         start: u32,
         end: u32,
     ) -> DropsetResult {
-        debug_assert!(start < end);
+        // Debug check that the node has been zeroed out.
+        debug_assert!(
+            start < end
+                && (start..end).map(SectorIndex).all(|i| {
+                    // Safety: The safety contract guarantees `i` is always in-bounds.
+                    let node = unsafe { Node::from_sector_index_mut(self.sectors, i) };
+                    node.load_payload::<FreeNodePayload>().0 == [0; NODE_PAYLOAD_SIZE]
+                })
+        );
 
         for i in (start..end).rev().map(SectorIndex) {
             let curr_top = self.top();
 
             // Safety: The safety contract guarantees `i` is always in-bounds.
-            let node = unsafe { Node::from_sector_index_mut_unchecked(self.sectors, i) };
-
-            debug_assert_eq!(
-                node.load_payload::<FreeNodePayload>().0,
-                [0u8; NODE_PAYLOAD_SIZE]
-            );
+            let node = unsafe { Node::from_sector_index_mut(self.sectors, i) };
 
             node.set_next(curr_top);
             self.set_top(i);
@@ -117,8 +120,7 @@ impl<'a> Stack<'a> {
 
         Node::check_in_bounds(self.sectors, free_index)?;
         // Safety: The free index was just checked as in-bounds.
-        let node_being_freed =
-            unsafe { Node::from_sector_index_mut_unchecked(self.sectors, free_index) };
+        let node_being_freed = unsafe { Node::from_sector_index_mut(self.sectors, free_index) };
 
         // Zero out the rest of the node by setting `next` to 0. The payload and `prev` were zeroed
         // out when adding to the free list.
