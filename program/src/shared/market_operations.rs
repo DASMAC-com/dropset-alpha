@@ -21,10 +21,7 @@ pub fn insert_market_seat(
     // Safety: MarketSeat adheres to all layout, alignment, and size constraints.
     let seat_bytes = unsafe { seat.as_slice() };
 
-    // Return an error early if the user already exists in the seat list, since this function is
-    // only for registering users that don't have a registerd seat yet.
-    // Only the prev index needs to be checked because `find_insert_before_index` only returns when
-    // a pubkey is found to be greater than the user passed in.
+    // Return an error early if the user already exists in the seat list at the previous index.
     if !prev_index.is_nil() {
         // Safety: `prev_index` is non-NIL and was returned by an iterator, so it must be in-bounds.
         let prev_node = unsafe { Node::from_sector_index(list.sectors, prev_index) };
@@ -34,11 +31,13 @@ pub fn insert_market_seat(
         }
     }
 
-    match insert_before_index {
-        SectorIndex(0) => list.push_front(seat_bytes),
-        NIL => list.push_back(seat_bytes),
+    if insert_before_index == list.header.seat_dll_head() {
+        list.push_front(seat_bytes)
+    } else if insert_before_index == NIL {
+        list.push_back(seat_bytes)
+    } else {
         // Safety: `index` was returned by the iterator so it must be in-bounds.
-        index => unsafe { list.insert_before(index, seat_bytes) },
+        unsafe { list.insert_before(insert_before_index, seat_bytes) }
     }
 }
 
@@ -46,19 +45,7 @@ pub fn insert_market_seat(
 /// to be inserted at as:
 ///
 /// (prev_index, insert_before_index)
-///
-/// This function *does not* contain any logic for handling duplicates. The caller must ensure
-/// duplicates are handled appropriately.
-///
-/// - `0` => Insert at the front of the list
-/// - `1..n` => Insert at `n - 1`, where `n` is an in-bounds index
-/// - `NIL` => Insert at the end of the list
 fn find_insert_before_index(list: &LinkedList, user: &Pubkey) -> (SectorIndex, SectorIndex) {
-    // A user that already exists in the seat list should never be passed.
-    debug_assert!(list
-        .iter()
-        .all(|(_index, node)| !pubkey_eq(user, &node.load_payload::<MarketSeat>().user)));
-
     for (index, node) in list.iter() {
         let seat = node.load_payload::<MarketSeat>();
         if user < &seat.user {
