@@ -12,6 +12,7 @@ pub enum DropsetError {
     InvalidIndexHint,
     UnalignedData,
     UnallocatedAccountData,
+    UserAlreadyExists,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -33,6 +34,7 @@ impl From<DropsetError> for &'static str {
             DropsetError::InvalidIndexHint => "Index hint is invalid",
             DropsetError::UnalignedData => "Account data is unaligned",
             DropsetError::UnallocatedAccountData => "Account data hasn't been properly allocated",
+            DropsetError::UserAlreadyExists => "User already has an existing seat",
         }
     }
 }

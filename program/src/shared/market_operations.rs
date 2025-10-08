@@ -17,19 +17,35 @@ pub fn insert_market_seat(
     list: &mut LinkedList,
     seat: MarketSeat,
 ) -> Result<SectorIndex, DropsetError> {
-    let insert_index = find_insert_index(list, &seat.user);
+    let (prev_index, insert_before_index) = find_insert_before_index(list, &seat.user);
     // Safety: MarketSeat adheres to all layout, alignment, and size constraints.
     let seat_bytes = unsafe { seat.as_slice() };
 
-    match insert_index {
+    // Return an error early if the user already exists in the seat list, since this function is
+    // only for registering users that don't have a registerd seat yet.
+    // Only the prev index needs to be checked because `find_insert_before_index` only returns when
+    // a pubkey is found to be greater than the user passed in.
+    if !prev_index.is_nil() {
+        // Safety: `prev_index` is non-NIL and was returned by an iterator, so it must be in-bounds.
+        let prev_node = unsafe { Node::from_sector_index(list.sectors, prev_index) };
+        let prev_seat = prev_node.load_payload::<MarketSeat>();
+        if pubkey_eq(&seat.user, &prev_seat.user) {
+            return Err(DropsetError::UserAlreadyExists);
+        }
+    }
+
+    match insert_before_index {
         SectorIndex(0) => list.push_front(seat_bytes),
         NIL => list.push_back(seat_bytes),
-        // Safety: `index` is in-bounds by virtue of having been found.
+        // Safety: `index` was returned by the iterator so it must be in-bounds.
         index => unsafe { list.insert_before(index, seat_bytes) },
     }
 }
 
-/// Returns the index a node should be inserted before.
+/// Returns the index a node should be inserted before and the `prev_index` relative to the index
+/// to be inserted at as:
+///
+/// (prev_index, insert_before_index)
 ///
 /// This function *does not* contain any logic for handling duplicates. The caller must ensure
 /// duplicates are handled appropriately.
@@ -37,7 +53,7 @@ pub fn insert_market_seat(
 /// - `0` => Insert at the front of the list
 /// - `1..n` => Insert at `n - 1`, where `n` is an in-bounds index
 /// - `NIL` => Insert at the end of the list
-fn find_insert_index(list: &LinkedList, user: &Pubkey) -> SectorIndex {
+fn find_insert_before_index(list: &LinkedList, user: &Pubkey) -> (SectorIndex, SectorIndex) {
     // A user that already exists in the seat list should never be passed.
     debug_assert!(list
         .iter()
@@ -46,10 +62,11 @@ fn find_insert_index(list: &LinkedList, user: &Pubkey) -> SectorIndex {
     for (index, node) in list.iter() {
         let seat = node.load_payload::<MarketSeat>();
         if user < &seat.user {
-            return index;
+            return (node.prev(), index);
         }
     }
-    NIL
+    // The `prev` index at the end of the list is the tail.
+    (list.header.seat_dll_tail(), NIL)
 }
 
 /// Tries to find a market seat given an index hint.
