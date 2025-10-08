@@ -132,23 +132,23 @@ impl Node {
         Ok(())
     }
 
-    #[inline(always)]
     /// Convert a sector index to a Node without checking if the index is in-bounds.
     ///
     /// # Safety
     ///
     /// Caller guarantees `index * Self::LEN` is within the bounds of `sectors` bytes.
+    #[inline(always)]
     pub unsafe fn from_sector_index(sectors: &[u8], index: SectorIndex) -> &Self {
         let byte_offset = index.0 as usize * Self::LEN;
         unsafe { &*(sectors.as_ptr().add(byte_offset) as *const Node) }
     }
 
-    #[inline(always)]
     /// Convert a sector index to a mutable Node without checking if the index is in-bounds.
     ///
     /// # Safety
     ///
     /// Caller guarantees `index * Self::LEN` is within the bounds of `sectors` bytes.
+    #[inline(always)]
     pub unsafe fn from_sector_index_mut(sectors: &mut [u8], index: SectorIndex) -> &mut Self {
         let byte_offset = index.0 as usize * Self::LEN;
         unsafe { &mut *(sectors.as_mut_ptr().add(byte_offset) as *mut Node) }

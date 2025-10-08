@@ -4,10 +4,11 @@ use dropset_interface::{
     state::{
         linked_list::LinkedList,
         market::{Market, MarketRef, MarketRefMut},
-        market_header::{MarketHeader, MARKET_HEADER_SIZE},
+        market_header::MarketHeader,
         market_seat::MarketSeat,
         node::Node,
         sector::{SectorIndex, NIL, SECTOR_SIZE},
+        transmutable::Transmutable,
     },
 };
 use pinocchio::pubkey::{pubkey_eq, Pubkey};
@@ -103,11 +104,11 @@ pub fn initialize_market_account_data<'a>(
     market_bump: u8,
 ) -> Result<MarketRefMut<'a>, DropsetError> {
     let account_data_len = zeroed_market_account_data.len();
-    if account_data_len < MARKET_HEADER_SIZE {
+    if account_data_len < MarketHeader::LEN {
         return Err(DropsetError::UnallocatedAccountData);
     }
 
-    let sector_bytes = account_data_len - MARKET_HEADER_SIZE;
+    let sector_bytes = account_data_len - MarketHeader::LEN;
 
     if sector_bytes % SECTOR_SIZE != 0 {
         return Err(DropsetError::UnalignedData);
@@ -116,8 +117,16 @@ pub fn initialize_market_account_data<'a>(
     // Safety: The account's data length was verified as at least `MARKET_HEADER_SIZE`.
     let mut market = unsafe { Market::from_bytes_mut(zeroed_market_account_data) };
 
-    // Initialize the market header.
-    *market.header = MarketHeader::init(market_bump, base_mint, quote_mint);
+    // Safety: The zeroed market account data is exclusively mutably borrowed and length-verified.
+    unsafe {
+        // Initialize the market header.
+        MarketHeader::init(
+            core::ptr::addr_of_mut!(*market.header),
+            market_bump,
+            base_mint,
+            quote_mint,
+        );
+    }
 
     // Initialize all sectors by adding them to the free stack.
     let stack = &mut market.free_stack();
@@ -134,9 +143,8 @@ pub fn initialize_market_account_data<'a>(
 #[cfg(test)]
 pub mod tests {
     use super::initialize_market_account_data;
-    use dropset_interface::state::{
-        market_header::MARKET_HEADER_SIZE, market_seat::MarketSeat, sector::SECTOR_SIZE,
-    };
+    use dropset_interface::state::transmutable::Transmutable;
+    use dropset_interface::state::{market_seat::MarketSeat, sector::SECTOR_SIZE};
     use pinocchio_pubkey::pubkey;
 
     extern crate std;
@@ -148,7 +156,7 @@ pub mod tests {
     #[test]
     fn market_insert_users() {
         const N_SECTORS: usize = 10;
-        let mut bytes = [0u8; MARKET_HEADER_SIZE + SECTOR_SIZE * N_SECTORS];
+        let mut bytes = [0u8; MarketHeader::LEN + SECTOR_SIZE * N_SECTORS];
         let mut market = initialize_market_account_data(
             bytes.as_mut(),
             &pubkey!("11111111111111111111111111111111111111111111"),
