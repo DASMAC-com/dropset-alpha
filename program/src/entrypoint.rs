@@ -12,6 +12,8 @@ pub fn process_instruction(
         return Err(DropsetError::InvalidInstructionTag.into());
     };
 
+    // To simplify upholding the account data safety contract invariants in each `process_*`
+    // instruction, account data should never be borrowed outside of an individual instruction call.
     match InstructionTag::try_from(*tag)? {
         InstructionTag::RegisterMarket => process_register_market(accounts, remaining),
         InstructionTag::Deposit => process_deposit(accounts, remaining),

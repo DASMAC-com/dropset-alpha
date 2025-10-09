@@ -89,20 +89,21 @@ impl<'a> Stack<'a> {
         debug_assert!(
             start < end
                 && (start..end).map(SectorIndex).all(|i| {
-                    // Safety: The safety contract guarantees `i` is always in-bounds.
+                    // Safety: The safety contract guarantees the index is always in-bounds.
                     let node = unsafe { Node::from_sector_index_mut(self.sectors, i) };
                     node.load_payload::<FreeNodePayload>().0 == [0; NODE_PAYLOAD_SIZE]
                 })
         );
 
-        for i in (start..end).rev().map(SectorIndex) {
+        for i in (start..end).rev() {
+            let index = SectorIndex(i);
             let curr_top = self.top();
 
-            // Safety: The safety contract guarantees `i` is always in-bounds.
-            let node = unsafe { Node::from_sector_index_mut(self.sectors, i) };
+            // Safety: The safety contract guarantees the index is always in-bounds.
+            let node = unsafe { Node::from_sector_index_mut(self.sectors, index) };
 
             node.set_next(curr_top);
-            self.set_top(i);
+            self.set_top(index);
             self.header.increment_num_free_sectors();
         }
 

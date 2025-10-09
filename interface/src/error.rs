@@ -16,8 +16,18 @@ pub enum DropsetError {
     NotEnoughAccountKeys,
     InvalidTokenProgram,
     AlreadyInitializedAccount,
+    AccountNotInitialized,
     NotOwnedBySystemProgram,
     AddressDerivationFailed,
+    AmountCannotBeZero,
+    InsufficientUserBalance,
+    OwnerNotTokenProgram,
+    MintInfoMismatch,
+    IncorrectTokenAccountOwner,
+    InvalidMintAccount,
+    InvalidMarketAccountOwner,
+    MissingIndexHint,
+    InvalidNonZeroInteger,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -43,8 +53,18 @@ impl From<DropsetError> for &'static str {
             DropsetError::NotEnoughAccountKeys => "Not enough account keys were provided",
             DropsetError::InvalidTokenProgram => "Invalid token program ID",
             DropsetError::AlreadyInitializedAccount => "Account has already been initialized",
+            DropsetError::AccountNotInitialized => "Account hasn't been initialized",
             DropsetError::NotOwnedBySystemProgram => "Account is not owned by the system program",
             DropsetError::AddressDerivationFailed => "PDA derivation failed",
+            DropsetError::AmountCannotBeZero => "Amount can't be zero",
+            DropsetError::InsufficientUserBalance => "Insufficient user balance",
+            DropsetError::OwnerNotTokenProgram => "Account owner must be a valid token program",
+            DropsetError::MintInfoMismatch => "Mint info does not match",
+            DropsetError::IncorrectTokenAccountOwner => "Incorrect associated token account owner",
+            DropsetError::InvalidMintAccount => "Invalid mint account",
+            DropsetError::InvalidMarketAccountOwner => "Invalid market account owner",
+            DropsetError::MissingIndexHint => "Instruction data must include an index hint",
+            DropsetError::InvalidNonZeroInteger => "Value passed must be greater than zero",
         }
     }
 }

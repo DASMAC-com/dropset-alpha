@@ -1,5 +1,93 @@
-use pinocchio::{account_info::AccountInfo, ProgramResult};
+use dropset_interface::{
+    error::DropsetError,
+    instructions::amount::AmountInstructionData,
+    state::{market_seat::MarketSeat, node::Node, transmutable::Transmutable},
+};
+use pinocchio::{account_info::AccountInfo, program_error::ProgramError, ProgramResult};
 
-pub fn process_deposit(_accounts: &[AccountInfo], _instruction_data: &[u8]) -> ProgramResult {
+use crate::{
+    context::deposit_withdraw_context::DepositWithdrawContext,
+    shared::{
+        market_operations::{find_mut_seat_with_hint, insert_market_seat},
+        token_utils::market_transfers::deposit_to_market,
+    },
+};
+
+pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
+    // Safety:
+    // - No account data is currently being borrowed.
+    // - Each borrow of account data in this function is properly scoped and non-overlapping.
+    let ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
+    let args = AmountInstructionData::load(instruction_data)?;
+    let amount_deposited = deposit_to_market(&ctx, args.amount())?;
+
+    if amount_deposited == 0 {
+        return Err(DropsetError::AmountCannotBeZero.into());
+    }
+
+    let hint = args.sector_index_hint();
+
+    // Two possibilities:
+    // 1) User provided a sector index hint: update an existing seat.
+    //   - Try to find the saet with the user's sector index hint.
+    //   - If invalid return early, otherwise update the seat with the amount deposited.
+    //
+    // 2) The user didn't provide a sector index hint: register a new seat.
+    //   - Check if the account needs extra storage and resize it if so.
+    //   - Then register the user's new seat at the proper index with the amount deposited data.
+    //   - If the user already exists, return an error instead of inserting.
+    if let Some(index) = hint {
+        // 1) Update an existing seat.
+        let market = unsafe { ctx.market_account.load_unchecked_mut() };
+        Node::check_in_bounds(market.sectors, index)?;
+        // Safety: The index hint was just verified as in-bounds.
+        let seat = unsafe { find_mut_seat_with_hint(market, index, ctx.user.key()) }?;
+
+        if ctx.mint.is_base_mint {
+            seat.set_base_available(
+                seat.base_available()
+                    .checked_add(amount_deposited)
+                    .ok_or(ProgramError::ArithmeticOverflow)?,
+            );
+            seat.set_base_deposited(
+                seat.base_deposited()
+                    .checked_add(amount_deposited)
+                    .ok_or(ProgramError::ArithmeticOverflow)?,
+            );
+        } else {
+            seat.set_quote_available(
+                seat.quote_available()
+                    .checked_add(amount_deposited)
+                    .ok_or(ProgramError::ArithmeticOverflow)?,
+            );
+            seat.set_quote_deposited(
+                seat.quote_deposited()
+                    .checked_add(amount_deposited)
+                    .ok_or(ProgramError::ArithmeticOverflow)?,
+            );
+        }
+    } else {
+        // 2) Register a new seat.
+        let needs_resize = unsafe { ctx.market_account.load_unchecked() }
+            .header
+            .num_free_sectors()
+            == 0;
+
+        if needs_resize {
+            unsafe { ctx.market_account.resize(ctx.user, 1) }?;
+        }
+
+        let mut market = unsafe { ctx.market_account.load_unchecked_mut() };
+
+        let seat = if ctx.mint.is_base_mint {
+            MarketSeat::new(*ctx.user.key(), amount_deposited, 0)
+        } else {
+            MarketSeat::new(*ctx.user.key(), 0, amount_deposited)
+        };
+
+        // Attempts to insert the user into the linked list. If the user already exists, this fails.
+        insert_market_seat(&mut market.seat_list(), seat)?;
+    }
+
     Ok(())
 }

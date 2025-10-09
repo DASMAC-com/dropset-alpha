@@ -81,7 +81,7 @@ pub unsafe fn find_seat_with_hint<'a>(
 /// # Safety
 ///
 /// Caller guarantees `hint` is in-bounds of `market.sectors` bytes.
-pub fn find_mut_seat_with_hint<'a>(
+pub unsafe fn find_mut_seat_with_hint<'a>(
     market: MarketRefMut<'a>,
     hint: SectorIndex,
     user: &Pubkey,
