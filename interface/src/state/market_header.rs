@@ -10,7 +10,6 @@ use crate::{
     },
 };
 
-pub const MARKET_HEADER_SIZE: usize = 104;
 pub const MARKET_ACCOUNT_DISCRIMINANT: u64 = 0xd00d00b00b00f00du64;
 
 #[repr(C)]
@@ -46,7 +45,7 @@ pub struct MarketHeader {
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for MarketHeader {
-    const LEN: usize = MARKET_HEADER_SIZE;
+    const LEN: usize = 104;
 
     fn validate_bit_patterns(_bytes: &[u8]) -> DropsetResult {
         // All bit patterns are valid: no enums, bools, or other types with invalid states.
@@ -54,12 +53,25 @@ unsafe impl Transmutable for MarketHeader {
     }
 }
 
-const_assert_eq!(MARKET_HEADER_SIZE, size_of::<MarketHeader>());
+const_assert_eq!(MarketHeader::LEN, size_of::<MarketHeader>());
 const_assert_eq!(align_of::<MarketHeader>(), 1);
 
 impl MarketHeader {
-    pub fn init(market_bump: u8, base_mint: &Pubkey, quote_mint: &Pubkey) -> Self {
-        MarketHeader {
+    /// Initializes market header data to the header destination pointer with a core::ptr::write.
+    ///
+    /// # Safety
+    ///
+    /// Caller guarantees:
+    /// - `header_dst_ptr` points to allocated memory with at least `MarketHeader::LEN` bytes.
+    /// - The pointer has exclusive mutable access (no active borrows or aliases)
+    #[inline(always)]
+    pub unsafe fn init(
+        header_dst_ptr: *mut MarketHeader,
+        market_bump: u8,
+        base_mint: &Pubkey,
+        quote_mint: &Pubkey,
+    ) {
+        let header = MarketHeader {
             discriminant: MARKET_ACCOUNT_DISCRIMINANT.to_le_bytes(),
             num_seats: [0; U32_SIZE],
             num_free_sectors: [0; U32_SIZE],
@@ -71,7 +83,8 @@ impl MarketHeader {
             market_bump,
             nonce: [0; U64_SIZE],
             _padding: [0; 3],
-        }
+        };
+        core::ptr::write(header_dst_ptr, header);
     }
 
     #[inline(always)]
