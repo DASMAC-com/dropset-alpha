@@ -11,15 +11,29 @@ use pinocchio::{
 };
 
 use crate::{
-    context::register_market_context::RegisterMarketContext,
-    market_signer,
-    shared::{
-        market_operations::initialize_market_account_data,
-        token_utils::create_token_accounts::{self},
-    },
+    context::register_market_context::RegisterMarketContext, market_signer,
+    shared::market_operations::initialize_market_account_data,
 };
 
-pub fn process_register_market(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
+/// # Safety
+///
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` User account
+///   1. `[WRITE]` Market account
+///   2. `[WRITE]` Market base mint token account
+///   3. `[WRITE]` Market quote mint token account
+///   4. `[READ]` Base mint
+///   5. `[READ]` Quote mint
+///   6. `[READ]` System program
+///   7. `[READ]` Token program
+pub unsafe fn process_register_market(
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
     let num_sectors = NumSectorsInstructionData::load(instruction_data)?.num_sectors();
     let ctx = RegisterMarketContext::load(accounts)?;
 
@@ -29,12 +43,14 @@ pub fn process_register_market(accounts: &[AccountInfo], instruction_data: &[u8]
         try_find_program_address(&[ctx.base_mint.key(), ctx.quote_mint.key()], &crate::ID)
             .ok_or(DropsetError::AddressDerivationFailed)?;
 
-    // Create the program derived market account.
+    // Calculate the lamports required to create the market account.
     let account_space = MarketHeader::LEN + SECTOR_SIZE * (num_sectors as usize);
     let lamports_required = Rent::get()?.minimum_balance(account_space);
+
+    // Create the market account PDA.
     pinocchio_system::instructions::CreateAccount {
-        from: ctx.user,
-        to: ctx.market_account.info,
+        from: ctx.user,              // WRITE
+        to: ctx.market_account.info, // WRITE
         lamports: lamports_required,
         space: account_space as u64,
         owner: &crate::ID,
@@ -45,11 +61,30 @@ pub fn process_register_market(accounts: &[AccountInfo], instruction_data: &[u8]
         market_bump
     )])?;
 
-    // Create the market's base and quote associated token accounts.
-    create_token_accounts::create_atas(&ctx)?;
+    // Create the market's base and quote mint associated token accounts with the non-idempotent
+    // Create instruction to ensure that passing duplicate mint accounts fails.
+    pinocchio_associated_token_account::instructions::Create {
+        funding_account: ctx.user,                  // WRITE
+        account: ctx.base_market_ata,               // WRITE
+        wallet: ctx.market_account.info,            // READ
+        mint: ctx.base_mint,                        // READ
+        system_program: ctx.system_program,         // READ
+        token_program: ctx.base_token_program.info, // READ
+    }
+    .invoke()?;
+
+    pinocchio_associated_token_account::instructions::Create {
+        funding_account: ctx.user,                   // WRITE
+        account: ctx.quote_market_ata,               // WRITE
+        wallet: ctx.market_account.info,             // READ
+        mint: ctx.quote_mint,                        // READ
+        system_program: ctx.system_program,          // READ
+        token_program: ctx.quote_token_program.info, // READ
+    }
+    .invoke()?;
 
     initialize_market_account_data(
-        // Safety: Single mutable borrow of the market account data for the init call.
+        // Safety: Scoped mutable borrow of the market account data to initialize it.
         unsafe { ctx.market_account.info.borrow_mut_data_unchecked() },
         ctx.base_mint.key(),
         ctx.quote_mint.key(),

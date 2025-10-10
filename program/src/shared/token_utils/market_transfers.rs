@@ -1,4 +1,3 @@
-use dropset_interface::state::market::MarketRef;
 use pinocchio::{program_error::ProgramError, ProgramResult};
 
 use crate::{context::deposit_withdraw_context::DepositWithdrawContext, market_signer};
@@ -8,13 +7,24 @@ use crate::{context::deposit_withdraw_context::DepositWithdrawContext, market_si
 ///
 /// # Safety
 ///
-/// Caller guarantees the market token account is not currently borrowed.
-pub fn deposit_to_market(ctx: &DepositWithdrawContext, amount: u64) -> Result<u64, ProgramError> {
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` User token account (source)
+///   1. `[WRITE]` Market token account (destination)
+///   2. `[READ]` User account (authority)
+///   3. `[READ]` Mint account
+pub unsafe fn deposit_to_market(
+    ctx: &DepositWithdrawContext,
+    amount: u64,
+) -> Result<u64, ProgramError> {
     if ctx.token_program.is_spl_token {
         pinocchio_token::instructions::Transfer {
-            from: ctx.user_ata.info,
-            to: ctx.market_ata.info,
-            authority: ctx.user,
+            from: ctx.user_ata.info, // WRITE
+            to: ctx.market_ata.info, // WRITE
+            authority: ctx.user,     // READ
             amount,
         }
         .invoke()?;
@@ -22,23 +32,24 @@ pub fn deposit_to_market(ctx: &DepositWithdrawContext, amount: u64) -> Result<u6
         // `spl_token` always transfers the exact amount passed in.
         Ok(amount)
     } else {
-        let decimals = ctx.mint.get_mint_decimals()?;
+        // Safety: Scoped immutable borrow to read the mint account's mint decimals.
+        let decimals = unsafe { ctx.mint.get_mint_decimals() }?;
 
-        // Safety: Single, scoped borrow of the market token account data to get its balance.
+        // Safety: Scoped immutable borrow of the market token account data to get its balance.
         let balance_before = unsafe { ctx.market_ata.get_balance() }?;
 
         pinocchio_token_2022::instructions::TransferChecked {
-            from: ctx.user_ata.info,
-            to: ctx.market_ata.info,
-            mint: ctx.mint.info,
-            authority: ctx.user,
+            from: ctx.user_ata.info, // WRITE
+            to: ctx.market_ata.info, // WRITE
+            mint: ctx.mint.info,     // READ
+            authority: ctx.user,     // READ
             decimals,
             amount,
             token_program: ctx.token_program.info.key(),
         }
         .invoke()?;
 
-        // Safety: Single, scoped borrow of the market token account data to get its balance.
+        // Safety: Scoped immutable borrow of the market token account data to get its balance.
         let balance_after = unsafe { ctx.market_ata.get_balance() }?;
 
         // `spl_token_2022` amount deposited must be checked due to transfer hooks, fees, and other
@@ -55,10 +66,18 @@ pub fn deposit_to_market(ctx: &DepositWithdrawContext, amount: u64) -> Result<u6
 ///
 /// # Safety
 ///
-/// Caller guarantees the market account is not currently borrowed.
-pub fn withdraw_from_market(ctx: &DepositWithdrawContext, amount: u64) -> ProgramResult {
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` User token account (destination)
+///   1. `[WRITE]` Market token account (source)
+///   2. `[READ]`  Market account (authority)
+///   3. `[READ]`  Mint account
+pub unsafe fn withdraw_from_market(ctx: &DepositWithdrawContext, amount: u64) -> ProgramResult {
     let (base_mint, quote_mint, market_bump) = {
-        // Safety: Scoped immutable borrow to copy the signer seeds necessary.
+        // Safety: Scoped immutable borrow of the market account.
         let market = unsafe { ctx.market_account.load_unchecked() };
         (
             market.header.base_mint,
@@ -69,21 +88,24 @@ pub fn withdraw_from_market(ctx: &DepositWithdrawContext, amount: u64) -> Progra
 
     if ctx.token_program.is_spl_token {
         pinocchio_token::instructions::Transfer {
-            from: ctx.market_ata.info,
-            to: ctx.user_ata.info,
-            authority: ctx.market_account.info(),
+            from: ctx.market_ata.info,            // WRITE
+            to: ctx.user_ata.info,                // WRITE
+            authority: ctx.market_account.info(), // READ
             amount,
         }
         .invoke_signed(&[market_signer!(base_mint, quote_mint, market_bump)])
     } else {
-        let decimals = ctx.mint.get_mint_decimals()?;
-        pinocchio_token::instructions::TransferChecked {
-            from: ctx.market_ata.info,
-            to: ctx.user_ata.info,
-            authority: ctx.market_account.info(),
+        // Safety: Scoped immutable borrow of mint account data to get the mint decimals.
+        let decimals = unsafe { ctx.mint.get_mint_decimals() }?;
+
+        pinocchio_token_2022::instructions::TransferChecked {
+            from: ctx.market_ata.info,            // WRITE
+            to: ctx.user_ata.info,                // WRITE
+            mint: ctx.mint.info,                  // READ
+            authority: ctx.market_account.info(), // READ
             amount,
-            mint: ctx.mint.info,
             decimals,
+            token_program: ctx.token_program.info.key(),
         }
         .invoke_signed(&[market_signer!(base_mint, quote_mint, market_bump)])
     }

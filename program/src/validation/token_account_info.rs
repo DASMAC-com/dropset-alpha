@@ -16,21 +16,29 @@ pub struct TokenAccountInfo<'a> {
 impl<'a> TokenAccountInfo<'a> {
     /// # Safety
     ///
-    /// Caller guarantees the token account info isn't being actively borrowed.
+    /// Caller guarantees:
+    /// - WRITE accounts are not currently borrowed in *any* capacity.
+    /// - READ accounts are not currently mutably borrowed.
+    ///
+    /// ### Accounts
+    ///   0. `[READ]` Token account
     #[inline(always)]
     pub unsafe fn new(
-        info: &'a AccountInfo,
+        token_account: &'a AccountInfo,
         expected_mint: &Pubkey,
         expected_owner: &Pubkey,
     ) -> Result<TokenAccountInfo<'a>, ProgramError> {
         // NOTE: This check is most likely unnecessary since the token program checks this and fails
         // transfers if the check fails.
-        if !owned_by(info, &pinocchio_token::ID) && !owned_by(info, &pinocchio_token_2022::ID) {
+        if !owned_by(token_account, &pinocchio_token::ID)
+            && !owned_by(token_account, &pinocchio_token_2022::ID)
+        {
             return Err(DropsetError::OwnerNotTokenProgram.into());
         }
 
-        // Safety: Caller adheres to the safety contract.
-        let account_data = unsafe { info.borrow_data_unchecked() };
+        // Safety: Immutable borrow of token account data to check the expected mint/owner, dropped
+        // before the function returns.
+        let account_data = unsafe { token_account.borrow_data_unchecked() };
 
         // Note the load below also checks that the account has been initialized.
         // Safety: Mint info account owner has been verified, so the account data is valid.
@@ -43,15 +51,21 @@ impl<'a> TokenAccountInfo<'a> {
             return Err(DropsetError::IncorrectTokenAccountOwner.into());
         }
 
-        Ok(Self { info })
+        Ok(Self {
+            info: token_account,
+        })
     }
 
     /// # Safety
     ///
-    /// Caller guarantees the token account info isn't being actively borrowed.
+    /// Caller guarantees:
+    /// - WRITE accounts are not currently borrowed in *any* capacity.
+    /// - READ accounts are not currently mutably borrowed.
+    ///
+    /// ### Accounts
+    ///   0. `[READ]` Token account
     #[inline(always)]
     pub unsafe fn get_balance(&self) -> Result<u64, ProgramError> {
-        // Safety: Caller adheres to the safety contract.
         let data = unsafe { self.info.borrow_data_unchecked() };
 
         // Safety: Account is verified as initialized and owned by one of the spl token programs

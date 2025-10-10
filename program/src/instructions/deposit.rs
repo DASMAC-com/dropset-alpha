@@ -13,13 +13,33 @@ use crate::{
     },
 };
 
-pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    // Safety:
-    // - No account data is currently being borrowed.
-    // - Each borrow of account data in this function is properly scoped and non-overlapping.
-    let ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
+/// User deposits tokens and updates or registers their seat.
+///
+/// 1) User provided a sector index hint: update an existing seat.
+///   - Try to find the seat with the user's sector index hint.
+///   - If invalid return early, otherwise update the seat with the amount deposited.
+///
+/// 2) The user didn't provide a sector index hint: register a new seat.
+///   - Check if the account needs extra storage and resize it if so.
+///   - Then register the user's new seat at the proper index with the amount deposited data.
+///   - If the user already exists, return an error instead of inserting.
+///
+/// # Safety
+///
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` Market account
+///   1. `[WRITE]` User token account (source)
+///   2. `[WRITE]` Market token account (destination)
+///   3. `[READ]` User account (authority)
+///   4. `[READ]` Mint account
+pub unsafe fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
+    let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
     let args = AmountInstructionData::load(instruction_data)?;
-    let amount_deposited = deposit_to_market(&ctx, args.amount())?;
+    let amount_deposited = unsafe { deposit_to_market(&ctx, args.amount()) }?;
 
     if amount_deposited == 0 {
         return Err(DropsetError::AmountCannotBeZero.into());
@@ -27,17 +47,10 @@ pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pro
 
     let hint = args.sector_index_hint();
 
-    // Two possibilities:
-    // 1) User provided a sector index hint: update an existing seat.
-    //   - Try to find the saet with the user's sector index hint.
-    //   - If invalid return early, otherwise update the seat with the amount deposited.
-    //
-    // 2) The user didn't provide a sector index hint: register a new seat.
-    //   - Check if the account needs extra storage and resize it if so.
-    //   - Then register the user's new seat at the proper index with the amount deposited data.
-    //   - If the user already exists, return an error instead of inserting.
     if let Some(index) = hint {
         // 1) Update an existing seat.
+
+        // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
         Node::check_in_bounds(market.sectors, index)?;
         // Safety: The index hint was just verified as in-bounds.
@@ -68,15 +81,19 @@ pub fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pro
         }
     } else {
         // 2) Register a new seat.
+
+        // Safety: Scoped immutable borrow of the market account, checks the number of free sectors.
         let needs_resize = unsafe { ctx.market_account.load_unchecked() }
             .header
             .num_free_sectors()
             == 0;
 
         if needs_resize {
+            // Safety: Scoped mutable borrow to resize the market account and add a new sector/node.
             unsafe { ctx.market_account.resize(ctx.user, 1) }?;
         }
 
+        // Safety: Scoped mutable borrow of market account data to insert the new seat.jj
         let mut market = unsafe { ctx.market_account.load_unchecked_mut() };
 
         let seat = if ctx.mint.is_base_mint {

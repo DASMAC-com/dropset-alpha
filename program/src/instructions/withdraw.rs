@@ -13,7 +13,18 @@ use crate::{
     },
 };
 
-pub fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
+/// # Safety
+///
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` User token account (destination)
+///   1. `[WRITE]` Market token account (source)
+///   2. `[WRITE]` Market account
+///   3. `[READ]`  Mint account
+pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let args = AmountInstructionData::load(instruction_data)?;
 
     // The amount withdrawn is always just the input amount.
@@ -22,16 +33,15 @@ pub fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> Pr
         return Err(DropsetError::AmountCannotBeZero.into());
     }
 
-    // Safety:
-    // - No account data is currently being borrowed.
-    // - Each borrow of account data in this function is properly scoped and non-overlapping.
-    let ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
-    withdraw_from_market(&ctx, args.amount())?;
+    // Safety: Scoped immutable borrow of market, user token, and market token accounts to validate.
+    let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
+    unsafe { withdraw_from_market(&ctx, args.amount()) }?;
 
     let hint = args
         .sector_index_hint()
         .ok_or(DropsetError::MissingIndexHint)?;
 
+    // Safety: Scoped mutable borrow of market account data to update the user's seat.
     let market = unsafe { ctx.market_account.load_unchecked_mut() };
 
     // User has provided a sector index hint; find the seat with it or fail and return early.

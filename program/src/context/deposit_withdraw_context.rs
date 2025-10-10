@@ -19,7 +19,14 @@ pub struct DepositWithdrawContext<'a> {
 impl<'a> DepositWithdrawContext<'a> {
     /// # Safety
     ///
-    /// Caller guarantees the market account info's data isn't actively being borrowed.
+    /// Caller guarantees:
+    /// - WRITE accounts are not currently borrowed in *any* capacity.
+    /// - READ accounts are not currently mutably borrowed.
+    ///
+    /// ### Accounts
+    ///   0. `[READ]` Market account
+    ///   1. `[READ]` User token account
+    ///   2. `[READ]` Market token account
     pub unsafe fn load(
         accounts: &'a [AccountInfo],
     ) -> Result<DepositWithdrawContext<'a>, ProgramError> {
@@ -27,16 +34,22 @@ impl<'a> DepositWithdrawContext<'a> {
             return Err(DropsetError::NotEnoughAccountKeys.into());
         };
 
-        // Safety: Caller guarantees the market account info's data isn't being borrowed.
+        // Safety: Scoped borrow of market account data.
         let (market_account, mint) = unsafe {
             let market_account = MarketAccountInfo::new(market_account)?;
-            let mint = MintInfo::new(mint, &market_account)?;
+            let market = market_account.load_unchecked();
+            let mint = MintInfo::new(mint, market)?;
             (market_account, mint)
         };
 
-        let user_ata = TokenAccountInfo::new(user_ata, mint.info.key(), user.key())?;
-        let market_ata =
-            TokenAccountInfo::new(market_ata, mint.info.key(), market_account.info().key())?;
+        // Safety: Scoped borrows of the user token account and market token account.
+        let (user_ata, market_ata) = unsafe {
+            let user_ata = TokenAccountInfo::new(user_ata, mint.info.key(), user.key())?;
+            let market_ata =
+                TokenAccountInfo::new(market_ata, mint.info.key(), market_account.info().key())?;
+            (user_ata, market_ata)
+        };
+
         let token_program = TokenProgramInfo::new(token_program)?;
 
         Ok(Self {

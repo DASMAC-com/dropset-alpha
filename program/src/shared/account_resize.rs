@@ -13,8 +13,15 @@ use pinocchio::{
 /// - If the lamport diff is zero, the transfer CPI isn't invoked.
 /// - Otherwise, the `payer` transfers the necessary lamports.
 ///
-/// # Safety:
-/// Caller must guarantee there are no active borrows of `account`'s account data.
+/// # Safety
+///
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///   0. `[WRITE]` Payer
+///   1. `[WRITE]` Account to be resized
 pub unsafe fn fund_then_resize_unchecked(
     payer: &AccountInfo,
     account: &AccountInfo,
@@ -31,11 +38,12 @@ pub unsafe fn fund_then_resize_unchecked(
     }
 
     pinocchio_system::instructions::Transfer {
-        from: payer,
-        to: account,
+        from: payer, // WRITE
+        to: account, // WRITE
         lamports: lamports_diff,
     }
     .invoke()?;
 
+    // Safety: Scoped mutable borrow of the account data.
     unsafe { account.resize_unchecked(new_size) }
 }
