@@ -28,7 +28,6 @@ use crate::{
 pub fn process_close(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let mut ctx = unsafe { CloseContext::load(accounts) }?;
 
-    // Safety: All bit patterns are valid.
     let args = CloseInstructionData::load(instruction_data)?;
     let hint = args.sector_index_hint();
 
