@@ -1,5 +1,5 @@
 use crate::{
-    error::{DropsetError, DropsetResult},
+    error::DropsetError,
     state::{
         free_stack::Stack,
         market_header::MarketHeader,
@@ -139,7 +139,7 @@ impl<'a> LinkedList<'a> {
     /// # Safety
     ///
     /// Caller guarantees `index` is in-bounds.
-    pub unsafe fn remove_at(&mut self, index: SectorIndex) -> DropsetResult {
+    pub unsafe fn remove_at(&mut self, index: SectorIndex) {
         let (prev_index, next_index) = {
             // Safety: Caller guarantees `index` is in-bounds.
             let node = unsafe { Node::from_sector_index_mut(self.sectors, index) };
@@ -166,8 +166,6 @@ impl<'a> LinkedList<'a> {
 
         let mut free_stack = Stack::new_from_parts(self.header, self.sectors);
         free_stack.push_free_node(index);
-
-        Ok(())
     }
 
     pub fn iter(&self) -> LinkedListIter<'_> {
