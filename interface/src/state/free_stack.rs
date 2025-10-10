@@ -60,7 +60,6 @@ impl<'a> Stack<'a> {
     pub unsafe fn push_free_node(&mut self, index: SectorIndex) {
         let curr_top = self.top();
 
-        // Safety: caller guarantees the safety contract for this method.
         let node = unsafe { Node::from_sector_index_mut(self.sectors, index) };
         node.zero_out_payload();
 

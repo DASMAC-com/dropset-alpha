@@ -1,4 +1,3 @@
-use crate::validation::market_account_info::MarketAccountInfo;
 use dropset_interface::{error::DropsetError, state::market::MarketRef};
 use pinocchio::{account_info::AccountInfo, program_error::ProgramError, pubkey::pubkey_eq};
 use pinocchio_token_interface::state::{load_unchecked as pinocchio_load_unchecked, mint::Mint};
@@ -30,32 +29,18 @@ impl<'a> MintInfo<'a> {
 
     /// Verifies the `base` and `quote` account info passed in is valid according to the pubkeys
     /// stored in the market header.
-    ///
-    /// # Safety
-    ///
-    /// Caller guarantees:
-    /// - WRITE accounts are not currently borrowed in *any* capacity.
-    /// - READ accounts are not currently mutably borrowed.
-    ///
-    /// ### Accounts
-    ///   0. `[READ]` Market account
     #[inline(always)]
-    pub unsafe fn new_base_and_quote(
+    pub fn new_base_and_quote(
         base: &'a AccountInfo,
         quote: &'a AccountInfo,
-        market_account: &MarketAccountInfo,
+        market: MarketRef,
     ) -> Result<(MintInfo<'a>, MintInfo<'a>), DropsetError> {
-        // Safety: Scoped borrow of market account data to compare base and quote mint pubkeys.
-        let valid_mint_accounts = {
-            let market = unsafe { market_account.load_unchecked() };
-            // The two mints will never be invalid since they're checked prior to initialization and
-            // never updated, so the only thing that's necessary to check is that the account info
-            // pubkeys match the ones in the header.
-            pubkey_eq(base.key(), &market.header.base_mint)
-                && pubkey_eq(quote.key(), &market.header.quote_mint)
-        };
-
-        if !valid_mint_accounts {
+        // The two mints in the header will never be invalid since they're checked prior to
+        // initialization and never updated, so the only thing that's necessary to check is that the
+        // account info pubkeys match the ones in the header.
+        if !pubkey_eq(base.key(), &market.header.base_mint)
+            || !pubkey_eq(quote.key(), &market.header.quote_mint)
+        {
             return Err(DropsetError::InvalidMintAccount);
         }
 
