@@ -1,6 +1,9 @@
 use core::mem::MaybeUninit;
 
-use crate::state::transmutable::Transmutable;
+use crate::{
+    error::DropsetError,
+    state::{transmutable::Transmutable, U16_SIZE, U32_SIZE, U64_SIZE},
+};
 
 pub const UNINIT_BYTE: MaybeUninit<u8> = MaybeUninit::uninit();
 
@@ -89,5 +92,32 @@ pub fn write_bytes(dst: &mut [MaybeUninit<u8>], src: &[u8]) {
     );
     for (d, s) in dst.iter_mut().zip(src.iter()) {
         d.write(*s);
+    }
+}
+
+pub fn unpack_u16(instruction_data: &[u8]) -> Result<u16, DropsetError> {
+    if instruction_data.len() >= U16_SIZE {
+        // Safety: The instruction data is at least U16_SIZE bytes.
+        Ok(unsafe { u16::from_le_bytes(*(instruction_data.as_ptr() as *const [u8; U16_SIZE])) })
+    } else {
+        Err(DropsetError::InvalidInstructionData)
+    }
+}
+
+pub fn unpack_u32(instruction_data: &[u8]) -> Result<u32, DropsetError> {
+    if instruction_data.len() >= U32_SIZE {
+        // Safety: The instruction data is at least U32_SIZE bytes.
+        Ok(unsafe { u32::from_le_bytes(*(instruction_data.as_ptr() as *const [u8; U32_SIZE])) })
+    } else {
+        Err(DropsetError::InvalidInstructionData)
+    }
+}
+
+pub fn unpack_u64(instruction_data: &[u8]) -> Result<u64, DropsetError> {
+    if instruction_data.len() >= U64_SIZE {
+        // Safety: The instruction data is at least U64_SIZE bytes.
+        Ok(unsafe { u64::from_le_bytes(*(instruction_data.as_ptr() as *const [u8; U64_SIZE])) })
+    } else {
+        Err(DropsetError::InvalidInstructionData)
     }
 }

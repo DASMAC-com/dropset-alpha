@@ -1,6 +1,7 @@
 use dropset_interface::{
     error::DropsetError,
     instructions::shared::num_sectors::NumSectorsInstructionData,
+    pack::unpack_u16,
     state::{market_header::MarketHeader, sector::SECTOR_SIZE, transmutable::Transmutable},
 };
 use pinocchio::{
@@ -17,25 +18,13 @@ use crate::{
 
 /// # Safety
 ///
-/// Caller guarantees:
-/// - WRITE accounts are not currently borrowed in *any* capacity.
-/// - READ accounts are not currently mutably borrowed.
-///
-/// ### Accounts
-///   0. `[WRITE]` User account
-///   1. `[WRITE]` Market account
-///   2. `[WRITE]` Market base mint token account
-///   3. `[WRITE]` Market quote mint token account
-///   4. `[READ]` Base mint
-///   5. `[READ]` Quote mint
-///   6. `[READ]` System program
-///   7. `[READ]` Base token program
-///   8. `[READ]` Quote token program
+/// Caller guarantees the safety contract detailed in
+/// [`dropset_interface::instructions::register_market::RegisterMarket`]
 pub unsafe fn process_register_market(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let num_sectors = NumSectorsInstructionData::load(instruction_data)?.num_sectors();
+    let num_sectors = unpack_u16(instruction_data)?;
     let ctx = RegisterMarketContext::load(accounts)?;
 
     // It's not necessary to check the returned PDA here because `CreateAccount` will fail if the

@@ -1,6 +1,6 @@
 use crate::{
-    instructions::{shared::num_sectors::NumSectorsInstructionData, InstructionTag},
-    pack::{write_bytes, AsSlice, UNINIT_BYTE},
+    instructions::InstructionTag,
+    pack::{write_bytes, UNINIT_BYTE},
 };
 use pinocchio::{
     account_info::AccountInfo,
@@ -8,10 +8,30 @@ use pinocchio::{
     ProgramResult,
 };
 
-pub struct RegisterMarket<'a, 'b> {
-    /// The user/payer registering the market.
+/// Registers a program-owned market account derived from the base mint and quote mint pubkeys.
+///
+/// Allocates the passed in number of sectors * SECTOR_SIZE bytes as extra initial account space.
+///
+/// # Safe Invocation
+///
+/// Caller guarantees:
+/// - WRITE accounts are not currently borrowed in *any* capacity.
+/// - READ accounts are not currently mutably borrowed.
+///
+/// ### Accounts
+///  0. `[WRITE]` User account
+///  1. `[WRITE]` Market account
+///  2. `[READ]` Base mint
+///  3. `[READ]` Quote mint
+///  4. `[WRITE]` Base market associated token account
+///  5. `[WRITE]` Quote market associated token account
+///  6. `[READ]` Base token program
+///  7. `[READ]` Quote token program
+///  8. `[READ]` System program
+pub struct RegisterMarket<'a> {
+    /// The user registering the market.
     pub user: &'a AccountInfo,
-    /// The market account, a PDA derived from the base mint + quote mint as seeds.
+    /// The market account PDA.
     pub market_account: &'a AccountInfo,
     /// The base mint account.
     pub base_mint: &'a AccountInfo,
@@ -28,24 +48,10 @@ pub struct RegisterMarket<'a, 'b> {
     /// The system program.
     pub system_program: &'a AccountInfo,
     /// The number of sectors to create upon market account initialization.
-    pub num_sectors: &'b NumSectorsInstructionData,
+    pub num_sectors: u16,
 }
 
-/// Registers a program-owned market account derived from the base mint and quote mint pubkeys.
-///
-/// Allocates the passed in number of sectors * SECTOR_SIZE bytes as extra initial account space.
-///
-///   0. `[WRITE, SIGNER]` User account
-///   1. `[WRITE]` Market account
-///   2. `[WRITE]` Market base mint token account
-///   3. `[WRITE]` Market quote mint token account
-///   4. `[READ]` Base mint
-///   5. `[READ]` Quote mint
-///   6. `[READ]` System program
-///   7. `[READ]` Token program
-impl RegisterMarket<'_, '_> {
-    pub const TAG: InstructionTag = InstructionTag::RegisterMarket;
-
+impl RegisterMarket<'_> {
     #[inline(always)]
     pub fn invoke(&self) -> ProgramResult {
         self.invoke_signed(&[])
@@ -93,7 +99,7 @@ impl RegisterMarket<'_, '_> {
     fn pack_instruction_data(&self) -> [u8; 3] {
         let mut tagged_data = [UNINIT_BYTE; 3];
         tagged_data[0].write(InstructionTag::RegisterMarket as u8);
-        write_bytes(&mut tagged_data[1..3], self.num_sectors.as_slice());
+        write_bytes(&mut tagged_data[1..3], &self.num_sectors.to_le_bytes());
         unsafe { *(tagged_data.as_ptr() as *const _) }
     }
 }
