@@ -1,17 +1,11 @@
-use core::mem::MaybeUninit;
-
-use pinocchio::{
-    account_info::AccountInfo,
-    cpi::invoke_signed,
-    instruction::{AccountMeta, Instruction, Signer},
-    ProgramResult,
-};
-
 use crate::{
     instructions::{shared::num_sectors::NumSectorsInstructionData, InstructionTag},
-    pack::{AsSlice, Pack, UNINIT_BYTE},
-    pack_with_tag,
-    state::transmutable::Transmutable,
+    pack::{write_bytes, AsSlice, UNINIT_BYTE},
+};
+use pinocchio::{
+    account_info::AccountInfo,
+    instruction::{AccountMeta, Instruction, Signer},
+    ProgramResult,
 };
 
 pub struct RegisterMarket<'a, 'b> {
@@ -33,8 +27,8 @@ pub struct RegisterMarket<'a, 'b> {
     pub quote_token_program: &'a AccountInfo,
     /// The system program.
     pub system_program: &'a AccountInfo,
-    /// Instruction data.
-    pub instruction_data: &'b NumSectorsInstructionData,
+    /// The number of sectors to create upon market account initialization.
+    pub num_sectors: &'b NumSectorsInstructionData,
 }
 
 /// Registers a program-owned market account derived from the base mint and quote mint pubkeys.
@@ -49,21 +43,8 @@ pub struct RegisterMarket<'a, 'b> {
 ///   5. `[READ]` Quote mint
 ///   6. `[READ]` System program
 ///   7. `[READ]` Token program
-impl<'a> RegisterMarket<'a, '_> {
-    #[inline(always)]
-    pub fn create_account_metas(&self) -> [AccountMeta; 9] {
-        [
-            AccountMeta::writable_signer(self.user.key()),
-            AccountMeta::writable(self.market_account.key()),
-            AccountMeta::writable(self.base_market_ata.key()),
-            AccountMeta::writable(self.quote_market_ata.key()),
-            AccountMeta::readonly(self.base_mint.key()),
-            AccountMeta::readonly(self.quote_mint.key()),
-            AccountMeta::readonly(self.system_program.key()),
-            AccountMeta::readonly(self.base_token_program.key()),
-            AccountMeta::readonly(self.quote_token_program.key()),
-        ]
-    }
+impl RegisterMarket<'_, '_> {
+    pub const TAG: InstructionTag = InstructionTag::RegisterMarket;
 
     #[inline(always)]
     pub fn invoke(&self) -> ProgramResult {
@@ -72,11 +53,11 @@ impl<'a> RegisterMarket<'a, '_> {
 
     #[inline(always)]
     pub fn invoke_signed(&self, signers_seeds: &[Signer]) -> ProgramResult {
-        invoke_signed(
+        pinocchio::cpi::invoke_signed(
             &Instruction {
                 program_id: &crate::program::ID,
                 accounts: &self.create_account_metas(),
-                // data: &tagged_data,
+                data: &self.pack_instruction_data(),
             },
             &[
                 self.user,
@@ -91,5 +72,28 @@ impl<'a> RegisterMarket<'a, '_> {
             ],
             signers_seeds,
         )
+    }
+
+    #[inline(always)]
+    fn create_account_metas(&self) -> [AccountMeta; 9] {
+        [
+            AccountMeta::writable_signer(self.user.key()),
+            AccountMeta::writable(self.market_account.key()),
+            AccountMeta::writable(self.base_market_ata.key()),
+            AccountMeta::writable(self.quote_market_ata.key()),
+            AccountMeta::readonly(self.base_mint.key()),
+            AccountMeta::readonly(self.quote_mint.key()),
+            AccountMeta::readonly(self.system_program.key()),
+            AccountMeta::readonly(self.base_token_program.key()),
+            AccountMeta::readonly(self.quote_token_program.key()),
+        ]
+    }
+
+    #[inline(always)]
+    fn pack_instruction_data(&self) -> [u8; 3] {
+        let mut tagged_data = [UNINIT_BYTE; 3];
+        tagged_data[0].write(InstructionTag::RegisterMarket as u8);
+        write_bytes(&mut tagged_data[1..3], self.num_sectors.as_slice());
+        unsafe { *(tagged_data.as_ptr() as *const _) }
     }
 }

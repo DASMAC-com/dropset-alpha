@@ -1,6 +1,6 @@
 use core::mem::MaybeUninit;
 
-use crate::state::transmutable::Transmutable;
+use crate::{instructions::InstructionTag, state::transmutable::Transmutable};
 
 pub const UNINIT_BYTE: MaybeUninit<u8> = MaybeUninit::uninit();
 
@@ -31,6 +31,7 @@ pub unsafe trait Pack<const LEN: usize>: Sized {
 /// - No invalid bit patterns for `Self`
 pub unsafe trait AsSlice<const LEN: usize>: Sized {
     /// Returns `Self` as a referenced slice.
+    #[inline(always)]
     fn as_slice(&self) -> &[u8; LEN] {
         unsafe { &*(self as *const Self as *const [u8; LEN]) }
     }

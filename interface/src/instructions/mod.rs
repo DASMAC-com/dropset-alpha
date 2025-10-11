@@ -10,7 +10,7 @@ pub mod shared;
 pub mod withdraw;
 
 #[repr(u8)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
 pub enum InstructionTag {
     RegisterMarket,
