@@ -1,6 +1,5 @@
 use dropset_interface::{
     error::DropsetError,
-    instructions::shared::num_sectors::NumSectorsInstructionData,
     pack::unpack_u16,
     state::{market_header::MarketHeader, sector::SECTOR_SIZE, transmutable::Transmutable},
 };
@@ -18,8 +17,7 @@ use crate::{
 
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::register_market::RegisterMarket`]
+/// Caller guarantees the safety contract detailed in [`dropset_interface::instructions::register_market::RegisterMarket`]
 pub unsafe fn process_register_market(
     accounts: &[AccountInfo],
     instruction_data: &[u8],

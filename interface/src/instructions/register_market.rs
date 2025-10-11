@@ -97,9 +97,9 @@ impl RegisterMarket<'_> {
 
     #[inline(always)]
     fn pack_instruction_data(&self) -> [u8; 3] {
-        let mut tagged_data = [UNINIT_BYTE; 3];
-        tagged_data[0].write(InstructionTag::RegisterMarket as u8);
-        write_bytes(&mut tagged_data[1..3], &self.num_sectors.to_le_bytes());
-        unsafe { *(tagged_data.as_ptr() as *const _) }
+        let mut data = [UNINIT_BYTE; 3];
+        data[0].write(InstructionTag::RegisterMarket as u8);
+        write_bytes(&mut data[1..3], &self.num_sectors.to_le_bytes());
+        unsafe { *(data.as_ptr() as *const _) }
     }
 }

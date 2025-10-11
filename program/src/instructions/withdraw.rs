@@ -1,7 +1,5 @@
 use dropset_interface::{
-    error::DropsetError,
-    instructions::shared::amount::AmountInstructionData,
-    state::{node::Node, transmutable::Transmutable},
+    error::DropsetError, pack::unpack_amount_and_sector_index, state::node::Node,
 };
 use pinocchio::{account_info::AccountInfo, ProgramResult};
 
@@ -9,7 +7,7 @@ use crate::{
     context::deposit_withdraw_context::DepositWithdrawContext,
     shared::{
         market_operations::find_mut_seat_with_hint,
-        token_utils::market_transfers::withdraw_from_market,
+        token_utils::market_transfers::withdraw_non_zero_from_market,
     },
 };
 
@@ -25,21 +23,11 @@ use crate::{
 ///   2. `[WRITE]` Market account
 ///   3. `[READ]`  Mint account
 pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    let args = AmountInstructionData::load(instruction_data)?;
-
-    // The amount withdrawn is always just the input amount.
-    let amount_withdrawn = args.amount();
-    if amount_withdrawn == 0 {
-        return Err(DropsetError::AmountCannotBeZero.into());
-    }
+    let (amount, hint) = unpack_amount_and_sector_index(instruction_data)?;
 
     // Safety: Scoped immutable borrow of market, user token, and market token accounts to validate.
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
-    unsafe { withdraw_from_market(&ctx, args.amount()) }?;
-
-    let hint = args
-        .sector_index_hint()
-        .ok_or(DropsetError::MissingIndexHint)?;
+    unsafe { withdraw_non_zero_from_market(&ctx, amount) }?;
 
     // Safety: Scoped mutable borrow of market account data to update the user's seat.
     let market = unsafe { ctx.market_account.load_unchecked_mut() };
@@ -54,23 +42,23 @@ pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]
     if ctx.mint.is_base_mint {
         seat.set_base_available(
             seat.base_available()
-                .checked_sub(amount_withdrawn)
+                .checked_sub(amount)
                 .ok_or(DropsetError::InsufficientUserBalance)?,
         );
         seat.set_base_deposited(
             seat.base_deposited()
-                .checked_sub(amount_withdrawn)
+                .checked_sub(amount)
                 .ok_or(DropsetError::InsufficientUserBalance)?,
         );
     } else {
         seat.set_quote_available(
             seat.quote_available()
-                .checked_sub(amount_withdrawn)
+                .checked_sub(amount)
                 .ok_or(DropsetError::InsufficientUserBalance)?,
         );
         seat.set_quote_deposited(
             seat.quote_deposited()
-                .checked_sub(amount_withdrawn)
+                .checked_sub(amount)
                 .ok_or(DropsetError::InsufficientUserBalance)?,
         );
     }
