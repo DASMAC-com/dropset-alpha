@@ -42,7 +42,8 @@ impl AmountInstructionData {
     }
 }
 
-impl Pack<12> for AmountInstructionData {
+// Safety: `pack_into_slice` packs `LEN` bytes.
+unsafe impl Pack<12> for AmountInstructionData {
     fn pack_into_slice(&self, dst: &mut [MaybeUninit<u8>; 12]) {
         write_bytes(&mut dst[0..8], &self.amount);
         write_bytes(&mut dst[8..12], &self.sector_index_hint);

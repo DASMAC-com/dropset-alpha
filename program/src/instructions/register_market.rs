@@ -1,6 +1,6 @@
 use dropset_interface::{
     error::DropsetError,
-    instructions::num_sectors::NumSectorsInstructionData,
+    instructions::shared::num_sectors::NumSectorsInstructionData,
     state::{market_header::MarketHeader, sector::SECTOR_SIZE, transmutable::Transmutable},
 };
 use pinocchio::{
@@ -29,7 +29,8 @@ use crate::{
 ///   4. `[READ]` Base mint
 ///   5. `[READ]` Quote mint
 ///   6. `[READ]` System program
-///   7. `[READ]` Token program
+///   7. `[READ]` Base token program
+///   8. `[READ]` Quote token program
 pub unsafe fn process_register_market(
     accounts: &[AccountInfo],
     instruction_data: &[u8],

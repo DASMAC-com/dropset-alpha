@@ -1,6 +1,6 @@
 use dropset_interface::{
     error::DropsetError,
-    instructions::amount::AmountInstructionData,
+    instructions::shared::amount::AmountInstructionData,
     state::{node::Node, transmutable::Transmutable},
 };
 use pinocchio::{account_info::AccountInfo, ProgramResult};

@@ -7,7 +7,7 @@ use crate::validation::{
 };
 
 #[derive(Clone)]
-pub struct CloseContext<'a> {
+pub struct CloseSeatContext<'a> {
     pub user: &'a AccountInfo,
     pub market_account: MarketAccountInfo<'a>,
     pub base_mint: MintInfo<'a>,
@@ -20,7 +20,7 @@ pub struct CloseContext<'a> {
     pub quote_token_program: TokenProgramInfo<'a>,
 }
 
-impl<'a> CloseContext<'a> {
+impl<'a> CloseSeatContext<'a> {
     /// # Safety
     ///
     /// Caller guarantees:
@@ -33,7 +33,7 @@ impl<'a> CloseContext<'a> {
     ///   2. `[READ]` User quote token account
     ///   3. `[READ]` Market base token account
     ///   4. `[READ]` Market quote token account
-    pub unsafe fn load(accounts: &'a [AccountInfo]) -> Result<CloseContext<'a>, ProgramError> {
+    pub unsafe fn load(accounts: &'a [AccountInfo]) -> Result<CloseSeatContext<'a>, ProgramError> {
         let [user, market_account, base_mint, quote_mint, user_base_ata, user_quote_ata, market_base_ata, market_quote_ata, base_token_program, quote_token_program] =
             accounts
         else {

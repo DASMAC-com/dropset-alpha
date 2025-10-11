@@ -98,12 +98,14 @@ const_assert_eq!(align_of::<MarketSeat>(), 1);
 // Safety: Const asserts ensure size_of::<MarketSeat>() == NODE_PAYLOAD_SIZE.
 unsafe impl NodePayload for MarketSeat {}
 
-impl Pack<NODE_PAYLOAD_SIZE> for MarketSeat {
+// Safety: `pack_into_slice` packs `LEN` (aka `NODE_PAYLOAD_SIZE`) bytes.
+unsafe impl Pack<NODE_PAYLOAD_SIZE> for MarketSeat {
     fn pack_into_slice(&self, dst: &mut [core::mem::MaybeUninit<u8>; NODE_PAYLOAD_SIZE]) {
         write_bytes(&mut dst[0..32], &self.user);
         write_bytes(&mut dst[32..40], &self.base_deposited);
         write_bytes(&mut dst[40..48], &self.quote_deposited);
         write_bytes(&mut dst[48..56], &self.base_available);
         write_bytes(&mut dst[56..64], &self.quote_available);
+        assert_eq!(dst.len(), NODE_PAYLOAD_SIZE);
     }
 }

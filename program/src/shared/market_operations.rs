@@ -1,6 +1,6 @@
 use dropset_interface::{
     error::DropsetError,
-    pack::Pack,
+    pack::AsSlice,
     state::{
         linked_list::LinkedList,
         market::{Market, MarketRef, MarketRefMut},
@@ -18,8 +18,7 @@ pub fn insert_market_seat(
     seat: MarketSeat,
 ) -> Result<SectorIndex, DropsetError> {
     let (prev_index, insert_before_index) = find_insert_before_index(list, &seat.user);
-    // Safety: MarketSeat adheres to all layout, alignment, and size constraints.
-    let seat_bytes = unsafe { seat.as_slice() };
+    let seat_bytes = seat.as_slice();
 
     // Return an error early if the user already exists in the seat list at the previous index.
     if !prev_index.is_nil() {

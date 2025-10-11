@@ -2,9 +2,12 @@ use pinocchio::program_error::ProgramError;
 
 use crate::error::DropsetError;
 
-pub mod amount;
-pub mod close;
-pub mod num_sectors;
+pub mod close_seat;
+pub mod deposit;
+pub mod flush_events;
+pub mod register_market;
+pub mod shared;
+pub mod withdraw;
 
 #[repr(u8)]
 #[derive(Clone, Debug, PartialEq)]

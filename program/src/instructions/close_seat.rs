@@ -1,11 +1,11 @@
 use dropset_interface::{
-    instructions::close::CloseInstructionData,
+    instructions::shared::close::CloseInstructionData,
     state::{node::Node, transmutable::Transmutable},
 };
 use pinocchio::{account_info::AccountInfo, ProgramResult};
 
 use crate::{
-    context::close_context::CloseContext, market_signer,
+    context::close_seat_context::CloseSeatContext, market_signer,
     shared::market_operations::find_seat_with_hint,
 };
 
@@ -25,8 +25,8 @@ use crate::{
 ///   4. `[WRITE]` User quote mint token account
 ///   5. `[READ]` Base mint
 ///   6. `[READ]` Quote mint
-pub fn process_close(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    let mut ctx = unsafe { CloseContext::load(accounts) }?;
+pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
+    let mut ctx = unsafe { CloseSeatContext::load(accounts) }?;
 
     let args = CloseInstructionData::load(instruction_data)?;
     let hint = args.sector_index_hint();

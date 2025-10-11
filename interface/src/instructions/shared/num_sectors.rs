@@ -24,7 +24,8 @@ impl NumSectorsInstructionData {
     }
 }
 
-impl Pack<2> for NumSectorsInstructionData {
+// Safety: `pack_into_slice` packs `LEN` bytes.
+unsafe impl Pack<2> for NumSectorsInstructionData {
     fn pack_into_slice(&self, dst: &mut [MaybeUninit<u8>; 2]) {
         write_bytes(&mut dst[0..2], &self.num_sectors);
     }

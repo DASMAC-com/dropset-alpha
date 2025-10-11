@@ -1,8 +1,13 @@
 use core::mem::MaybeUninit;
 
+use crate::state::transmutable::Transmutable;
+
 pub const UNINIT_BYTE: MaybeUninit<u8> = MaybeUninit::uninit();
 
-pub trait Pack<const LEN: usize>: Sized {
+/// # Safety
+///
+/// Implementor must guarantee `pack_into_slice` packs `LEN` bytes.
+pub unsafe trait Pack<const LEN: usize>: Sized {
     /// Pack into a buffer of size LEN without zero initializing the buffer, then return the buffer.
     fn pack(&self) -> [u8; LEN] {
         let mut dst = [UNINIT_BYTE; LEN];
@@ -12,22 +17,30 @@ pub trait Pack<const LEN: usize>: Sized {
         unsafe { *(dst.as_ptr() as *const [u8; LEN]) }
     }
 
-    /// Returns `Self` as a referenced slice.
-    ///
-    /// # Safety
-    /// Caller must ensure `Self` satisfies:
-    /// - `size_of::<Self>() == LEN`
-    /// - `#[repr(C)]` or `#[repr(transparent)]`
-    /// - No padding between fields
-    /// - All bit patterns are valid for `Self`
-    unsafe fn as_slice(&self) -> &[u8; LEN] {
-        unsafe { &*(self as *const Self as *const [u8; LEN]) }
-    }
-
     #[doc(hidden)]
     /// Pack into a destination slice of maybe uninitialized bytes of LEN length.
     fn pack_into_slice(&self, dst: &mut [MaybeUninit<u8>; LEN]);
 }
+
+/// # Safety
+///
+/// Implementor guarantees:
+/// - `size_of::<Self>() == LEN`
+/// - `#[repr(C)]` or `#[repr(transparent)]`
+/// - No padding between fields
+/// - No invalid bit patterns for `Self`
+pub unsafe trait AsSlice<const LEN: usize>: Sized {
+    /// Returns `Self` as a referenced slice.
+    fn as_slice(&self) -> &[u8; LEN] {
+        unsafe { &*(self as *const Self as *const [u8; LEN]) }
+    }
+}
+
+/// Safety: `Pack<LEN>` guarantees a length of `LEN`, and `Transmutable` guarantees a stable layout
+/// with no padding or invalid bit patterns, so it's safe to provide a blanket implementation of
+/// AsSlice for any type that implements both traits.
+/// The `LEN` in pack should always match the `Transmutable::LEN`.
+unsafe impl<T, const LEN: usize> AsSlice<LEN> for T where T: Pack<LEN> + Transmutable {}
 
 /// Writes bytes from a source slice into an uninitialized destination buffer.
 ///
@@ -76,4 +89,20 @@ pub fn write_bytes(dst: &mut [MaybeUninit<u8>], src: &[u8]) {
     for (d, s) in dst.iter_mut().zip(src.iter()) {
         d.write(*s);
     }
+}
+
+#[macro_export]
+macro_rules! pack_with_tag {
+    ($data:expr, $tag:expr, $len:expr) => {{
+        let mut tagged_instruction_data = [UNINIT_BYTE; $len + 1];
+        tagged_instruction_data[0].write($tag as u8);
+        let payload = unsafe {
+            &mut *tagged_instruction_data
+                .as_mut_ptr()
+                .add(1)
+                .cast::<[MaybeUninit<u8>; $len]>()
+        };
+        $data.pack_into_slice(payload);
+        unsafe { *(tagged_instruction_data.as_ptr() as *const [u8; $len + 1]) }
+    }};
 }

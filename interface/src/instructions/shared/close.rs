@@ -28,7 +28,8 @@ impl CloseInstructionData {
     }
 }
 
-impl Pack<8> for CloseInstructionData {
+// Safety: `pack_into_slice` packs `LEN` bytes.
+unsafe impl Pack<8> for CloseInstructionData {
     fn pack_into_slice(&self, dst: &mut [MaybeUninit<u8>; 8]) {
         write_bytes(&mut dst[0..8], &self.sector_index_hint);
     }
