@@ -18,7 +18,7 @@ use crate::{
 /// - READ accounts are not currently mutably borrowed.
 ///
 /// ### Accounts
-///   0. `[READ, SIGNER]` User (authority)
+///   0. `[READ, SIGNER]` User
 ///   1. `[WRITE]` Market account
 ///   2. `[WRITE]` User token account (source)
 ///   3. `[WRITE]` Market token account (destination)
@@ -36,7 +36,7 @@ pub struct Deposit<'a> {
     pub mint: &'a AccountInfo,
     /// The amount to deposit.
     pub amount: u64,
-    /// A hint as to which sector index the calling user is located in the sectors array.
+    /// A hint indicating which sector index the user's seat is at in the sectors array.
     /// If `NIL`, it's treated as no hint. This avoids the need for a custom COption type.
     pub sector_index_hint: SectorIndex,
 }

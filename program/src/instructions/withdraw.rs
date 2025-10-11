@@ -11,17 +11,11 @@ use crate::{
     },
 };
 
+/// User withdraws tokens and updates their seat.
+///
 /// # Safety
 ///
-/// Caller guarantees:
-/// - WRITE accounts are not currently borrowed in *any* capacity.
-/// - READ accounts are not currently mutably borrowed.
-///
-/// ### Accounts
-///   0. `[WRITE]` User token account (destination)
-///   1. `[WRITE]` Market token account (source)
-///   2. `[WRITE]` Market account
-///   3. `[READ]`  Mint account
+/// Caller guarantees the safety contract detailed in [`dropset_interface::instructions::withdraw::Withdraw`]
 pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let (amount, hint) = unpack_amount_and_sector_index(instruction_data)?;
 
@@ -32,7 +26,7 @@ pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]
     // Safety: Scoped mutable borrow of market account data to update the user's seat.
     let market = unsafe { ctx.market_account.load_unchecked_mut() };
 
-    // User has provided a sector index hint; find the seat with it or fail and return early.
+    // Find the seat with the index hint or fail and return early.
     Node::check_in_bounds(market.sectors, hint)?;
     // Safety: The hint was just verified as in-bounds.
     let seat = unsafe { find_mut_seat_with_hint(market, hint, ctx.user.key()) }?;
