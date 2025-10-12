@@ -1,9 +1,7 @@
 use dropset_interface::error::DropsetError;
 use pinocchio::account_info::AccountInfo;
 
-use crate::validation::{
-    token_program_info::TokenProgramInfo, uninitialized_account_info::UninitializedAccountInfo,
-};
+use crate::validation::uninitialized_account_info::UninitializedAccountInfo;
 
 #[derive(Clone)]
 pub struct RegisterMarketContext<'a> {
@@ -13,8 +11,8 @@ pub struct RegisterMarketContext<'a> {
     pub quote_mint: &'a AccountInfo,
     pub base_market_ata: &'a AccountInfo,
     pub quote_market_ata: &'a AccountInfo,
-    pub base_token_program: TokenProgramInfo<'a>,
-    pub quote_token_program: TokenProgramInfo<'a>,
+    pub base_token_program: &'a AccountInfo,
+    pub quote_token_program: &'a AccountInfo,
     pub system_program: &'a AccountInfo,
 }
 
@@ -31,12 +29,9 @@ impl<'a> RegisterMarketContext<'a> {
         // transaction succeeds. The two mint accounts are also guaranteed to be different, since
         // the non-idempotent ATA creation instruction would fail on the second invocation.
         // Thus there is no need to check ownership, address derivations, or account data here, only
-        // that the token programs provided are valid and that `market_account` is uninitialized.
+        // that the `market_account` is uninitialized.
+        // The token programs are also validated in the ATA `Create` instruction.
         let market_account = UninitializedAccountInfo::new(market_account)?;
-        // These checks are necessary since an antagonistic caller could substitute these with
-        // malicious programs with identical interfaces as the token programs.
-        let base_token_program = TokenProgramInfo::new(base_token_program)?;
-        let quote_token_program = TokenProgramInfo::new(quote_token_program)?;
 
         Ok(Self {
             user,

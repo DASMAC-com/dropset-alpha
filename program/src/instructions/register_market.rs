@@ -50,24 +50,24 @@ pub unsafe fn process_register_market(
     )])?;
 
     // Create the market's base and quote mint associated token accounts with the non-idempotent
-    // Create instruction to ensure that passing duplicate mint accounts fails.
+    // creation instruction to ensure that passing duplicate mint accounts fails.
     pinocchio_associated_token_account::instructions::Create {
-        funding_account: ctx.user,                  // WRITE
-        account: ctx.base_market_ata,               // WRITE
-        wallet: ctx.market_account.info,            // READ
-        mint: ctx.base_mint,                        // READ
-        system_program: ctx.system_program,         // READ
-        token_program: ctx.base_token_program.info, // READ
+        funding_account: ctx.user,             // WRITE
+        account: ctx.base_market_ata,          // WRITE
+        wallet: ctx.market_account.info,       // READ
+        mint: ctx.base_mint,                   // READ
+        system_program: ctx.system_program,    // READ
+        token_program: ctx.base_token_program, // READ
     }
     .invoke()?;
 
     pinocchio_associated_token_account::instructions::Create {
-        funding_account: ctx.user,                   // WRITE
-        account: ctx.quote_market_ata,               // WRITE
-        wallet: ctx.market_account.info,             // READ
-        mint: ctx.quote_mint,                        // READ
-        system_program: ctx.system_program,          // READ
-        token_program: ctx.quote_token_program.info, // READ
+        funding_account: ctx.user,              // WRITE
+        account: ctx.quote_market_ata,          // WRITE
+        wallet: ctx.market_account.info,        // READ
+        mint: ctx.quote_mint,                   // READ
+        system_program: ctx.system_program,     // READ
+        token_program: ctx.quote_token_program, // READ
     }
     .invoke()?;
 
