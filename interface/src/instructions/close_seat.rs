@@ -9,6 +9,7 @@ use crate::{
     pack::{write_bytes, UNINIT_BYTE},
     state::sector::SectorIndex,
 };
+
 /// Closes a market seat for a user by withdrawing all base and quote from their seat.
 ///
 /// # Caller guarantees
