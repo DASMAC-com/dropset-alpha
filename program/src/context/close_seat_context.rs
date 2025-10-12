@@ -20,9 +20,17 @@ pub struct CloseSeatContext<'a> {
 
 impl<'a> CloseSeatContext<'a> {
     pub unsafe fn load(accounts: &'a [AccountInfo]) -> Result<CloseSeatContext<'a>, ProgramError> {
-        let [user, market_account, base_mint, quote_mint, user_base_ata, user_quote_ata, market_base_ata, market_quote_ata] =
-            accounts
-        else {
+        #[rustfmt::skip]
+        let [
+            user,
+            market_account,
+            user_base_ata,
+            user_quote_ata,
+            market_base_ata,
+            market_quote_ata,
+            base_mint,
+            quote_mint,
+        ] = accounts else {
             return Err(DropsetError::NotEnoughAccountKeys.into());
         };
 

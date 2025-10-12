@@ -29,7 +29,14 @@ impl<'a> DepositWithdrawContext<'a> {
     pub unsafe fn load(
         accounts: &'a [AccountInfo],
     ) -> Result<DepositWithdrawContext<'a>, ProgramError> {
-        let [user, market_account, mint, user_ata, market_ata] = accounts else {
+        #[rustfmt::skip]
+        let [
+            user,
+            market_account,
+            user_ata,
+            market_ata,
+            mint,
+        ] = accounts else {
             return Err(DropsetError::NotEnoughAccountKeys.into());
         };
 

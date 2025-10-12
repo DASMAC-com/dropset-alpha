@@ -18,9 +18,18 @@ pub struct RegisterMarketContext<'a> {
 
 impl<'a> RegisterMarketContext<'a> {
     pub fn load(accounts: &'a [AccountInfo]) -> Result<RegisterMarketContext<'a>, DropsetError> {
-        let [user, market_account, base_mint, quote_mint, base_market_ata, quote_market_ata, base_token_program, quote_token_program, system_program] =
-            accounts
-        else {
+        #[rustfmt::skip]
+        let [
+            user,
+            market_account,
+            base_mint,
+            quote_mint,
+            base_market_ata,
+            quote_market_ata,
+            base_token_program,
+            quote_token_program,
+            system_program,
+        ] = accounts else {
             return Err(DropsetError::NotEnoughAccountKeys);
         };
 
