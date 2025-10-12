@@ -97,9 +97,14 @@ impl RegisterMarket<'_> {
 
     #[inline(always)]
     pub fn pack_instruction_data(&self) -> [u8; 3] {
+        // Instruction data layout:
+        //   - [0]: the instruction tag, 1 byte
+        //   - [1..3]: the u16 `num_sectors` as little-endian bytes, 2 bytes
         let mut data = [UNINIT_BYTE; 3];
+
         data[0].write(InstructionTag::RegisterMarket as u8);
         write_bytes(&mut data[1..3], &self.num_sectors.to_le_bytes());
+
         // Safety: All 3 bytes were written to.
         unsafe { *(data.as_ptr() as *const _) }
     }

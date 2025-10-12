@@ -78,10 +78,16 @@ impl Withdraw<'_> {
 
     #[inline(always)]
     pub fn pack_instruction_data(&self) -> [u8; 13] {
+        // Instruction data layout:
+        //   - [0]: the instruction tag, 1 byte
+        //   - [1..9]: the amount as u64 little-endian bytes, 8 bytes
+        //   - [9..13]: the u32 `sector_index_hint` as little-endian bytes, 4 bytes
         let mut data = [UNINIT_BYTE; 13];
+
         data[0].write(InstructionTag::Withdraw as u8);
         write_bytes(&mut data[1..9], &self.amount.to_le_bytes());
         write_bytes(&mut data[9..13], &self.sector_index_hint.0.to_le_bytes());
+
         // Safety: All 13 bytes were written to.
         unsafe { *(data.as_ptr() as *const _) }
     }

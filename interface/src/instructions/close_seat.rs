@@ -90,11 +90,16 @@ impl CloseSeat<'_> {
     }
 
     #[inline(always)]
-    pub fn pack_instruction_data(&self) -> [u8; 9] {
-        let mut data = [UNINIT_BYTE; 9];
+    pub fn pack_instruction_data(&self) -> [u8; 5] {
+        // Instruction data layout:
+        //   - [0]: the instruction tag, 1 byte
+        //   - [1..5]: the u32 `sector_index_hint` as little-endian bytes, 4 bytes
+        let mut data = [UNINIT_BYTE; 5];
+
         data[0].write(InstructionTag::CloseSeat as u8);
-        write_bytes(&mut data[1..9], &self.sector_index_hint.0.to_le_bytes());
-        // Safety: All 9 bytes were written to.
+        write_bytes(&mut data[1..5], &self.sector_index_hint.0.to_le_bytes());
+
+        // Safety: All 5 bytes were written to.
         unsafe { *(data.as_ptr() as *const _) }
     }
 }
