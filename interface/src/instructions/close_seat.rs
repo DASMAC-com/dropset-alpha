@@ -11,13 +11,13 @@ use crate::{
 };
 /// Closes a market seat for a user by withdrawing all base and quote from their seat.
 ///
-/// # Safety
+/// # Caller guarantees
 ///
-/// Caller guarantees:
+/// When invoking this instruction, caller must ensure that:
 /// - WRITE accounts are not currently borrowed in *any* capacity.
 /// - READ accounts are not currently mutably borrowed.
 ///
-/// ### Account
+/// ### Accounts
 ///   0. `[READ, SIGNER]` User
 ///   1. `[WRITE]` Market account
 ///   2. `[WRITE]` User base mint token account
@@ -32,13 +32,13 @@ pub struct CloseSeat<'a> {
     /// The market account PDA.
     pub market_account: &'a AccountInfo,
     /// The user's associated base mint token account.
-    pub user_base_ata: &'a AccountInfo,
+    pub base_user_ata: &'a AccountInfo,
     /// The user's associated quote mint token account.
-    pub user_quote_ata: &'a AccountInfo,
+    pub quote_user_ata: &'a AccountInfo,
     /// The market's associated base mint token account.
-    pub market_base_ata: &'a AccountInfo,
+    pub base_market_ata: &'a AccountInfo,
     /// The market's associated quote mint token account.
-    pub market_quote_ata: &'a AccountInfo,
+    pub quote_market_ata: &'a AccountInfo,
     /// The base token mint account.
     pub base_mint: &'a AccountInfo,
     /// The quote token mint account.
@@ -64,10 +64,10 @@ impl CloseSeat<'_> {
             &[
                 self.user,
                 self.market_account,
-                self.user_base_ata,
-                self.user_quote_ata,
-                self.market_base_ata,
-                self.market_quote_ata,
+                self.base_user_ata,
+                self.quote_user_ata,
+                self.base_market_ata,
+                self.quote_market_ata,
                 self.base_mint,
                 self.quote_mint,
             ],
@@ -80,10 +80,10 @@ impl CloseSeat<'_> {
         [
             AccountMeta::readonly_signer(self.user.key()),
             AccountMeta::writable(self.market_account.key()),
-            AccountMeta::writable(self.user_base_ata.key()),
-            AccountMeta::writable(self.user_quote_ata.key()),
-            AccountMeta::writable(self.market_base_ata.key()),
-            AccountMeta::writable(self.market_quote_ata.key()),
+            AccountMeta::writable(self.base_user_ata.key()),
+            AccountMeta::writable(self.quote_user_ata.key()),
+            AccountMeta::writable(self.base_market_ata.key()),
+            AccountMeta::writable(self.quote_market_ata.key()),
             AccountMeta::readonly(self.base_mint.key()),
             AccountMeta::readonly(self.quote_mint.key()),
         ]

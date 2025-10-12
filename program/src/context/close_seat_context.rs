@@ -10,10 +10,10 @@ use crate::validation::{
 pub struct CloseSeatContext<'a> {
     pub user: &'a AccountInfo,
     pub market_account: MarketAccountInfo<'a>,
-    pub user_base_ata: TokenAccountInfo<'a>,
-    pub user_quote_ata: TokenAccountInfo<'a>,
-    pub market_base_ata: TokenAccountInfo<'a>,
-    pub market_quote_ata: TokenAccountInfo<'a>,
+    pub base_user_ata: TokenAccountInfo<'a>,
+    pub quote_user_ata: TokenAccountInfo<'a>,
+    pub base_market_ata: TokenAccountInfo<'a>,
+    pub quote_market_ata: TokenAccountInfo<'a>,
     pub base_mint: MintInfo<'a>,
     pub quote_mint: MintInfo<'a>,
 }
@@ -24,10 +24,10 @@ impl<'a> CloseSeatContext<'a> {
         let [
             user,
             market_account,
-            user_base_ata,
-            user_quote_ata,
-            market_base_ata,
-            market_quote_ata,
+            base_user_ata,
+            quote_user_ata,
+            base_market_ata,
+            quote_market_ata,
             base_mint,
             quote_mint,
         ] = accounts else {
@@ -45,16 +45,16 @@ impl<'a> CloseSeatContext<'a> {
         };
 
         // Safety: Scoped borrows of the various user/market + base/quote token accounts.
-        let user_base_ata = TokenAccountInfo::new(user_base_ata, base_mint.info.key(), user.key())?;
-        let user_quote_ata =
-            TokenAccountInfo::new(user_quote_ata, quote_mint.info.key(), user.key())?;
-        let market_base_ata = TokenAccountInfo::new(
-            market_base_ata,
+        let base_user_ata = TokenAccountInfo::new(base_user_ata, base_mint.info.key(), user.key())?;
+        let quote_user_ata =
+            TokenAccountInfo::new(quote_user_ata, quote_mint.info.key(), user.key())?;
+        let base_market_ata = TokenAccountInfo::new(
+            base_market_ata,
             base_mint.info.key(),
             market_account.info().key(),
         )?;
-        let market_quote_ata = TokenAccountInfo::new(
-            market_quote_ata,
+        let quote_market_ata = TokenAccountInfo::new(
+            quote_market_ata,
             quote_mint.info.key(),
             market_account.info().key(),
         )?;
@@ -62,10 +62,10 @@ impl<'a> CloseSeatContext<'a> {
         Ok(Self {
             user,
             market_account,
-            user_base_ata,
-            user_quote_ata,
-            market_base_ata,
-            market_quote_ata,
+            base_user_ata,
+            quote_user_ata,
+            base_market_ata,
+            quote_market_ata,
             base_mint,
             quote_mint,
         })

@@ -48,8 +48,8 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
     if base_available > 0 {
         if is_owned_by_spl_token(ctx.base_mint.info) {
             pinocchio_token::instructions::Transfer {
-                from: ctx.market_base_ata.info,       // WRITE
-                to: ctx.user_base_ata.info,           // WRITE
+                from: ctx.base_market_ata.info,       // WRITE
+                to: ctx.base_user_ata.info,           // WRITE
                 authority: ctx.market_account.info(), // READ
                 amount: base_available,
             }
@@ -62,8 +62,8 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
             // Safety: Scoped immutable borrow of mint account data to get mint decimals.
             let decimals = unsafe { ctx.base_mint.get_mint_decimals() }?;
             pinocchio_token_2022::instructions::TransferChecked {
-                from: ctx.market_base_ata.info,       // WRITE
-                to: ctx.user_base_ata.info,           // WRITE
+                from: ctx.base_market_ata.info,       // WRITE
+                to: ctx.base_user_ata.info,           // WRITE
                 authority: ctx.market_account.info(), // READ
                 mint: ctx.base_mint.info,             // READ
                 amount: base_available,
@@ -82,8 +82,8 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
     if quote_available > 0 {
         if is_owned_by_spl_token(ctx.quote_mint.info) {
             pinocchio_token::instructions::Transfer {
-                from: ctx.market_quote_ata.info,      // WRITE
-                to: ctx.user_quote_ata.info,          // WRITE
+                from: ctx.quote_market_ata.info,      // WRITE
+                to: ctx.quote_user_ata.info,          // WRITE
                 authority: ctx.market_account.info(), // READ
                 amount: quote_available,
             }
@@ -96,8 +96,8 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
             // Safety: Scoped immutable borrow of mint account data to get mint decimals.
             let decimals = unsafe { ctx.quote_mint.get_mint_decimals() }?;
             pinocchio_token_2022::instructions::TransferChecked {
-                from: ctx.market_quote_ata.info,      // WRITE
-                to: ctx.user_quote_ata.info,          // WRITE
+                from: ctx.quote_market_ata.info,      // WRITE
+                to: ctx.quote_user_ata.info,          // WRITE
                 authority: ctx.market_account.info(), // READ
                 mint: ctx.quote_mint.info,            // READ
                 amount: quote_available,

@@ -12,8 +12,9 @@ use crate::{
 
 /// User deposits tokens and updates or registers their seat.
 ///
-/// # Safe Invocation
+/// # Caller guarantees
 ///
+/// When invoking this instruction, caller must ensure that:
 /// - WRITE accounts are not currently borrowed in *any* capacity.
 /// - READ accounts are not currently mutably borrowed.
 ///

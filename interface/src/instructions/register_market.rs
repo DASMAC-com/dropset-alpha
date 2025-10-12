@@ -12,9 +12,9 @@ use pinocchio::{
 ///
 /// Allocates the passed in number of sectors * SECTOR_SIZE bytes as extra initial account space.
 ///
-/// # Safe Invocation
+/// # Caller guarantees
 ///
-/// Caller guarantees:
+/// When invoking this instruction, caller must ensure that:
 /// - WRITE accounts are not currently borrowed in *any* capacity.
 /// - READ accounts are not currently mutably borrowed.
 ///

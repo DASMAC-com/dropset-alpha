@@ -12,8 +12,9 @@ use crate::{
 
 /// User withdraws tokens and updates their seat.
 ///
-/// # Safe Invocation
+/// # Caller guarantees
 ///
+/// When invoking this instruction, caller must ensure that:
 /// - WRITE accounts are not currently borrowed in *any* capacity.
 /// - READ accounts are not currently mutably borrowed.
 ///
@@ -22,7 +23,7 @@ use crate::{
 ///   1. `[WRITE]` Market account
 ///   2. `[WRITE]` User token account (destination)
 ///   3. `[WRITE]` Market token account (source)
-//    4. `[READ]` Mint account
+///   4. `[READ]` Mint account
 pub struct Withdraw<'a> {
     /// The user withdrawing.
     pub user: &'a AccountInfo,
