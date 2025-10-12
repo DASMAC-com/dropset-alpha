@@ -17,7 +17,7 @@ pub fn insert_market_seat(
     seat: MarketSeat,
 ) -> Result<SectorIndex, DropsetError> {
     let (prev_index, insert_before_index) = find_insert_before_index(list, &seat.user);
-    let seat_bytes = seat.as_bytes();
+    let seat_bytes = seat.as_array();
 
     // Return an error early if the user already exists in the seat list at the previous index.
     if !prev_index.is_nil() {
