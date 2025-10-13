@@ -1,6 +1,6 @@
+use instruction_macros::ProgramInstructions;
 use pinocchio::{
-    account_info::AccountInfo,
-    instruction::{AccountMeta, Instruction, Signer},
+    instruction::{Instruction, Signer},
     ProgramResult,
 };
 
@@ -9,6 +9,27 @@ use crate::{
     pack::{write_bytes, UNINIT_BYTE},
     state::sector::SectorIndex,
 };
+
+pub use pinocchio::account_info::AccountInfo;
+
+use pinocchio::instruction::AccountMeta;
+
+#[derive(ProgramInstructions)]
+#[rustfmt::skip]
+pub enum DropsetInstructions {
+    #[account(0, writable, signer, name = "my_account", desc = "The user closing their seat")]
+    #[account(1, name = "acc2")]
+    #[account(2, name = "acc1")]
+    #[account(3, name = "acc0")]
+    CloseSeat,
+
+    #[account(0, signer, name = "acc0", desc = "The user depositing tokens")]
+    #[account(1, signer, name = "acc1")]
+    #[account(2, signer, name = "acc3")]
+    #[account(3, signer, name = "acc2")]
+    #[account(4, signer, name = "acc4")]
+    Deposit,
+}
 
 /// Closes a market seat for a user by withdrawing all base and quote from their seat.
 ///
@@ -59,8 +80,17 @@ impl CloseSeat<'_> {
         pinocchio::cpi::invoke_signed(
             &Instruction {
                 program_id: &crate::program::ID,
-                accounts: &self.create_account_metas(),
-                data: &self.pack_instruction_data(),
+                accounts: &[
+                    AccountMeta::readonly_signer(self.user.key()),
+                    AccountMeta::writable(self.market_account.key()),
+                    AccountMeta::writable(self.base_user_ata.key()),
+                    AccountMeta::writable(self.quote_user_ata.key()),
+                    AccountMeta::writable(self.base_market_ata.key()),
+                    AccountMeta::writable(self.quote_market_ata.key()),
+                    AccountMeta::readonly(self.base_mint.key()),
+                    AccountMeta::readonly(self.quote_mint.key()),
+                ],
+                data: &self.pack(),
             },
             &[
                 self.user,
@@ -76,22 +106,22 @@ impl CloseSeat<'_> {
         )
     }
 
-    #[inline(always)]
-    pub fn create_account_metas(&self) -> [AccountMeta; 8] {
-        [
-            AccountMeta::readonly_signer(self.user.key()),
-            AccountMeta::writable(self.market_account.key()),
-            AccountMeta::writable(self.base_user_ata.key()),
-            AccountMeta::writable(self.quote_user_ata.key()),
-            AccountMeta::writable(self.base_market_ata.key()),
-            AccountMeta::writable(self.quote_market_ata.key()),
-            AccountMeta::readonly(self.base_mint.key()),
-            AccountMeta::readonly(self.quote_mint.key()),
-        ]
-    }
+    // #[cfg(feature = "client")]
+    // pub fn create_account_metas(&self) -> [AccountMeta; 8] {
+    //     [
+    //         AccountMeta::new_readonly((*self.user).into(), true),
+    //         AccountMeta::new((*self.market_account).into(), false),
+    //         AccountMeta::new((*self.base_user_ata).into(), false),
+    //         AccountMeta::new((*self.quote_user_ata).into(), false),
+    //         AccountMeta::new((*self.base_market_ata).into(), false),
+    //         AccountMeta::new((*self.quote_market_ata).into(), false),
+    //         AccountMeta::new_readonly((*self.base_mint).into(), false),
+    //         AccountMeta::new_readonly((*self.quote_mint).into(), false),
+    //     ]
+    // }
 
     #[inline(always)]
-    pub fn pack_instruction_data(&self) -> [u8; 5] {
+    pub fn pack(&self) -> [u8; 5] {
         // Instruction data layout:
         //   - [0]: the instruction tag, 1 byte
         //   - [1..5]: the u32 `sector_index_hint` as little-endian bytes, 4 bytes

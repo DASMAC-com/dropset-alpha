@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "instruction-macros",
   "interface",
   "program",
 ]
@@ -10,7 +11,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-anyhow = "1.0"
+anyhow = "1.0.100"
 bytemuck = { version = "1.23.2", features = ["derive"] }
 pinocchio = { version = "0.9.2" }
 pinocchio-associated-token-account = { version = "0.2.0" }
@@ -34,4 +35,5 @@ level = "warn"
 check-cfg = [
     'cfg(target_os, values("solana"))',
     'cfg(feature, values("no-entrypoint"))',
+    'cfg(feature, values("pinocchio-invoke"))',
 ]

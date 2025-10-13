@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+instruction-macros = { path = "../instruction-macros" }
 pinocchio.workspace = true
 pinocchio-pubkey.workspace = true
 pinocchio-token.workspace = true
@@ -16,3 +17,7 @@ strum_macros.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+default = ["pinocchio_invoke"]
+pinocchio_invoke = []
