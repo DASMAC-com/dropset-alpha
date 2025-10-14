@@ -14,7 +14,10 @@ pub use pinocchio::account_info::AccountInfo;
 
 use pinocchio::instruction::AccountMeta;
 
+use pinocchio::program_error::ProgramError;
+
 #[derive(ProgramInstructions)]
+#[instruction_tag(DropsetInstructionTag, ProgramError::InvalidInstructionData)]
 #[repr(u8)]
 #[rustfmt::skip]
 pub enum DropsetInstruction {
@@ -62,6 +65,21 @@ pub enum DropsetInstruction {
     #[account(0, signer, name = "hello!")]
     #[args(amount: u32, "the amt")]
     MyFavoriteInstruction,
+
+    #[account(0, signer, name = "asdf")]
+    WellWellWell = 100,
+    
+    #[account(0, signer, name = "asdf")]
+    WellWellWell2,
+
+    #[account(0, signer, name = "asdf")]
+    Well3 = 150,
+    
+    #[account(0, signer, name = "asdf")]
+    WellWellWell3 = 51,
+    
+    #[account(0, signer, name = "asdf")]
+    WellWellWell4,
 }
 
 /// Closes a market seat for a user by withdrawing all base and quote from their seat.

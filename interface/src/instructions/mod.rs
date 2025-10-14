@@ -49,3 +49,50 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod tests2 {
+    use strum::IntoEnumIterator;
+
+    extern crate std;
+    use std::collections::HashSet;
+
+    use crate::instructions::close_seat::*;
+
+    #[test]
+    fn test_ixn_tag_try_from_u8_happy_path() {
+        for variant in DropsetInstructionTag::iter() {
+            let variant_u8 = variant as u8;
+            assert_eq!(
+                DropsetInstructionTag::from_repr(variant_u8).unwrap(),
+                DropsetInstructionTag::try_from(variant_u8).unwrap(),
+            );
+            assert_eq!(
+                DropsetInstructionTag::try_from(variant_u8).unwrap(),
+                variant
+            );
+        }
+    }
+
+    #[test]
+    fn test_ixn_tag_try_from_u8_exhaustive() {
+        let valids = DropsetInstructionTag::iter()
+            .map(|v| v as u8)
+            .collect::<HashSet<_>>();
+
+        for v in 0..=u8::MAX {
+            if valids.contains(&v) {
+                assert_eq!(
+                    DropsetInstructionTag::from_repr(v).unwrap(),
+                    DropsetInstructionTag::try_from(v).unwrap()
+                );
+                assert_eq!(DropsetInstructionTag::try_from(v).unwrap() as u8, v);
+            } else {
+                assert_eq!(
+                    DropsetInstructionTag::from_repr(v).is_none(),
+                    DropsetInstructionTag::try_from(v).is_err(),
+                );
+            }
+        }
+    }
+}

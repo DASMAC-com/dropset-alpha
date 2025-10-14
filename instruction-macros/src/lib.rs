@@ -4,12 +4,12 @@ use itertools::Itertools;
 use quote::{quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input,
+    parse_macro_input, parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
     token::Comma,
-    Attribute, DataEnum, DeriveInput, Error, Expr, ExprLit, Ident, Lit, LitInt, Meta, PatLit,
-    Result, Token, Type, Variant,
+    Attribute, DataEnum, DeriveInput, Error, Expr, ExprLit, Ident, Lit, LitInt, Meta, Result,
+    Token, Type, Variant,
 };
 
 use crate::output::create_instruction_tags;
@@ -23,6 +23,8 @@ const ACCOUNT_WRITABLE: &str = "writable";
 const ACCOUNT_SIGNER: &str = "signer";
 const ARGUMENT_IDENTIFIER: &str = "args";
 const DESCRIPTION: &str = "desc";
+const DEFAULT_TAG_ERROR_BASE: &str = "ProgramError";
+const DEFAULT_TAG_ERROR_TYPE: &str = "InvalidInstructionData";
 
 #[proc_macro_derive(ProgramInstructions, attributes(account, args, instruction_tag))]
 pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -37,39 +39,112 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
     };
 
-    let tag_output = if let Some(tag_config) = parse_instruction_tag_attr(&input.attrs) {
-        impl_instruction_tag(input.ident, enum_item.clone(), tag_config)
-            .unwrap_or_else(|e| e.to_compile_error())
-    } else {
-        quote! {}
+    let tag_output = match parse_instruction_tag_attr(&input.attrs) {
+        // Instruction tag config is valid, parse the inner enum variants.
+        Some(Ok(config)) => impl_instruction_tag(input.ident, enum_item.clone(), config)
+            .unwrap_or_else(|e| e.to_compile_error()),
+        // Invalid instruction tag.
+        Some(Err(e)) => e.to_compile_error(),
+        // Instruction tag config doesn't exist, don't generate anything for it.
+        None => quote! {},
     };
 
     let acc_and_args_output =
         impl_accounts_and_args(enum_item).unwrap_or_else(|e| e.to_compile_error());
 
-    acc_and_args_output.into()
+    quote! {
+        #acc_and_args_output
+        #tag_output
+    }
+    .into()
 }
 
-struct InstructionTagConfig {
+#[derive(Debug)]
+struct TagConfig {
+    /// The name of the instruction tag enum emitted; e.g. `MyProgramInstructionTag`
     name: Ident,
-    error: Option<Expr>,
+    /// The error base segment; e.g. `ProgramError`
+    error_base: Type,
+    /// The error variant; e.g. `InvalidInstructionData`
+    error_variant: Ident,
 }
 
-fn parse_instruction_tag_attr(attrs: &[Attribute]) -> Option<InstructionTagConfig> {
-    attrs
+impl Parse for TagConfig {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name: Ident = input.parse()?;
+
+        // Error type is optional, so peek then parse.
+        let error_expr: Option<Expr> = if input.peek(Token![,]) {
+            input.parse::<Token![,]>()?;
+            Some(input.parse()?)
+        } else {
+            None
+        };
+
+        let (error_base, error_variant) = match error_expr {
+            Some(Expr::Path(expr_path)) => {
+                let path = &expr_path.path;
+                eprintln!("{:?}", path.segments.iter().collect_vec());
+                if path.segments.len() < 2 {
+                    return Err(ParsingError::ErrorNotFullyQualified.into_err(expr_path.span()));
+                }
+
+                let mut type_path = path.clone();
+                // Get the type variant aka the specific type identifier: `InvalidInstructionData`.
+                let last_portion = type_path
+                    .segments
+                    .pop()
+                    .expect("Path segments should at least be len 2")
+                    .into_value()
+                    .ident;
+
+                type_path.segments.pop_punct();
+
+                // Get the remaining base: `ProgramError` in `ProgramError::InvalidInstructionData`.
+                let base_portion = Type::Path(syn::TypePath {
+                    qself: None,
+                    path: type_path,
+                });
+
+                (base_portion, last_portion)
+            }
+            Some(expr) => return Err(ParsingError::InvalidErrorType.into_err(expr.span())),
+            None => (
+                syn::parse_str::<Type>(DEFAULT_TAG_ERROR_BASE).unwrap(),
+                syn::parse_str::<Ident>(DEFAULT_TAG_ERROR_TYPE).unwrap(),
+            ),
+        };
+
+        Ok(TagConfig {
+            name,
+            error_base,
+            error_variant,
+        })
+    }
+}
+
+fn parse_instruction_tag_attr(attrs: &[Attribute]) -> Option<Result<TagConfig>> {
+    let instruction_tags = attrs
         .iter()
-        .find(|attr| attr.path().is_ident(INSTRUCTION_TAG))
-        .map(|attr| args.parse_args::<InstructionTagConfig>())
+        .filter(|attr| attr.path().is_ident(INSTRUCTION_TAG))
+        .collect::<Vec<&Attribute>>();
+
+    if instruction_tags.len() > 1 {
+        return Some(Err(
+            ParsingError::TooManyInstructionTags.into_err(instruction_tags[1].span())
+        ));
+    }
+
+    instruction_tags.last().map(|v| v.parse_args::<TagConfig>())
 }
 
 fn impl_instruction_tag(
     enum_ident: Ident,
     enum_item: DataEnum,
-    tag_config: InstructionTagConfig,
+    tag_config: TagConfig,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let instruction_tags = InstructionTags::try_from(enum_item.variants)?;
-    let tag_tokens = create_instruction_tags(enum_ident, instruction_tags);
-    eprintln!("{tag_tokens}");
+    let tag_tokens = create_instruction_tags(enum_ident, instruction_tags, tag_config);
 
     Ok(tag_tokens)
 }
@@ -106,10 +181,10 @@ fn impl_accounts_and_args(enum_item: DataEnum) -> syn::Result<proc_macro2::Token
     Ok(quote! {})
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct InstructionTags(pub Vec<InstructionVariant>);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct InstructionVariant {
     name: String,
     discriminant: u8,
@@ -142,7 +217,7 @@ impl TryFrom<Punctuated<Variant, Comma>> for InstructionTags {
                     None => implicit_discriminant,
                 };
 
-                implicit_discriminant += 1;
+                implicit_discriminant = discriminant + 1;
 
                 Ok(InstructionVariant {
                     name: variant.ident.to_string(),
@@ -157,7 +232,7 @@ impl TryFrom<Punctuated<Variant, Comma>> for InstructionTags {
 
 #[derive(Debug, Clone, strum_macros::EnumIter, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "lowercase")]
-enum PrimitiveArg {
+enum PrimitiveArgType {
     U8,
     U16,
     U32,
@@ -165,7 +240,7 @@ enum PrimitiveArg {
     U128,
 }
 
-impl TryFrom<&Type> for PrimitiveArg {
+impl TryFrom<&Type> for PrimitiveArgType {
     type Error = Error;
 
     fn try_from(ty: &Type) -> std::result::Result<Self, Self::Error> {
@@ -185,7 +260,7 @@ impl TryFrom<&Type> for PrimitiveArg {
                 return Err(err);
             }
 
-            PrimitiveArg::from_str(segment.ident.to_string().as_str()).or(Err(err))
+            PrimitiveArgType::from_str(segment.ident.to_string().as_str()).or(Err(err))
         } else {
             Err(err)
         }
@@ -195,7 +270,7 @@ impl TryFrom<&Type> for PrimitiveArg {
 #[derive(Debug, Clone)]
 struct InstructionArgument {
     name: String,
-    ty: PrimitiveArg,
+    ty: PrimitiveArgType,
     description: String,
 }
 
@@ -218,7 +293,7 @@ impl Parse for InstructionArgument {
 
         Ok(InstructionArgument {
             name: ident.to_string(),
-            ty: PrimitiveArg::try_from(&ty)?,
+            ty: PrimitiveArgType::try_from(&ty)?,
             description,
         })
     }
@@ -250,6 +325,9 @@ enum ParsingError {
     InvalidPrimitiveType,
     ExpectedArgumentDescription,
     InvalidLiteralU8,
+    InvalidErrorType,
+    ErrorNotFullyQualified,
+    TooManyInstructionTags,
 }
 
 impl From<ParsingError> for String {
@@ -281,12 +359,15 @@ impl From<ParsingError> for String {
             }
             ParsingError::InvalidPrimitiveType => format!(
                 "Invalid argument type, valid types include: {}",
-                PrimitiveArg::iter().join(", ")
+                PrimitiveArgType::iter().join(", ")
             ),
             ParsingError::ExpectedArgumentDescription => {
                 "Expected a string literal for the argument description".into()
             }
             ParsingError::InvalidLiteralU8 => "Enum variant must be a literal u8".into(),
+            ParsingError::InvalidErrorType => "Invalid error type, expected a raw path like: ProgramError::InvalidInstructionData".into(),
+            ParsingError::ErrorNotFullyQualified => "Instruction tag error type must be minimally qualified; e.g. `ProgramError::InvalidInstructionData`".into(),
+            ParsingError::TooManyInstructionTags => "Too many instruction tags, expected 0 or 1".into(),
         }
     }
 }
