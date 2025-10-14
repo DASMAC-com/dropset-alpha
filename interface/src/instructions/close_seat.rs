@@ -15,21 +15,53 @@ pub use pinocchio::account_info::AccountInfo;
 use pinocchio::instruction::AccountMeta;
 
 #[derive(ProgramInstructions)]
+#[repr(u8)]
 #[rustfmt::skip]
 pub enum DropsetInstruction {
-    #[account(0, writable, signer, name = "my_account", desc = "The user closing their seat")]
-    #[account(1, name = "acc2")]
-    #[account(2, name = "acc1")]
-    #[account(3, name = "acc0")]
+    #[account(0, signer,   name = "user",             desc = "The user closing their seat.")]
+    #[account(1, writable, name = "market_account",   desc = "The market account PDA.")]
+    #[account(2, writable, name = "base_user_ata",    desc = "The user's associated base mint token account.")]
+    #[account(3, writable, name = "quote_user_ata",   desc = "The user's associated quote mint token account.")]
+    #[account(4, writable, name = "base_market_ata",  desc = "The market's associated base mint token account.")]
+    #[account(5, writable, name = "quote_market_ata", desc = "The market's associated quote mint token account.")]
+    #[account(6,           name = "base_mint",        desc = "The base token mint account.")]
+    #[account(7,           name = "quote_mint",       desc = "The quote token mint account.")]
+    #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
     CloseSeat,
 
-    #[account(0, signer, name = "acc0", desc = "The user depositing tokens")]
-    #[account(1, signer, name = "acc1")]
-    #[account(2, signer, name = "acc3")]
-    #[account(3, signer, name = "acc2")]
-    #[account(4, signer, name = "acc4")]
-    #[args(my_first_arg: u64)]
+    #[account(0, signer,   name = "user",           desc = "The user depositing or registering their seat.")]
+    #[account(1, writable, name = "market_account", desc = "The market account PDA.")]
+    #[account(2, writable, name = "user_ata",       desc = "The user's associated token account.")]
+    #[account(3, writable, name = "market_ata",     desc = "The market's associated token account.")]
+    #[account(4,           name = "mint",           desc = "The token mint account.")]
+    #[args(amount: u64, "The amount to deposit.")]
+    #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in (pass `NIL` when registering a new seat).")]
     Deposit,
+
+    #[account(0, signer, writable, name = "user",        desc = "The user registering the market.")]
+    #[account(1, writable, name = "market_account",      desc = "The market account PDA.")]
+    #[account(2, writable, name = "base_market_ata",     desc = "The market's associated token account for the base mint.")]
+    #[account(3, writable, name = "quote_market_ata",    desc = "The market's associated token account for the quote mint.")]
+    #[account(4,           name = "base_mint",           desc = "The base mint account.")]
+    #[account(5,           name = "quote_mint",          desc = "The quote mint account.")]
+    #[account(6,           name = "base_token_program",  desc = "The base mint's token program.")]
+    #[account(7,           name = "quote_token_program", desc = "The quote mint's token program.")]
+    #[account(8,           name = "system_program",      desc = "The system program.")]
+    #[args(num_sectors: u16, "The number of sectors to preallocate for the market.")]
+    RegisterMarket,
+
+    #[account(0, signer,   name = "user",           desc = "The user withdrawing.")]
+    #[account(1, writable, name = "market_account", desc = "The market account PDA.")]
+    #[account(2, writable, name = "user_ata",       desc = "The user's associated token account.")]
+    #[account(3, writable, name = "market_ata",     desc = "The market's associated token account.")]
+    #[account(4,           name = "mint",           desc = "The token mint account.")]
+    #[args(amount: u64, "The amount to withdraw.")]
+    #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
+    Withdraw,
+
+    #[account(0, signer, name = "hello!")]
+    #[args(amount: u32, "the amt")]
+    MyFavoriteInstruction,
 }
 
 /// Closes a market seat for a user by withdrawing all base and quote from their seat.

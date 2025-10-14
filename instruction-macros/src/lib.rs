@@ -5,16 +5,23 @@ use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
+    punctuated::Punctuated,
     spanned::Spanned,
-    Attribute, DeriveInput, Error, Expr, Ident, Lit, LitInt, Meta, Result, Token, Type,
+    token::Comma,
+    Attribute, DeriveInput, Error, Expr, ExprLit, Ident, Lit, LitInt, Meta, PatLit, Result, Token,
+    Type, Variant,
 };
+
+use crate::output::create_instruction_tags;
+
+mod output;
 
 const ACCOUNT_IDENTIFIER: &str = "account";
 const ACCOUNT_NAME: &str = "name";
-const ACCOUNT_DESCRIPTION: &str = "desc";
 const ACCOUNT_WRITABLE: &str = "writable";
 const ACCOUNT_SIGNER: &str = "signer";
 const ARGUMENT_IDENTIFIER: &str = "args";
+const DESCRIPTION: &str = "desc";
 
 #[proc_macro_derive(ProgramInstructions, attributes(account, args))]
 pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -30,11 +37,7 @@ fn impl_instruction(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
     };
 
     // For each enum variant, check all attrs.
-    enum_item.variants.into_iter().try_for_each(|variant| {
-        // `ident` here is the name of the enum variant
-        let variant_name = &variant.ident;
-        eprintln!("{variant_name}");
-
+    enum_item.variants.iter().try_for_each(|variant| {
         // Filter by attrs matching `#[account(...)]`, then try converting to `InstructionAccount`s.
         let instruction_accounts = variant
             .attrs
@@ -49,7 +52,7 @@ fn impl_instruction(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
             .attrs
             .iter()
             .filter(|attr| attr.path().is_ident(ARGUMENT_IDENTIFIER))
-            .map(InstructionArgument::try_from)
+            .map(Attribute::parse_args)
             .collect::<Result<Vec<InstructionArgument>>>()?;
 
         instruction_arguments.iter().for_each(|arg| {
@@ -64,7 +67,61 @@ fn impl_instruction(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
         Ok::<(), Error>(())
     })?;
 
-    Ok(proc_macro2::TokenStream::new())
+    let instruction_tags = InstructionTags::try_from(enum_item.variants)?;
+
+    let tag_tokens = create_instruction_tags(input.ident, instruction_tags);
+    eprintln!("{tag_tokens}");
+
+    Ok(tag_tokens)
+}
+
+#[derive(Clone)]
+struct InstructionTags(pub Vec<InstructionVariant>);
+
+#[derive(Clone)]
+struct InstructionVariant {
+    name: String,
+    discriminant: u8,
+}
+
+impl TryFrom<Punctuated<Variant, Comma>> for InstructionTags {
+    type Error = Error;
+
+    fn try_from(variants: Punctuated<Variant, Comma>) -> std::result::Result<Self, Self::Error> {
+        // Implicit discriminants either start at 0 or the last variant that was explicitly set + 1.
+        let mut implicit_discriminant = 0;
+
+        let with_discriminants = variants
+            .iter()
+            .map(|variant| {
+                if !variant.fields.is_empty() {
+                    return Err(ParsingError::EnumVariantShouldBeFieldless.into_err(variant.span()));
+                }
+
+                let discriminant = match &variant.discriminant {
+                    Some((_eq, expr)) => match expr {
+                        Expr::Lit(ExprLit { lit, .. }) => match lit {
+                            Lit::Int(lit) => lit
+                                .base10_parse()
+                                .or(Err(ParsingError::InvalidLiteralU8.into_err(lit.span())))?,
+                            lit => return Err(ParsingError::InvalidLiteralU8.into_err(lit.span())),
+                        },
+                        expr => return Err(ParsingError::InvalidLiteralU8.into_err(expr.span())),
+                    },
+                    None => implicit_discriminant,
+                };
+
+                implicit_discriminant += 1;
+
+                Ok(InstructionVariant {
+                    name: variant.ident.to_string(),
+                    discriminant,
+                })
+            })
+            .collect::<Result<_>>()?;
+
+        Ok(InstructionTags(with_discriminants))
+    }
 }
 
 #[derive(Debug, Clone, strum_macros::EnumIter, strum_macros::Display, strum_macros::EnumString)]
@@ -75,16 +132,6 @@ enum PrimitiveArg {
     U32,
     U64,
     U128,
-}
-
-impl TryFrom<Ident> for PrimitiveArg {
-    type Error = Error;
-
-    fn try_from(value: Ident) -> std::result::Result<Self, Self::Error> {
-        PrimitiveArg::from_str(value.to_string().as_str()).or(Err(
-            ParsingError::InvalidPrimitiveType.into_err(value.span()),
-        ))
-    }
 }
 
 impl TryFrom<&Type> for PrimitiveArg {
@@ -118,33 +165,30 @@ impl TryFrom<&Type> for PrimitiveArg {
 struct InstructionArgument {
     name: String,
     ty: PrimitiveArg,
+    description: String,
 }
 
-/// An argument pair of the exact form (ident: type) e.g. (foo: u64).
-struct ArgPair {
-    ident: Ident,
-    _colon: Token![:],
-    ty: Type,
-}
-
-impl Parse for ArgPair {
+impl Parse for InstructionArgument {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(Self {
-            ident: input.parse()?,
-            _colon: input.parse()?,
-            ty: input.parse()?,
-        })
-    }
-}
+        let ident: Ident = input.parse()?;
+        let _colon: Token![:] = input.parse()?;
+        let ty: Type = input.parse()?;
 
-impl TryFrom<&Attribute> for InstructionArgument {
-    type Error = Error;
+        // Optional: a single `key = value` pair as `desc = "argument description"`.
+        let mut description: String = "".to_string();
 
-    fn try_from(attr: &Attribute) -> std::result::Result<Self, Self::Error> {
-        let tokens: ArgPair = attr.parse_args()?;
+        if input.peek(Token![,]) {
+            let _comma: Token![,] = input.parse()?;
+            match input.parse::<Lit>() {
+                Ok(Lit::Str(s)) => description = s.value(),
+                _ => return Err(ParsingError::ExpectedArgumentDescription.into_err(input.span())),
+            }
+        }
+
         Ok(InstructionArgument {
-            name: tokens.ident.to_string(),
-            ty: PrimitiveArg::try_from(&tokens.ty)?,
+            name: ident.to_string(),
+            ty: PrimitiveArg::try_from(&ty)?,
+            description,
         })
     }
 }
@@ -160,6 +204,7 @@ struct InstructionAccount {
 
 enum ParsingError {
     NotAnEnum,
+    EnumVariantShouldBeFieldless,
     ZeroAccounts,
     MissingSigner,
     DuplicateName(String, String),
@@ -171,8 +216,9 @@ enum ParsingError {
     TooManyDescriptions,
     ExpectedNameValueLiteral(String),
     IndexOutOfOrder(u8, usize),
-    TooManyArgumentAttributes,
     InvalidPrimitiveType,
+    ExpectedArgumentDescription,
+    InvalidLiteralU8,
 }
 
 impl From<ParsingError> for String {
@@ -182,6 +228,9 @@ impl From<ParsingError> for String {
 
         match value {
             ParsingError::NotAnEnum => "Derive macro only works on enums".into(),
+            ParsingError::EnumVariantShouldBeFieldless => {
+                "Enum variants should be fieldless".into()
+            }
             ParsingError::ZeroAccounts => "Instruction has no accounts".into(),
             ParsingError::MissingSigner => "Instruction must have at least one signer".into(),
             ParsingError::DuplicateName(dupe_type, name) => {
@@ -199,13 +248,14 @@ impl From<ParsingError> for String {
             ParsingError::IndexOutOfOrder(idx, pos) => {
                 format!("Account index {idx} doesn't match position {pos}")
             }
-            ParsingError::TooManyArgumentAttributes => {
-                "Too many argument attributes, expected only one".into()
-            }
             ParsingError::InvalidPrimitiveType => format!(
                 "Invalid argument type, valid types include: {}",
                 PrimitiveArg::iter().join(", ")
             ),
+            ParsingError::ExpectedArgumentDescription => {
+                "Expected a string literal for the argument description".into()
+            }
+            ParsingError::InvalidLiteralU8 => "Enum variant must be a literal u8".into(),
         }
     }
 }
@@ -291,7 +341,7 @@ fn build_instruction_account(input: ParseStream) -> Result<InstructionAccountInC
                         return Err(ParsingError::TooManyNames(old, name_str).into_err(m.span()));
                     }
                     name.replace(name_str);
-                } else if m.path().is_ident(ACCOUNT_DESCRIPTION) {
+                } else if m.path().is_ident(DESCRIPTION) {
                     let new_description = parse_name_value(&m)?;
                     if description.is_some() {
                         return Err(ParsingError::TooManyDescriptions.into_err(m.span()));
