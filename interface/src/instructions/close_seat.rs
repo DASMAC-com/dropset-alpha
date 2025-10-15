@@ -30,7 +30,7 @@ pub enum DropsetInstruction {
     #[account(6,           name = "base_mint",        desc = "The base token mint account.")]
     #[account(7,           name = "quote_mint",       desc = "The quote token mint account.")]
     #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
-    CloseSeat,
+    CloseSeat_,
 
     #[account(0, signer,   name = "user",           desc = "The user depositing or registering their seat.")]
     #[account(1, writable, name = "market_account", desc = "The market account PDA.")]
@@ -39,7 +39,7 @@ pub enum DropsetInstruction {
     #[account(4,           name = "mint",           desc = "The token mint account.")]
     #[args(amount: u64, "The amount to deposit.")]
     #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in (pass `NIL` when registering a new seat).")]
-    Deposit,
+    Deposit_,
 
     #[account(0, signer, writable, name = "user",        desc = "The user registering the market.")]
     #[account(1, writable, name = "market_account",      desc = "The market account PDA.")]
@@ -51,7 +51,7 @@ pub enum DropsetInstruction {
     #[account(7,           name = "quote_token_program", desc = "The quote mint's token program.")]
     #[account(8,           name = "system_program",      desc = "The system program.")]
     #[args(num_sectors: u16, "The number of sectors to preallocate for the market.")]
-    RegisterMarket,
+    RegisterMarket_,
 
     #[account(0, signer,   name = "user",           desc = "The user withdrawing.")]
     #[account(1, writable, name = "market_account", desc = "The market account PDA.")]
@@ -60,7 +60,7 @@ pub enum DropsetInstruction {
     #[account(4,           name = "mint",           desc = "The token mint account.")]
     #[args(amount: u64, "The amount to withdraw.")]
     #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
-    Withdraw,
+    Withdraw_,
 
     #[account(0, signer, name = "hello!")]
     #[args(amount: u32, "the amt")]

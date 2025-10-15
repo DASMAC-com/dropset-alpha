@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use itertools::Itertools;
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
+    parse_macro_input,
     punctuated::Punctuated,
     spanned::Spanned,
     token::Comma,
@@ -12,7 +12,9 @@ use syn::{
     Token, Type, Variant,
 };
 
-use crate::output::create_instruction_tags;
+use crate::output::{
+    create_tag_enum, create_tag_variant_struct, create_try_from_u8_for_instruction_tag,
+};
 
 mod output;
 
@@ -59,7 +61,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     .into()
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct TagConfig {
     /// The name of the instruction tag enum emitted; e.g. `MyProgramInstructionTag`
     name: Ident,
@@ -143,10 +145,53 @@ fn impl_instruction_tag(
     enum_item: DataEnum,
     tag_config: TagConfig,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let instruction_tags = InstructionTags::try_from(enum_item.variants)?;
-    let tag_tokens = create_instruction_tags(enum_ident, instruction_tags, tag_config);
+    let instruction_tags = InstructionTags::try_from(enum_item.clone().variants)?;
+    let tag_enum_ident = format_ident!("{}Tag", enum_ident);
+    let tag_enum = create_tag_enum(tag_enum_ident.clone(), instruction_tags.clone());
+    let tag_try_from = create_try_from_u8_for_instruction_tag(
+        tag_enum_ident.clone(),
+        instruction_tags,
+        tag_config.clone(),
+    );
 
-    Ok(tag_tokens)
+    let variant_structs = create_variant_structs(tag_enum_ident, enum_item, tag_config)?;
+
+    Ok(quote! {
+        #tag_enum
+        #tag_try_from
+        #variant_structs
+    })
+}
+
+fn create_variant_structs(
+    tag_enum_ident: Ident,
+    enum_item: DataEnum,
+    tag_config: TagConfig,
+) -> syn::Result<proc_macro2::TokenStream> {
+    let variant_structs = enum_item
+        .variants
+        .iter()
+        .map(|variant| {
+            // Filter by attrs matching `#[args(...)]`, then try converting to `InstructionArgument`s.
+            let instruction_arguments = variant
+                .attrs
+                .iter()
+                .filter(|attr| attr.path().is_ident(ARGUMENT_IDENTIFIER))
+                .map(Attribute::parse_args)
+                .collect::<Result<Vec<InstructionArgument>>>()?;
+
+            validate_args(&instruction_arguments, variant.span())?;
+
+            Ok(create_tag_variant_struct(
+                tag_enum_ident.clone(),
+                variant.ident.clone(),
+                instruction_arguments,
+                tag_config.clone(),
+            ))
+        })
+        .collect::<Result<Vec<proc_macro2::TokenStream>>>()?;
+
+    Ok(quote! { #(#variant_structs)* })
 }
 
 fn impl_accounts_and_args(enum_item: DataEnum) -> syn::Result<proc_macro2::TokenStream> {
@@ -160,20 +205,7 @@ fn impl_accounts_and_args(enum_item: DataEnum) -> syn::Result<proc_macro2::Token
             .map(InstructionAccount::try_from)
             .collect::<Result<Vec<InstructionAccount>>>()?;
 
-        // Filter by attrs matching `#[args(...)]`, then try converting to `InstructionArgument`s.
-        let instruction_arguments = variant
-            .attrs
-            .iter()
-            .filter(|attr| attr.path().is_ident(ARGUMENT_IDENTIFIER))
-            .map(Attribute::parse_args)
-            .collect::<Result<Vec<InstructionArgument>>>()?;
-
-        instruction_arguments.iter().for_each(|arg| {
-            eprintln!("{:?}", arg);
-        });
-
         validate_accounts(instruction_accounts, variant.span())?;
-        validate_args(instruction_arguments, variant.span())?;
 
         Ok::<(), Error>(())
     })?;
@@ -186,7 +218,7 @@ struct InstructionTags(pub Vec<InstructionVariant>);
 
 #[derive(Clone, Debug)]
 struct InstructionVariant {
-    name: String,
+    name: Ident,
     discriminant: u8,
 }
 
@@ -220,7 +252,7 @@ impl TryFrom<Punctuated<Variant, Comma>> for InstructionTags {
                 implicit_discriminant = discriminant + 1;
 
                 Ok(InstructionVariant {
-                    name: variant.ident.to_string(),
+                    name: variant.ident.clone(),
                     discriminant,
                 })
             })
@@ -238,6 +270,22 @@ enum PrimitiveArgType {
     U32,
     U64,
     U128,
+}
+
+impl PrimitiveArgType {
+    pub const fn size(&self) -> usize {
+        match self {
+            Self::U8 => size_of::<u8>(),
+            Self::U16 => size_of::<u16>(),
+            Self::U32 => size_of::<u32>(),
+            Self::U64 => size_of::<u64>(),
+            Self::U128 => size_of::<u128>(),
+        }
+    }
+
+    pub fn as_parsed_type(&self) -> syn::Type {
+        syn::parse_str(self.to_string().as_str()).expect("All types should be valid")
+    }
 }
 
 impl TryFrom<&Type> for PrimitiveArgType {
@@ -269,7 +317,7 @@ impl TryFrom<&Type> for PrimitiveArgType {
 
 #[derive(Debug, Clone)]
 struct InstructionArgument {
-    name: String,
+    name: Ident,
     ty: PrimitiveArgType,
     description: String,
 }
@@ -292,7 +340,7 @@ impl Parse for InstructionArgument {
         }
 
         Ok(InstructionArgument {
-            name: ident.to_string(),
+            name: ident.clone(),
             ty: PrimitiveArgType::try_from(&ty)?,
             description,
         })
@@ -513,8 +561,11 @@ fn validate_accounts(accs: Vec<InstructionAccount>, span: proc_macro2::Span) -> 
 }
 
 /// Validate the vector of instruction arguments to ensure no duplicate names.
-fn validate_args(args: Vec<InstructionArgument>, span: proc_macro2::Span) -> Result<()> {
-    let names: Vec<String> = args.iter().map(|arg| arg.name.clone()).collect();
+fn validate_args(args: &[InstructionArgument], span: proc_macro2::Span) -> Result<()> {
+    let names: Vec<String> = args
+        .iter()
+        .map(|arg| arg.name.clone().to_string())
+        .collect();
     check_duplicate_names(names, span, "argument")
 }
 

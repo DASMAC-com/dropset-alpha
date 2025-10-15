@@ -5,32 +5,160 @@ use syn::Ident;
 
 use crate::{InstructionArgument, InstructionTags, InstructionVariant, TagConfig};
 
-pub fn create_pack_fn(instruction_args: Vec<InstructionArgument>) -> syn::Result<TokenStream> {
-    for arg in instruction_args.into_iter() {
-        // arg.
-    }
-
-    Ok(quote! {})
-}
-
-pub fn create_instruction_tags(
-    instruction_enum_ident: Ident,
-    instruction_tags: InstructionTags,
+pub fn create_tag_variant_struct(
+    tag_enum_ident: Ident,
+    tag_variant: Ident,
+    instruction_args: Vec<InstructionArgument>,
     tag_config: TagConfig,
 ) -> TokenStream {
+    // The `0` is hardcoded for the discriminant, so start at byte `1..`
+    let mut curr = 1;
+    let (ret_names, field_assignments, struct_fields, layout_docs, writes, field_sizes): (
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+    ) = instruction_args
+        .iter()
+        .map(|arg| {
+            let parsed_type = arg.ty.as_parsed_type();
+            let (name, size) = (&arg.name, arg.ty.size());
+            let (start, end) = (curr, curr + size);
+            let desc = format!(" {}", &arg.description);
+            let pack_doc_string = format!(
+                " - [{}..{}]: the {} `{}` as little-endian bytes, {} bytes",
+                start, end, arg.ty, name, size
+            );
+
+            assert_eq!(end - start, size);
+
+            let write_bytes_line = quote! {
+                ::core::ptr::copy_nonoverlapping(
+                    (&self.#name.to_le_bytes()).as_ptr(),
+                    (&mut data[#start..#end]).as_mut_ptr() as *mut u8,
+                    #size,
+                );
+            };
+            let struct_field = quote! {
+                #[doc = #desc]
+                pub #name: #parsed_type,
+            };
+
+            // The pointer offset is for the instruction data which has already peeled the tag byte.
+            let ptr_offset = start - 1;
+            let ptr_with_offset = if ptr_offset == 0 {
+                quote! { p }
+            } else {
+                quote! { p.add(#ptr_offset) }
+            };
+            let field_assignment = quote! {
+                let #name = #parsed_type::from_le_bytes(*(#ptr_with_offset as *const [u8; #size]));
+            };
+
+            curr = end;
+            (
+                name,
+                field_assignment,
+                struct_field,
+                quote! {#[doc = #pack_doc_string]},
+                write_bytes_line,
+                size,
+            )
+        })
+        .multiunzip();
+
+    let size_with_tag = curr;
+    let size_without_tag = size_with_tag - 1;
+    let enum_variant = format!("{tag_enum_ident}::{tag_variant}");
+    let discriminant_description = format!(" - [0]: the discriminant `{enum_variant}`, 1 byte");
+    let writes = if writes.is_empty() {
+        quote! {}
+    } else {
+        quote! { unsafe { #(#writes)* }}
+    };
+
+    let (error_base, error_variant) = (tag_config.error_base, tag_config.error_variant);
+
+    let const_assertion = if instruction_args.is_empty() {
+        quote! { const _: [(); #size_with_tag] = [(); 1]; }
+    } else {
+        quote! { const _: [(); #size_with_tag] = [(); 1 + #( #field_sizes )+* ]; }
+    };
+
+    quote! {
+        pub struct #tag_variant {
+            #(#struct_fields)*
+        }
+
+        /// Compile time assertion that the size with the tag == the sum of the field sizes.
+        #const_assertion
+
+        impl #tag_variant {
+            #[doc = " Instruction data layout:"]
+            #[doc = #discriminant_description]
+            #(#layout_docs)*
+            #[inline(always)]
+            pub fn pack(&self) -> [u8; #size_with_tag] {
+                let mut data: [::core::mem::MaybeUninit<u8>; #size_with_tag] = [::core::mem::MaybeUninit::uninit(); #size_with_tag];
+                data[0].write(#tag_enum_ident::#tag_variant as u8);
+                // Safety: The pointers are non-overlapping and the same exact size.
+                #writes
+
+                // All bytes initialized during the construction above.
+                unsafe { *(data.as_ptr() as *const [u8; #size_with_tag]) }
+            }
+
+            /// This method unpacks the instruction data that comes *after* the discriminant has
+            /// already been peeled off of the front of the slice.
+            #[inline(always)]
+            pub fn unpack(instruction_data: &[u8]) -> Result<Self, #error_base> {
+                if instruction_data.len() < #size_without_tag {
+                    return Err(#error_base::#error_variant);
+                }
+
+                // Safety: The length was just verified; all dereferences are valid.
+                unsafe {
+                    let p = instruction_data.as_ptr();
+                    #(#field_assignments)*
+
+                    Ok(Self {
+                        #(#ret_names),*
+                    })
+                }
+            }
+        }
+    }
+}
+
+pub fn create_tag_enum(tag_enum_ident: Ident, instruction_tags: InstructionTags) -> TokenStream {
     let variants = instruction_tags.0.iter().map(|variant| {
-        let ident = format_ident!("{}", &variant.name);
+        let ident = variant.name.clone();
         let discriminant = variant.discriminant;
 
         quote! { #ident = #discriminant, }
     });
 
-    let tag_enum_ident = format_ident!("{}Tag", instruction_enum_ident);
-    let (error_base, error_variant) = (tag_config.error_base, tag_config.error_variant);
+    quote! {
+        #[repr(u8)]
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
+        pub enum #tag_enum_ident {
+            #(#variants)*
+        }
+    }
+}
 
+pub fn create_try_from_u8_for_instruction_tag(
+    tag_enum_ident: Ident,
+    instruction_tags: InstructionTags,
+    tag_config: TagConfig,
+) -> TokenStream {
+    let (error_base, error_variant) = (tag_config.error_base, tag_config.error_variant);
     let mut cloned_variants = instruction_tags.0.clone().into_iter().collect_vec();
     let chunks = sort_and_chunk_variants(&mut cloned_variants);
-    eprintln!("{:#?}", chunks);
+
     let match_arms = chunks.iter().map(|chunk| {
         let range = if chunk.len() == 1 {
             let start = chunk[0].discriminant;
@@ -48,23 +176,12 @@ pub fn create_instruction_tags(
         quote! { #range => Ok(unsafe { core::mem::transmute::<u8, Self>(value) }), }
     });
 
-    let safety_comment = quote! {
-        // Safety: Match arms ensure only valid discriminants are transmuted.
-    };
-
     quote! {
-        #[repr(u8)]
-        #[derive(Clone, Copy, Debug, PartialEq)]
-        #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
-        pub enum #tag_enum_ident {
-            #(#variants)*
-        }
-
         impl TryFrom<u8> for #tag_enum_ident {
             type Error = #error_base;
 
             fn try_from(value: u8) -> Result<Self, Self::Error> {
-                #safety_comment
+                // Safety: Match arms ensure only valid discriminants are transmuted.
                 match value {
                     #(#match_arms)*
                     _ => Err(#error_base::#error_variant),
@@ -74,14 +191,7 @@ pub fn create_instruction_tags(
     }
 }
 
-pub fn create_try_from_u8_for_instruction_tag(instruction_tags: InstructionTags) -> TokenStream {
-    let mut variants = instruction_tags.0.clone();
-    let chunks = sort_and_chunk_variants(&mut variants);
-
-    TokenStream::new()
-}
-
-fn sort_and_chunk_variants(variants: &mut Vec<InstructionVariant>) -> Vec<&[InstructionVariant]> {
+fn sort_and_chunk_variants(variants: &mut [InstructionVariant]) -> Vec<&[InstructionVariant]> {
     variants.sort_by_key(|t| t.discriminant);
     assert_eq!(
         variants[0].discriminant, 0,
@@ -101,13 +211,15 @@ fn sort_and_chunk_variants(variants: &mut Vec<InstructionVariant>) -> Vec<&[Inst
 /// Tests for chunking contiguous variants by discriminant. Since this ultimately generates safe
 /// unsafe code, it's important this is correct.
 mod tests {
+    use quote::format_ident;
+
     use super::*;
 
     fn make_variants(discriminants: &[u8]) -> Vec<InstructionVariant> {
         discriminants
             .iter()
             .map(|&disc| InstructionVariant {
-                name: disc.to_string(),
+                name: format_ident!("{disc}"),
                 discriminant: disc,
             })
             .collect()

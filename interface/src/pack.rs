@@ -1,7 +1,10 @@
 use core::mem::MaybeUninit;
 
+use pinocchio::program_error::ProgramError;
+
 use crate::{
     error::DropsetError,
+    instructions::close_seat::{Deposit_, DropsetInstructionTag, WellWellWell},
     state::{sector::SectorIndex, U16_SIZE, U32_SIZE, U64_SIZE},
 };
 
@@ -88,7 +91,7 @@ pub fn unpack_u64(instruction_data: &[u8]) -> Result<u64, DropsetError> {
 
 /// Safely unpacks a u64 and an optional sector index.
 ///
-/// /// Sector indices passed by a caller can sometimes be optional, in which case `NIL` is used as
+/// Sector indices passed by a caller can sometimes be optional, in which case `NIL` is used as
 /// a `None`-like value. This function safely unpacks the u32 bytes into an Option<SectorIndex>.
 ///
 /// This is useful because it means there's no need to use a COption type.
