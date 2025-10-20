@@ -16,6 +16,8 @@ pub struct CloseSeatContext<'a> {
     pub quote_market_ata: TokenAccountInfo<'a>,
     pub base_mint: MintInfo<'a>,
     pub quote_mint: MintInfo<'a>,
+    pub _base_token_program: &'a AccountInfo,
+    pub _quote_token_program: &'a AccountInfo,
 }
 
 impl<'a> CloseSeatContext<'a> {
@@ -30,8 +32,10 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
+            _base_token_program,
+            _quote_token_program,
         ] = accounts else {
-            return Err(DropsetError::NotEnoughAccountKeys.into());
+            return Err(DropsetError::IncorrectNumberOfAccountInfos.into());
         };
 
         // Safety: Scoped borrow of market account data.
@@ -68,6 +72,8 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
+            _base_token_program,
+            _quote_token_program,
         })
     }
 }

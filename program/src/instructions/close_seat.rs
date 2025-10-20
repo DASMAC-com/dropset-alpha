@@ -1,7 +1,6 @@
 use dropset_interface::{
     instructions::CloseSeatInstructionData, state::node::Node, utils::is_owned_by_spl_token,
 };
-use dropset_interface::{state::node::Node, utils::is_owned_by_spl_token};
 use pinocchio::{account_info::AccountInfo, ProgramResult};
 
 use crate::{
