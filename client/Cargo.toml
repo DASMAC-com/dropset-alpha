@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 anyhow.workspace = true
 colored.workspace = true
-dropset = { path = "../program", features = ["no-entrypoint"] }
+dropset = { path = "../program" }
 dropset-interface = { path = "../interface", features = ["client"], default-features = false }
 solana-client.workspace = true
 solana-commitment-config.workspace = true
