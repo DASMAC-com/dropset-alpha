@@ -8,7 +8,6 @@ use quote::{
     quote,
 };
 use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 use syn::Ident;
 
 use crate::{
@@ -17,63 +16,64 @@ use crate::{
         instruction_variants::InstructionVariant,
         parsed_enum::ParsedEnum,
     },
-    FEATURE_CLIENT,
-    FEATURE_PINOCCHIO_INVOKE,
-    FEATURE_SOLANA_SDK_INVOKE,
+    render::feature_namespace::{
+        Feature,
+        FeatureNamespace,
+        NamespacedTokenStream,
+    },
 };
 
-#[derive(EnumIter)]
-enum Sdk {
-    SolanaSdkInvoke,
-    PinocchioInvoke,
-    Client,
-}
-
-impl Sdk {
-    pub const fn feature(&self) -> &'static str {
+impl Feature {
+    pub fn account_info_lifetime(&self) -> TokenStream {
         match self {
-            Sdk::SolanaSdkInvoke => FEATURE_SOLANA_SDK_INVOKE,
-            Sdk::PinocchioInvoke => FEATURE_PINOCCHIO_INVOKE,
-            Sdk::Client => FEATURE_CLIENT,
+            Feature::SolanaProgram => quote! { 'a, 'info },
+            Feature::Pinocchio => quote! { 'a },
+            Feature::Client => quote! {},
         }
     }
 
-    pub fn field_type_and_lifetime(&self) -> (TokenStream, Option<TokenStream>) {
+    pub fn lifetimed_ref(&self) -> TokenStream {
         match self {
-            Sdk::SolanaSdkInvoke => (
-                quote! { solana_sdk::account_info::AccountInfo<'a> },
-                Some(quote! { 'a }),
-            ),
-            Sdk::PinocchioInvoke => (
-                quote! { &'a pinocchio::account_info::AccountInfo },
-                Some(quote! { 'a }),
-            ),
-            Sdk::Client => (quote! { solana_sdk::pubkey::Pubkey }, None),
+            Feature::SolanaProgram => quote! { &'a },
+            Feature::Pinocchio => quote! { &'a },
+            Feature::Client => quote! {},
         }
     }
 
-    pub fn render_impl(
-        &self,
-        data_struct_ident: &Ident,
-        accounts: &[InstructionAccount],
-    ) -> TokenStream {
-        let acc_metas = accounts
+    /// The specific account info type path, without the lifetimed ref prefixed to it.
+    pub fn account_info_type_path(&self) -> TokenStream {
+        match self {
+            Feature::SolanaProgram => quote! { solana_sdk::account_info::AccountInfo<'info> },
+            Feature::Pinocchio => quote! { pinocchio::account_info::AccountInfo },
+            Feature::Client => quote! { solana_sdk::pubkey::Pubkey },
+        }
+    }
+
+    /// Renders the `invoke_`, `invoke_signed` for pinocchio/solana-program and the create
+    /// instruction method for the client.
+    pub fn render_invoke_methods(&self, instruction_variant: &InstructionVariant) -> TokenStream {
+        let instruction_data_variant_type = instruction_variant.instruction_data_struct_ident();
+        let accounts = &instruction_variant.accounts;
+        let metas = accounts
             .iter()
             .map(|acc| acc.render_account_meta(self))
             .collect_vec();
 
-        let acc_infos = accounts
+        let infos = accounts
             .iter()
             .map(|acc| {
                 let account_ident = format_ident!("{}", acc.name);
-                quote! { #account_ident, }
+                quote! { #account_ident }
             })
             .collect_vec();
 
+        // e.g. `super::CloseSeatInstructionData`
+        let supered_type = quote! { super::#instruction_data_variant_type };
+
         match self {
-            Sdk::PinocchioInvoke => render_pinocchio_impl(data_struct_ident, acc_metas, acc_infos),
-            Sdk::SolanaSdkInvoke => render_solana_sdk_impl(data_struct_ident, acc_metas, acc_infos),
-            Sdk::Client => render_client_impl(data_struct_ident, acc_metas),
+            Feature::Pinocchio => render_pinocchio_invoke(supered_type, metas, infos),
+            Feature::SolanaProgram => render_solana_program_invoke(supered_type, metas, infos),
+            Feature::Client => render_client_create_instruction(supered_type, metas),
         }
     }
 }
@@ -81,30 +81,29 @@ impl Sdk {
 pub fn render_account_struct_variants(
     parsed_enum: &ParsedEnum,
     instruction_variants: Vec<InstructionVariant>,
-) -> TokenStream {
+) -> Vec<NamespacedTokenStream> {
     instruction_variants
         .into_iter()
-        // Don't render anything for `batch` instructions.
+        // Don't render anything for instructions that have no accounts/arguments.
         .filter(|instruction_variant| !instruction_variant.no_accounts_or_args)
         .flat_map(|instruction_variant| {
-            Sdk::iter().map(move |account_struct| {
+            Feature::iter().map(move |account_struct| {
                 render_variant(parsed_enum, &instruction_variant, account_struct)
             })
         })
-        .collect::<TokenStream>()
+        .collect()
 }
 
 fn render_variant(
     parsed_enum: &ParsedEnum,
     instruction_variant: &InstructionVariant,
-    sdk_type: Sdk,
-) -> TokenStream {
+    feature: Feature,
+) -> NamespacedTokenStream {
     let enum_ident = &parsed_enum.enum_ident;
     let instruction_variant_name = &instruction_variant.variant_name;
     let struct_ident = format_ident!("{instruction_variant_name}");
-    let feature = sdk_type.feature();
-    let feature_cfg = quote! { #[cfg(feature = #feature)]};
-    let (account_field_type, lifetime) = sdk_type.field_type_and_lifetime();
+    let type_suffix = feature.account_info_type_path();
+    let lifetimed_ref = feature.lifetimed_ref();
     let struct_level_field_comments = instruction_variant
         .accounts
         .iter()
@@ -119,7 +118,8 @@ fn render_variant(
                 &format_ident!("{}", account.name),
                 // Ensure the comment is prepended with a space for the doc comment.
                 &format!(" {}", &account.description.trim_start()),
-                &account_field_type,
+                &lifetimed_ref,
+                &type_suffix,
             )
         })
         .collect::<Vec<TokenStream>>();
@@ -128,15 +128,13 @@ fn render_variant(
         " The invocation struct for a `{enum_ident}::{instruction_variant_name}` instruction."
     );
 
-    let (ident_and_explicit_lifetime, ident_and_elided_lifetime) =
-        render_struct_name_and_lifetimes(&struct_ident, lifetime);
+    let lifetime = feature.account_info_lifetime();
+    // let (struct_and_lifetime, impl_and_lifetime) = feature.struct_and_impl_idents(&struct_ident);
 
-    let impl_render = sdk_type.render_impl(
-        &instruction_variant.instruction_data_struct_ident(),
-        &instruction_variant.accounts,
-    );
+    let invoke_methods = feature.render_invoke_methods(instruction_variant);
+    let account_load_method = render_account_loader(feature, instruction_variant);
 
-    quote! {
+    let tokens = quote! {
         #[doc = #first_doc_line]
         ///
         /// # Caller Guarantees
@@ -147,15 +145,19 @@ fn render_variant(
         ///
         /// ### Accounts
         #(#struct_level_field_comments)*
-        #feature_cfg
-        pub struct #ident_and_explicit_lifetime {
+        pub struct #struct_ident<#lifetime> {
             #(#struct_fields)*
         }
 
-        #feature_cfg
-        impl #ident_and_elided_lifetime {
-            #impl_render
+        impl<#lifetime> #struct_ident<#lifetime> {
+            #invoke_methods
+            #account_load_method
         }
+    };
+
+    NamespacedTokenStream {
+        tokens,
+        namespace: FeatureNamespace(feature),
     }
 }
 
@@ -185,84 +187,68 @@ fn render_struct_level_doc_comment_for_field(account: &InstructionAccount) -> To
 fn render_struct_field(
     name: &Ident,
     doc_comment: &String,
-    account_info_type: &TokenStream,
+    lifetimed_ref: &TokenStream,
+    type_suffix: &TokenStream,
 ) -> TokenStream {
     if doc_comment.is_empty() {
-        quote! { pub #name: #account_info_type, }
+        quote! { pub #name: #lifetimed_ref #type_suffix, }
     } else {
         quote! {
             #[doc = #doc_comment]
-            pub #name: #account_info_type,
+            pub #name: #lifetimed_ref #type_suffix,
         }
     }
 }
 
-fn render_struct_name_and_lifetimes(
-    struct_ident: &Ident,
-    lifetime: Option<TokenStream>,
-) -> (TokenStream, TokenStream) {
-    let name_with_explicit_lifetime = match &lifetime {
-        Some(lifetime) => quote! { #struct_ident<#lifetime> },
-        None => quote! { #struct_ident },
-    };
-
-    let name_with_elided_lifetime = match &lifetime {
-        Some(_) => quote! { #struct_ident<'_> },
-        None => quote! { #struct_ident },
-    };
-
-    (name_with_explicit_lifetime, name_with_elided_lifetime)
-}
-
 impl InstructionAccount {
-    fn render_account_meta(&self, account_struct: &Sdk) -> TokenStream {
+    fn render_account_meta(&self, account_struct: &Feature) -> TokenStream {
         let field_ident = format_ident!("{}", self.name);
         match account_struct {
-            Sdk::PinocchioInvoke => {
+            Feature::Pinocchio => {
                 let ctor_method = match (self.is_writable, self.is_signer) {
                     (true, true) => quote! { writable_signer },
                     (true, false) => quote! { writable },
                     (false, true) => quote! { readonly_signer },
                     (false, false) => quote! { readonly },
                 };
-                quote! { pinocchio::instruction::AccountMeta::#ctor_method(self.#field_ident.key()), }
+                quote! { pinocchio::instruction::AccountMeta::#ctor_method(self.#field_ident.key()) }
             }
-            Sdk::SolanaSdkInvoke => {
+            Feature::SolanaProgram => {
                 let ctor_method = match self.is_writable {
                     true => quote! { new },
                     false => quote! { new_readonly },
                 };
                 let is_signer = format_ident!("{}", self.is_signer);
-                quote! { solana_instruction::AccountMeta::#ctor_method(*self.#field_ident.key, #is_signer), }
+                quote! { solana_instruction::AccountMeta::#ctor_method(*self.#field_ident.key, #is_signer) }
             }
-            Sdk::Client => {
+            Feature::Client => {
                 let ctor_method = match self.is_writable {
                     true => quote! { new },
                     false => quote! { new_readonly },
                 };
                 let is_signer = format_ident!("{}", self.is_signer);
-                quote! { solana_instruction::AccountMeta::#ctor_method(self.#field_ident, #is_signer), }
+                quote! { solana_instruction::AccountMeta::#ctor_method(self.#field_ident, #is_signer) }
             }
         }
     }
 }
 
-fn render_pinocchio_impl(
-    instruction_data_ident: &Ident,
+fn render_pinocchio_invoke(
+    instruction_data_type: TokenStream,
     account_metas: Vec<TokenStream>,
     account_infos: Vec<TokenStream>,
 ) -> TokenStream {
     quote! {
         #[inline(always)]
-        pub fn invoke(self, data: #instruction_data_ident) -> pinocchio::ProgramResult {
+        pub fn invoke(self, data: #instruction_data_type) -> pinocchio::ProgramResult {
             self.invoke_signed(&[], data)
         }
 
         #[inline(always)]
-        pub fn invoke_signed(self, signers_seeds: &[pinocchio::instruction::Signer], data: #instruction_data_ident) -> pinocchio::ProgramResult {
-            let accounts = &[ #(#account_metas)* ];
+        pub fn invoke_signed(self, signers_seeds: &[pinocchio::instruction::Signer], data: #instruction_data_type) -> pinocchio::ProgramResult {
+            let accounts = &[ #(#account_metas),* ];
             let Self {
-                #(#account_infos)*
+                #(#account_infos),*
             } = self;
 
             pinocchio::cpi::invoke_signed(
@@ -272,7 +258,7 @@ fn render_pinocchio_impl(
                     data: &data.pack(),
                 },
                 &[
-                    #(#account_infos)*
+                    #(#account_infos),*
                 ],
                 signers_seeds,
             )
@@ -280,12 +266,12 @@ fn render_pinocchio_impl(
     }
 }
 
-fn render_solana_sdk_impl(
-    instruction_data_ident: &Ident,
+fn render_solana_program_invoke(
+    instruction_data_ident: TokenStream,
     account_metas: Vec<TokenStream>,
     account_infos: Vec<TokenStream>,
 ) -> TokenStream {
-    quote! {
+    let res = quote! {
         #[inline(always)]
         pub fn invoke(self, data: #instruction_data_ident) -> solana_sdk::entrypoint::ProgramResult {
             self.invoke_signed(&[], data)
@@ -293,9 +279,9 @@ fn render_solana_sdk_impl(
 
         #[inline(always)]
         pub fn invoke_signed(self, signers_seeds: &[&[&[u8]]], data: #instruction_data_ident) -> solana_sdk::entrypoint::ProgramResult {
-            let accounts = [ #(#account_metas)* ].to_vec();
+            let accounts = [ #(#account_metas),* ].to_vec();
             let Self {
-                #(#account_infos)*
+                #(#account_infos),*
             } = self;
 
             solana_cpi::invoke_signed(
@@ -305,28 +291,77 @@ fn render_solana_sdk_impl(
                     data: data.pack().to_vec(),
                 },
                 &[
-                    #(#account_infos)*
+                    #(#account_infos.clone()),*
                 ],
                 signers_seeds,
             )
         }
-    }
+    };
+
+    eprintln!("asdfhsakfhFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+    eprintln!(
+        "{}",
+        quote! { let Self {
+            #(#account_infos),*
+        } = self;}
+    );
+
+    res
 }
 
-fn render_client_impl(
-    instruction_data_ident: &Ident,
+fn render_client_create_instruction(
+    instruction_data_ident: TokenStream,
     account_metas: Vec<TokenStream>,
 ) -> TokenStream {
     quote! {
         #[inline(always)]
         pub fn create_instruction(&self, data: #instruction_data_ident) -> solana_instruction::Instruction {
-            let accounts = [ #(#account_metas)* ].to_vec();
+            let accounts = [ #(#account_metas),* ].to_vec();
 
             solana_instruction::Instruction {
                 program_id: crate::program::ID.into(),
                 accounts,
                 data: data.pack().to_vec(),
             }
+        }
+    }
+}
+
+/// Render the account load function.
+///
+/// The account load function fallibly attempts to structure a slice of `AccountInfo`s into the
+/// corresponding struct of ordered accounts.
+fn render_account_loader(
+    feature: Feature,
+    instruction_variant: &InstructionVariant,
+) -> TokenStream {
+    // The client doesn't need this function.
+    if feature == Feature::Client {
+        return quote! {};
+    }
+
+    let lifetimed_ref = feature.lifetimed_ref();
+    let account_field_type = feature.account_info_type_path();
+    let accounts = instruction_variant
+        .accounts
+        .iter()
+        .map(|acc| format_ident!("{}", acc.name))
+        .collect::<Vec<_>>();
+
+    let err_base = quote! { ProgramError };
+    let err_variant = quote! { NotEnoughAccountKeys };
+
+    assert!(!lifetimed_ref.is_empty(), "Method must receive a slice.");
+
+    quote! {
+        pub fn load_accounts(accounts: #lifetimed_ref [#account_field_type]) -> Result<Self, #err_base> {
+            let [ #(#accounts),* ] = accounts else {
+                return Err(#err_base::#err_variant);
+            };
+
+            Ok(Self {
+                #(#accounts),*
+            })
         }
     }
 }

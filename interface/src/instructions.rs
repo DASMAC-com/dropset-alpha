@@ -53,7 +53,7 @@ pub enum DropsetInstruction {
     #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
     Withdraw,
 
-    #[account(0, signer, name = "event_authority", desc = "Flush events")]
+    #[account(0, signer, name = "event_authority", desc = "Flush events.")]
     FlushEvents,
 
     Batch,
