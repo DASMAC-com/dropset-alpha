@@ -32,7 +32,6 @@ use solana_transaction_status::{
 
 use crate::{
     logs::{
-        log_divider,
         log_error,
         log_info,
         log_success,
@@ -125,12 +124,18 @@ pub async fn send_transaction_with_config(
     match res {
         Ok(sig) => {
             if matches!(debug_logs, Some(true)) {
-                log_divider();
+                println!();
                 log_success("Signature", sig);
                 let encoded = get_transaction_json(rpc, sig).await?;
                 let parsed = ParsedTransaction::from_encoded_transaction(encoded);
-                parsed.inspect(|txn| {
-                    println!("{}", PrettyTransaction(txn));
+                parsed.inspect(|transaction| {
+                    println!(
+                        "\n{}",
+                        PrettyTransaction {
+                            indent: 2,
+                            transaction,
+                        }
+                    );
                 });
             }
             Ok(sig)

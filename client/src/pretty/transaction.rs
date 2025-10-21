@@ -27,7 +27,12 @@ use crate::{
     SPL_TOKEN_ID,
 };
 
-pub struct PrettyTransaction<'a>(pub &'a ParsedTransaction);
+pub struct PrettyTransaction<'a> {
+    /// The amount of spaces preceding each line in the output.
+    pub indent: u8,
+    /// The parsed transaction.
+    pub transaction: &'a ParsedTransaction,
+}
 
 pub struct PrettyInstruction<'a> {
     pub instruction: &'a ParsedInstruction,
@@ -43,9 +48,11 @@ impl Display for PrettyInstruction<'_> {
 
 impl Display for PrettyTransaction<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for outer in &self.0.instructions {
+        for outer in &self.transaction.instructions {
             let outer_header = format_instruction_info(&outer.outer_instruction, true);
-            writeln!(f, "\n{}", outer_header)?;
+            let indentation = " ".repeat(self.indent as usize);
+
+            writeln!(f, "{indentation}{outer_header}")?;
 
             for (i, inner) in outer.inner_instructions.iter().enumerate() {
                 let pretty_instruction = PrettyInstruction {
@@ -53,7 +60,8 @@ impl Display for PrettyTransaction<'_> {
                     outer: false,
                 };
                 let text = format!("    {:>2}. {}", i + 1, pretty_instruction);
-                writeln!(f, "{}", text.color(LogColor::FadedGray))?;
+                let colored = text.color(LogColor::FadedGray);
+                writeln!(f, "{indentation}{colored}")?;
             }
         }
 
