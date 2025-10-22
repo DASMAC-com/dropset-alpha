@@ -5,7 +5,7 @@ use client::{
         send_transaction,
     },
 };
-use dropset_interface::instructions::RegisterMarketInstructionData;
+use dropset_interface::instructions::generated_client::*;
 use solana_client::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::signer::Signer;

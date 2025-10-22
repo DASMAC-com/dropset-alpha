@@ -193,7 +193,8 @@ pub fn log_instruction_error(error: &ClientError, instructions: &[Instruction]) 
                 InstructionError::Custom(code) => {
                     if instruction.program_id.as_ref() == dropset::ID {
                         let error = DropsetError::from_repr(code as u8).expect("Should be valid");
-                        let tag = DropsetInstruction::try_from(tag).expect("Should be valid");
+                        let tag = DropsetInstruction::try_from_u8(tag, || anyhow::Error::msg(""))
+                            .expect("Should be valid");
                         let msg = format!("({tag}, {error})");
                         log_error("Dropset error", msg);
                     }

@@ -8,11 +8,7 @@ use client::{
     },
 };
 use dropset_interface::{
-    instructions::{
-        CloseSeatInstructionData,
-        DepositInstructionData,
-        RegisterMarketInstructionData,
-    },
+    instructions::generated_client::*,
     state::sector::NIL,
 };
 use solana_client::rpc_client::RpcClient;

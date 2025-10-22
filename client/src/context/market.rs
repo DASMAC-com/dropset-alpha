@@ -1,11 +1,5 @@
 use dropset_interface::{
-    instructions::{
-        generated_client::*,
-        CloseSeatInstructionData,
-        DepositInstructionData,
-        RegisterMarketInstructionData,
-        WithdrawInstructionData,
-    },
+    instructions::generated_client::*,
     state::SYSTEM_PROGRAM_ID,
 };
 use solana_client::rpc_client::RpcClient;

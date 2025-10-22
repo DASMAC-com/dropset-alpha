@@ -97,7 +97,7 @@ impl KnownProgram {
                 let tag = instruction_data
                     .first()
                     .expect("Dropset instruction should have at least one byte");
-                let dropset_tag = DropsetInstruction::try_from(*tag)
+                let dropset_tag = DropsetInstruction::try_from_u8(*tag, || anyhow::Error::msg(""))
                     .expect("Dropset instruction tag should be valid");
                 enum_name(&dropset_tag)
             }
