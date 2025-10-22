@@ -2,7 +2,6 @@ use instruction_macros::ProgramInstruction;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, ProgramInstruction)]
-#[program_instruction(error = pinocchio::program_error::ProgramError::InvalidInstructionData)]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
 #[cfg_attr(feature = "client", derive(strum_macros::Display))]
 #[rustfmt::skip]

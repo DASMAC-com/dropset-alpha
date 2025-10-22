@@ -1,5 +1,5 @@
-pub mod config;
 pub mod data_enum;
+pub mod error_path;
 pub mod instruction_account;
 pub mod instruction_argument;
 pub mod instruction_tags;

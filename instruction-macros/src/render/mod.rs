@@ -1,4 +1,5 @@
 pub mod account_structs;
+pub mod error_type;
 pub mod feature_namespace;
 pub mod instruction_data_struct;
 pub mod try_from_u8_for_instruction_tag;

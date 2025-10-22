@@ -10,13 +10,15 @@ mod render;
 
 use parse::parsing_error::ParsingError;
 
-use crate::derive::{
-    accounts::derive_accounts,
-    instruction_data::derive_instruction_data,
+use crate::{
+    derive::{
+        accounts::derive_accounts,
+        instruction_data::derive_instruction_data,
+    },
+    render::feature_namespace::merge_namespaced_token_streams,
 };
 
 const ACCOUNT_IDENTIFIER: &str = "account";
-const CONFIG_ATTR: &str = "sigil";
 const ACCOUNT_NAME: &str = "name";
 const ACCOUNT_WRITABLE: &str = "writable";
 const ACCOUNT_SIGNER: &str = "signer";
@@ -27,7 +29,7 @@ const DESCRIPTION: &str = "desc";
 pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let tag_render = match derive_instruction_data(input.clone()) {
+    let instruction_data_render = match derive_instruction_data(input.clone()) {
         Ok(tag) => tag,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -37,9 +39,22 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(e) => return e.to_compile_error().into(),
     };
 
-    quote! {
-        #tag_render
-        #accounts_render
-    }
-    .into()
+    let merged_streams =
+        merge_namespaced_token_streams(vec![instruction_data_render, accounts_render]);
+
+    let namespaced_outputs = merged_streams
+        .into_iter()
+        .map(|(namespace, tokens)| {
+            let feature = namespace.0;
+
+            quote! {
+                #[cfg(feature = #feature)]
+                pub mod #namespace {
+                    #(#tokens)*
+                }
+            }
+        })
+        .collect::<proc_macro2::TokenStream>();
+
+    namespaced_outputs.into()
 }

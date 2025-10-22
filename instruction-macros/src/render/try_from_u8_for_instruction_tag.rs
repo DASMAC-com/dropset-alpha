@@ -4,19 +4,43 @@ use proc_macro2::{
     TokenStream,
 };
 use quote::quote;
+use strum::IntoEnumIterator;
 
-use crate::parse::{
-    instruction_tags::InstructionTags,
-    parsed_enum::ParsedEnum,
+use crate::{
+    parse::{
+        error_path::ErrorPath,
+        instruction_tags::InstructionTags,
+        parsed_enum::ParsedEnum,
+    },
+    render::{
+        error_type::ErrorType,
+        feature_namespace::{
+            Feature,
+            FeatureNamespace,
+            NamespacedTokenStream,
+        },
+    },
 };
 
-pub fn render_try_from_u8_for_instruction_tag(
+pub fn render_try_from_u8_for_instruction_tags(
     parsed_enum: &ParsedEnum,
-    instruction_tags: InstructionTags,
+    instruction_tags: &InstructionTags,
+) -> Vec<NamespacedTokenStream> {
+    Feature::iter()
+        .map(|feature| NamespacedTokenStream {
+            tokens: render_try_from_impl(parsed_enum, instruction_tags, feature),
+            namespace: FeatureNamespace(feature),
+        })
+        .collect()
+}
+
+fn render_try_from_impl(
+    parsed_enum: &ParsedEnum,
+    instruction_tags: &InstructionTags,
+    feature: Feature,
 ) -> TokenStream {
     let enum_ident = &parsed_enum.enum_ident;
-    let error_base = &parsed_enum.config.errors.invalid_tag.base;
-    let error_variant = &parsed_enum.config.errors.invalid_tag.variant;
+    let ErrorPath { base, variant } = ErrorType::InvalidTag.to_path(feature);
 
     let mut cloned_variants = instruction_tags.0.clone().into_iter().collect_vec();
     cloned_variants.sort_by_key(|t| t.discriminant);
@@ -39,14 +63,14 @@ pub fn render_try_from_u8_for_instruction_tag(
     });
 
     quote! {
-        impl TryFrom<u8> for #enum_ident {
-            type Error = #error_base;
+        impl TryFrom<u8> for super::#enum_ident {
+            type Error = #base;
 
             fn try_from(tag: u8) -> Result<Self, Self::Error> {
                 // Safety: Match arms ensure only valid discriminants are transmuted.
                 match tag {
                     #(#ranges)|* => Ok(unsafe { core::mem::transmute::<u8, Self>(tag) }),
-                    _ => Err(#error_base::#error_variant),
+                    _ => Err(#base::#variant),
                 }
             }
         }
