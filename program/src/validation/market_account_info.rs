@@ -2,14 +2,21 @@ use dropset_interface::{
     error::DropsetError,
     program,
     state::{
-        market::{Market, MarketRef, MarketRefMut},
+        market::{
+            Market,
+            MarketRef,
+            MarketRefMut,
+        },
         market_header::MarketHeader,
         sector::SECTOR_SIZE,
         transmutable::Transmutable,
     },
     utils::owned_by,
 };
-use pinocchio::{account_info::AccountInfo, ProgramResult};
+use pinocchio::{
+    account_info::AccountInfo,
+    ProgramResult,
+};
 
 use crate::shared::account_resize::fund_then_resize_unchecked;
 

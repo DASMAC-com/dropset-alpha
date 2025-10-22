@@ -1,7 +1,13 @@
 use crate::state::{
     free_stack::Stack,
-    linked_list::{LinkedList, LinkedListIter},
-    market_header::{MarketHeader, MARKET_ACCOUNT_DISCRIMINANT},
+    linked_list::{
+        LinkedList,
+        LinkedListIter,
+    },
+    market_header::{
+        MarketHeader,
+        MARKET_ACCOUNT_DISCRIMINANT,
+    },
     sector::SECTOR_SIZE,
     transmutable::Transmutable,
 };

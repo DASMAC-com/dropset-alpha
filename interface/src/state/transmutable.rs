@@ -6,7 +6,10 @@
 // - Made load/load_mut safe for callers
 // Original: https://github.com/solana-program/token/blob/75116550519a9ee3fdfa6c819aca91e383fffa39/p-interface/src/state/mod.rs
 
-use crate::error::{DropsetError, DropsetResult};
+use crate::error::{
+    DropsetError,
+    DropsetResult,
+};
 
 /// Marker trait for a zero-copy view of bytes as `&Self` via an unchecked cast, aka a transmute.
 ///

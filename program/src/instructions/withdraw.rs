@@ -1,7 +1,12 @@
 use dropset_interface::{
-    error::DropsetError, pack::unpack_amount_and_sector_index, state::node::Node,
+    error::DropsetError,
+    pack::unpack_amount_and_sector_index,
+    state::node::Node,
 };
-use pinocchio::{account_info::AccountInfo, ProgramResult};
+use pinocchio::{
+    account_info::AccountInfo,
+    ProgramResult,
+};
 
 use crate::{
     context::deposit_withdraw_context::DepositWithdrawContext,

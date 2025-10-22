@@ -1,8 +1,16 @@
-use dropset_interface::{pack::unpack_u32, state::node::Node, utils::is_owned_by_spl_token};
-use pinocchio::{account_info::AccountInfo, ProgramResult};
+use dropset_interface::{
+    pack::unpack_u32,
+    state::node::Node,
+    utils::is_owned_by_spl_token,
+};
+use pinocchio::{
+    account_info::AccountInfo,
+    ProgramResult,
+};
 
 use crate::{
-    context::close_seat_context::CloseSeatContext, market_signer,
+    context::close_seat_context::CloseSeatContext,
+    market_signer,
     shared::market_operations::find_seat_with_hint,
 };
 
