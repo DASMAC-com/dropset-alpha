@@ -78,7 +78,7 @@ impl<'a> MarketAccountInfo<'a> {
     /// ### Accounts
     ///   0. `[READ]` Market account
     #[inline(always)]
-    pub unsafe fn load_unchecked(&self) -> MarketRef {
+    pub unsafe fn load_unchecked(&self) -> MarketRef<'_> {
         let data = unsafe { self.info.borrow_data_unchecked() };
         // Safety: `Self::new` guarantees the account info is program-owned and initialized.
         unsafe { Market::from_bytes(data) }
@@ -95,7 +95,7 @@ impl<'a> MarketAccountInfo<'a> {
     /// ### Accounts
     ///   0. `[WRITE]` Market account
     #[inline(always)]
-    pub unsafe fn load_unchecked_mut(&mut self) -> MarketRefMut {
+    pub unsafe fn load_unchecked_mut(&mut self) -> MarketRefMut<'_> {
         let data = unsafe { self.info.borrow_mut_data_unchecked() };
         // Safety: `Self::new` guarantees the account info is program-owned and initialized.
         unsafe { Market::from_bytes_mut(data) }
