@@ -53,14 +53,15 @@ pub fn parse_logs_for_compute(
     let mut stack = ComputeBuilder::default();
 
     for log in meta.log_messages.as_ref().unwrap_or(&vec![]) {
-        if let Some((program_id, expected_height)) = parse_invoke(log) {
+        let trimmed = log.trim();
+        if let Some((program_id, expected_height)) = parse_invoke(trimmed) {
             stack.push_new(program_id);
 
             let heights_match = expected_height == stack.stack.last().unwrap().stack_height;
             ensure!(heights_match, "Stack height mismatch");
-        } else if let Some((program_id, used, total)) = parse_compute(log) {
+        } else if let Some((program_id, used, total)) = parse_compute(trimmed) {
             stack.push_compute_info(&program_id, used, total)?;
-        } else if let Some(program_id) = parse_success(log) {
+        } else if let Some(program_id) = parse_success(trimmed) {
             stack.push_success(&program_id)?;
         }
     }
@@ -208,18 +209,9 @@ impl ComputeBuilder {
         );
 
         for child in children_infos.into_iter() {
-            ensure!(
-                child.parent_index.is_some(),
-                "Child should have parent index"
-            );
-
-            let parent_idx = child.parent_index.unwrap();
-            if parent_instructions.get_mut(parent_idx).is_none() {
-                println!(
-                    "parent index: {parent_idx}, {child:#?}, LEN: {}",
-                    parent_instructions.len()
-                );
-            }
+            let parent_idx = child
+                .parent_index
+                .ok_or(anyhow::Error::msg("Child should have parent index"))?;
 
             parent_instructions
                 .get_mut(parent_idx)
