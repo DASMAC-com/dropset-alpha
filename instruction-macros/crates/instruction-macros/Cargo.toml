@@ -10,6 +10,7 @@ proc-macro = true
 workspace = true
 
 [dependencies]
+instruction-macros-impl = { path = "../instruction-macros-impl" }
 quote.workspace = true
 proc-macro2.workspace = true
 syn.workspace = true
