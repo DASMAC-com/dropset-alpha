@@ -9,9 +9,11 @@ impl From<ParsingError> for String {
     fn from(value: ParsingError) -> Self {
         match value {
             ParsingError::NotAnEnum => "Derive macro only works on enums".into(),
-            ParsingError::ProgramIdMissing => "Program ID not found. Specify the `[u8; 32]` program ID path like so: `#[program_id(program::ID)]`".into(),
-            ParsingError::InvalidProgramIdPath => "Program ID path must start with `crate::`, `::`, or be a single local identifier like `PROGRAM_ID`".into(),
-        }
+            ParsingError::ProgramIdMissing =>
+                "Program ID not found. Specify the `[u8; 32]` program ID path like so: `#[program_id(program::ID)]`".into(),
+            ParsingError::InvalidProgramIdPath =>
+                "Program ID path must start with `crate::`, `::`, or be a single local identifier like `PROGRAM_ID`".into(),
+}
     }
 }
 
