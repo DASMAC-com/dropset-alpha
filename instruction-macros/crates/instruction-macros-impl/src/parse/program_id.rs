@@ -70,7 +70,7 @@ impl TryFrom<&DeriveInput> for ProgramID {
                 let p: Path = parse_quote!(super::#ident);
                 p
             }
-            // Something invalid, like `program::ID`, since this is ambiguous.
+            // Something invalid; e.g. `program::ID`, since that's ambiguous.
             p => return Err(ParsingError::InvalidProgramIdPath.new_err(p)),
         };
 
