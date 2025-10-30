@@ -21,10 +21,12 @@ use crate::{
         instruction_variant::InstructionVariant,
         parsed_enum::ParsedEnum,
     },
-    render::feature_namespace::{
+    render::{
+        feature_namespace::{
+            FeatureNamespace,
+            NamespacedTokenStream,
+        },
         Feature,
-        FeatureNamespace,
-        NamespacedTokenStream,
     },
 };
 

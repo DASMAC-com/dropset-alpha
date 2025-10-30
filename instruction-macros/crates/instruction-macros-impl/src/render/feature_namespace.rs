@@ -1,30 +1,14 @@
 use std::collections::HashMap;
 
-use proc_macro2::{
-    Literal,
-    TokenStream,
-};
+use proc_macro2::TokenStream;
 use quote::{
     format_ident,
     ToTokens,
     TokenStreamExt,
 };
 use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 
-#[derive(Clone, Copy, strum_macros::Display, EnumIter, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "kebab-case")]
-pub enum Feature {
-    SolanaProgram,
-    Pinocchio,
-    Client,
-}
-
-impl ToTokens for Feature {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.append(Literal::string(&self.to_string()));
-    }
-}
+use crate::render::Feature;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct FeatureNamespace(pub Feature);
