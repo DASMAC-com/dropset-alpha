@@ -10,9 +10,9 @@ use crate::{
 };
 
 impl InstructionAccount {
-    pub fn render_account_meta(&self, account_struct: Feature) -> TokenStream {
+    pub fn render_account_meta(&self, feature: Feature) -> TokenStream {
         let field_ident = format_ident!("{}", self.name);
-        match account_struct {
+        match feature {
             Feature::Pinocchio => {
                 let ctor_method = match (self.is_writable, self.is_signer) {
                     (true, true) => quote! { writable_signer },
