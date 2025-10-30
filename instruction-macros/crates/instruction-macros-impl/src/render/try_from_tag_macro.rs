@@ -1,4 +1,3 @@
-use heck::ToSnakeCase;
 use itertools::Itertools;
 use proc_macro2::{
     Literal,
@@ -126,20 +125,21 @@ pub fn render(
 ///
 /// // The transmute macro for Enum1 would then expand to:
 /// match $tag {
-///   // This is an INVALID TRANSMUTE because `Enum1::B == 2` here.
+///   // This is *undefined behavior*. Since `Enum1::B == 2`
+///   // here, the transmute is invalid and results in UB.
 ///   0..1 => Ok(unsafe { transmute::<u8, Enum1> }),
 ///   _ => // ...
 /// }
 /// ```
 ///
 /// To prevent this, the macro inserts compile time const assertions
-/// for every single variant to ensure isomorphism between the two
-/// enum variants, even if they're not strictly the same type.
+/// for every single variant to ensure isomorphism between the original
+/// enum and the passed enum, even if they're not strictly the same type.
 ///
-/// This ensures the transmute is *sound*.
+/// This guarantees the transmute is *sound*.
 ///
-/// More clearly:
-///
+/// More specifically, the following const assertions would be generated,
+/// triggering a compile-time failure:
 /// ```rust
 /// const _: [(); 0] = [(); Enum1::A as usize];
 /// // ❌ fails because Enum1::B == 2
