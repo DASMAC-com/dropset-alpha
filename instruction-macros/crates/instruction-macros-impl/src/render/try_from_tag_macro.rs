@@ -94,7 +94,7 @@ pub fn render(
             ($tag:expr, $err_variant:path) => {{
                 let tag = $tag;
                 #soundness_checks
-                // Safety: Match arms ensure only valid discriminants are transmuted.
+                // Safety: Only valid discriminants are transmuted.
                 match tag {
                     #(#ranges)|* => Ok(unsafe { core::mem::transmute::<u8, #enum_ident>(tag) }),
                     _ => Err($err_variant),
