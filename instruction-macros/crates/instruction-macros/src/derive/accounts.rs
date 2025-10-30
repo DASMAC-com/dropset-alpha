@@ -1,9 +1,19 @@
-use instruction_macros_impl::parse::parsed_enum::ParsedEnum;
-use proc_macro2::TokenStream;
+use instruction_macros_impl::{
+    parse::{
+        instruction_variant::parse_instruction_variants,
+        parsed_enum::ParsedEnum,
+    },
+    render::{
+        render_accounts,
+        NamespacedTokenStream,
+    },
+};
 use syn::DeriveInput;
 
-pub fn derive_accounts(input: DeriveInput) -> syn::Result<TokenStream> {
+pub fn derive_accounts(input: DeriveInput) -> syn::Result<Vec<NamespacedTokenStream>> {
     let parsed_enum = ParsedEnum::try_from(input)?;
+    let instruction_variants = parse_instruction_variants(&parsed_enum.data_enum)?;
+    let accounts = render_accounts(&parsed_enum, instruction_variants);
 
-    Ok(TokenStream::new())
+    Ok(accounts)
 }
