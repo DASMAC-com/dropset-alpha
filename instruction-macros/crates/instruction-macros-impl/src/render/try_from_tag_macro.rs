@@ -13,15 +13,13 @@ use crate::parse::{
     parsed_enum::ParsedEnum,
 };
 
-/// Renders a declarative macro that fallibly converts a primitive `u8` to an enum type `T`.
-///
-/// In essence, it is the inner body of a `TryFrom<u8> for T`, where `T` is an enum with all u8
-/// variant discriminants.
+/// Renders a declarative macro that fallibly converts a primitive `u8` instruction tag byte to an
+/// enum type `T`.
 ///
 /// ## Rendered output
 /// ```
 /// #[repr(u8)]
-/// // `ProgramInstruction` creates a declarative macro `my_instruction_try_from_u8` for this enum.
+/// // `ProgramInstruction` creates a declarative macro for this enum.
 /// #[derive(ProgramInstruction)]
 /// pub enum MyInstruction {
 ///     CloseSeat = 0,
@@ -32,12 +30,21 @@ use crate::parse::{
 /// }
 ///
 /// // Which expands this:
-/// my_instruction_try_from_u8!(tag, ProgramError::InvalidInstructionData)
+/// MyInstruction_try_from_tag!(tag, ProgramError::InvalidInstructionData)
 ///
 /// // To this:
-/// match tag {
-///     0..=1 | 3..=5 => Ok(unsafe { core::mem::transmute::<u8, MyInstruction>(tag) }),
-///     _ => Err(ProgramError::InvalidInstructionData),
+/// {
+///     // The const assertions here ensure soundness.
+///     const _: [(); 0] = [(); MyInstruction::CloseSeat as usize];
+///     const _: [(); 1] = [(); MyInstruction::Deposit as usize];
+///     const _: [(); 4] = [(); MyInstruction::Withdraw as usize];
+///     const _: [(); 5] = [(); MyInstruction::TagWithImplicitDiscriminant as usize];
+///     const _: [(); 3] = [(); MyInstruction::OutOfOrderDiscriminant as usize];
+///
+///     match tag {
+///         0..=1 | 3..=5 => Ok(unsafe { core::mem::transmute::<u8, MyInstruction>(tag) }),
+///         _ => Err(ProgramError::InvalidInstructionData),
+///     }
 /// }
 /// ```
 ///
