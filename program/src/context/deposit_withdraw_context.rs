@@ -1,4 +1,4 @@
-use dropset_interface::error::DropsetError;
+use dropset_interface::instructions::generated_pinocchio::Deposit;
 use pinocchio::{
     account_info::AccountInfo,
     program_error::ProgramError,
@@ -17,6 +17,7 @@ pub struct DepositWithdrawContext<'a> {
     pub user_ata: TokenAccountInfo<'a>,
     pub market_ata: TokenAccountInfo<'a>,
     pub mint: MintInfo<'a>,
+    pub _token_program: &'a AccountInfo,
 }
 
 impl<'a> DepositWithdrawContext<'a> {
@@ -33,16 +34,23 @@ impl<'a> DepositWithdrawContext<'a> {
     pub unsafe fn load(
         accounts: &'a [AccountInfo],
     ) -> Result<DepositWithdrawContext<'a>, ProgramError> {
-        #[rustfmt::skip]
-        let [
+        // Ensure no drift between deposit/withdraw struct fields since this method is used to load
+        // accounts for both `Deposit` and `Withdraw` instructions.
+        // Ideally, this would be a unit test, but it's not possible to construct the `pinocchio`
+        // `AccountInfo` without spinning up an entire e2e test with a local validator.
+        #[cfg(debug_assertions)]
+        debug_assert_deposit_withdraw(accounts);
+
+        // Note `Withdraw`'s fields are checked below with unit tests, since this method is used for
+        // both `Deposit` and `Withdraw`.
+        let Deposit {
             user,
             market_account,
             user_ata,
             market_ata,
             mint,
-        ] = accounts else {
-            return Err(DropsetError::NotEnoughAccountKeys.into());
-        };
+            token_program,
+        } = Deposit::load_accounts(accounts)?;
 
         // Safety: Scoped borrow of market account data.
         let (market_account, mint) = unsafe {
@@ -66,6 +74,45 @@ impl<'a> DepositWithdrawContext<'a> {
             user_ata,
             market_ata,
             mint,
+            _token_program: token_program,
         })
     }
+}
+
+#[cfg(debug_assertions)]
+fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
+    use dropset_interface::instructions::generated_pinocchio::{
+        Deposit,
+        Withdraw,
+    };
+
+    let d = Deposit::load_accounts(accounts);
+    let w = Withdraw::load_accounts(accounts);
+
+    debug_assert_eq!(d.is_ok(), w.is_ok(), "Deposit/Withdraw mapping drift");
+
+    // Let the `load` function handle the error.
+    if d.is_err() {
+        return;
+    }
+
+    // The compiler will raise an error if these fields are incorrect.
+    let Withdraw {
+        user,
+        market_account,
+        user_ata,
+        market_ata,
+        mint,
+        token_program,
+    } = w.unwrap();
+
+    let d = d.unwrap();
+
+    // And to ensure the same ordering, check the pubkeys field by field.
+    debug_assert_eq!(d.user.key(), user.key());
+    debug_assert_eq!(d.market_account.key(), market_account.key());
+    debug_assert_eq!(d.user_ata.key(), user_ata.key());
+    debug_assert_eq!(d.market_ata.key(), market_ata.key());
+    debug_assert_eq!(d.mint.key(), mint.key());
+    debug_assert_eq!(d.token_program.key(), token_program.key());
 }

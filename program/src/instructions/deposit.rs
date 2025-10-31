@@ -1,8 +1,9 @@
 use dropset_interface::{
-    pack::unpack_amount_and_optional_sector_index,
+    instructions::generated_pinocchio::DepositInstructionData,
     state::{
         market_seat::MarketSeat,
         node::Node,
+        sector::NIL,
     },
 };
 use pinocchio::{
@@ -24,11 +25,11 @@ use crate::{
 
 /// User deposits tokens and updates or registers their seat.
 ///
-/// 1) User provided a sector index hint: update an existing seat.
+/// 1) User provided a non-NIL sector index hint: update an existing seat.
 ///   - Try to find the seat with the user's sector index hint.
 ///   - If invalid return early, otherwise update the seat with the amount deposited.
 ///
-/// 2) The user didn't provide a sector index hint: register a new seat.
+/// 2) The user didn't provide a non-NIL sector index hint: register a new seat.
 ///   - Check if the account needs extra storage and resize it if so.
 ///   - Then register the user's new seat at the proper index with the amount deposited data.
 ///   - If the user already exists, return an error instead of inserting.
@@ -38,18 +39,21 @@ use crate::{
 /// Caller guarantees the safety contract detailed in
 /// [`dropset_interface::instructions::deposit::Deposit`]
 pub unsafe fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    let (amount, hint) = unpack_amount_and_optional_sector_index(instruction_data)?;
+    let DepositInstructionData {
+        amount,
+        sector_index_hint,
+    } = DepositInstructionData::unpack(instruction_data)?;
 
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
     let amount_deposited = unsafe { deposit_non_zero_to_market(&ctx, amount) }?;
 
     // 1) Update an existing seat.
-    if let Some(index) = hint {
+    if sector_index_hint != NIL {
         // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
-        Node::check_in_bounds(market.sectors, index)?;
+        Node::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
-        let seat = unsafe { find_mut_seat_with_hint(market, index, ctx.user.key()) }?;
+        let seat = unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.key()) }?;
 
         if ctx.mint.is_base_mint {
             seat.set_base_available(

@@ -1,4 +1,4 @@
-use dropset_interface::error::DropsetError;
+use dropset_interface::instructions::generated_pinocchio::CloseSeat;
 use pinocchio::{
     account_info::AccountInfo,
     program_error::ProgramError,
@@ -20,12 +20,13 @@ pub struct CloseSeatContext<'a> {
     pub quote_market_ata: TokenAccountInfo<'a>,
     pub base_mint: MintInfo<'a>,
     pub quote_mint: MintInfo<'a>,
+    pub _base_token_program: &'a AccountInfo,
+    pub _quote_token_program: &'a AccountInfo,
 }
 
 impl<'a> CloseSeatContext<'a> {
     pub unsafe fn load(accounts: &'a [AccountInfo]) -> Result<CloseSeatContext<'a>, ProgramError> {
-        #[rustfmt::skip]
-        let [
+        let CloseSeat {
             user,
             market_account,
             base_user_ata,
@@ -34,9 +35,9 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
-        ] = accounts else {
-            return Err(DropsetError::NotEnoughAccountKeys.into());
-        };
+            base_token_program,
+            quote_token_program,
+        } = CloseSeat::load_accounts(accounts)?;
 
         // Safety: Scoped borrow of market account data.
         let (market_account, base_mint, quote_mint) = unsafe {
@@ -72,6 +73,8 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
+            _base_token_program: base_token_program,
+            _quote_token_program: quote_token_program,
         })
     }
 }

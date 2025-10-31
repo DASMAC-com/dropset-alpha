@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+instruction-macros = { path = "../instruction-macros/crates/instruction-macros" }
 pinocchio.workspace = true
 pinocchio-pubkey.workspace = true
 pinocchio-token.workspace = true
@@ -18,5 +19,8 @@ strum_macros.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["pinocchio"]
 std = []
+pinocchio = []
+client = []
+solana_program = []
