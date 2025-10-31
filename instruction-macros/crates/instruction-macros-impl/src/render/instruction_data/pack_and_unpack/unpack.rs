@@ -45,7 +45,7 @@ pub fn render(
 
     quote! {
         /// This method unpacks the instruction data that comes *after* the discriminant has
-        /// already been peeledoff of the front of the slice.
+        /// already been peeled off of the front of the slice.
         /// Trailing bytes are ignored; the length must be sufficient, not exact.
         #[inline(always)]
         pub fn unpack(instruction_data: &[u8]) -> Result<Self, #base> {

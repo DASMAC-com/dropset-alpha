@@ -17,8 +17,8 @@ pub fn render(
         format!(" - [0]: the discriminant `{enum_ident}::{tag_variant}` (u8, 1 byte)");
 
     let pack_statements_tokens = match pack_statements.len() {
-        0 => quote! { unsafe { #(#pack_statements)* } },
-        _ => quote! {},
+        0 => quote! {},
+        _ => quote! { unsafe { #(#pack_statements)* } },
     };
 
     quote! {
