@@ -96,7 +96,7 @@ fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
         return;
     }
 
-    // The compiler will immediately yell if these fields are ever incorrect.
+    // The compiler will raise an error if these fields are incorrect.
     let Withdraw {
         user,
         market_account,
