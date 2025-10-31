@@ -3,6 +3,11 @@
 // Ideally `rustfmt` is available, too, otherwise the expanded code won't be formatted.
 
 #[test]
+pub fn expand_client() {
+    macrotest::expand_args("src/client.rs", ["--features", "client"]);
+}
+
+#[test]
 pub fn expand_pinocchio() {
     macrotest::expand_args("src/pinocchio.rs", ["--features", "pinocchio"]);
 }
@@ -10,9 +15,4 @@ pub fn expand_pinocchio() {
 #[test]
 pub fn expand_solana_program() {
     macrotest::expand_args("src/solana_program.rs", ["--features", "solana-program"]);
-}
-
-#[test]
-pub fn expand_client() {
-    macrotest::expand_args("src/client.rs", ["--features", "client"]);
 }
