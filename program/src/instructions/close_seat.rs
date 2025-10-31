@@ -1,5 +1,5 @@
 use dropset_interface::{
-    pack::unpack_u32,
+    instructions::generated_pinocchio::CloseSeatInstructionData,
     state::node::Node,
     utils::is_owned_by_spl_token,
 };
@@ -21,7 +21,7 @@ use crate::{
 /// Caller guarantees the safety contract detailed in
 /// [`dropset_interface::instructions::close_seat::CloseSeat`]
 pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    let hint = unpack_u32(instruction_data)?;
+    let sector_index_hint = CloseSeatInstructionData::unpack(instruction_data)?.sector_index_hint;
     let mut ctx = unsafe { CloseSeatContext::load(accounts) }?;
 
     // Get the market bump and the base and quote amounts available for the user.
@@ -30,9 +30,9 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
         let market = ctx.market_account.load_unchecked();
         let market_bump = market.header.market_bump;
 
-        Node::check_in_bounds(market.sectors, hint)?;
+        Node::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
-        let seat = find_seat_with_hint(market, hint, ctx.user.key())?;
+        let seat = find_seat_with_hint(market, sector_index_hint, ctx.user.key())?;
 
         // NOTE: The base/quote available and deposited do not need to be zeroed here because
         // they're zeroed out in the `push_free_node` call in the `remove_at` method below.
@@ -46,7 +46,7 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
             .load_unchecked_mut()
             .seat_list()
             // Safety: The index hint was verified as in-bounds.
-            .remove_at(hint)
+            .remove_at(sector_index_hint)
     };
 
     // If the user had any `base_available`, transfer that amount from market account => user.

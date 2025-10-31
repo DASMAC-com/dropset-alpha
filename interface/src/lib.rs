@@ -5,7 +5,6 @@ extern crate std;
 
 pub mod error;
 pub mod instructions;
-pub mod pack;
 pub mod state;
 pub mod utils;
 
