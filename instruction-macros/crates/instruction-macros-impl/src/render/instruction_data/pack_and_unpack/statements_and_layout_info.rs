@@ -74,7 +74,7 @@ fn pack_statement(name: &Ident, pack_offset: usize, size: usize) -> TokenStream 
     let end_lit = Literal::usize_unsuffixed(pack_offset + size);
 
     quote! {
-        core::ptr::copy_nonoverlapping(
+        ::core::ptr::copy_nonoverlapping(
             (&self.#name.to_le_bytes()).as_ptr(),
             (&mut data[#start_lit..#end_lit]).as_mut_ptr() as *mut u8,
             #size_lit,

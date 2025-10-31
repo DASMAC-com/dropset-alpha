@@ -43,9 +43,9 @@ impl Feature {
     /// The specific account info type path, without the lifetimed ref prefixed to it.
     pub fn account_info_type_path(&self) -> TokenStream {
         match self {
-            Feature::SolanaProgram => quote! { solana_sdk::account_info::AccountInfo<'info> },
-            Feature::Pinocchio => quote! { pinocchio::account_info::AccountInfo },
-            Feature::Client => quote! { solana_sdk::pubkey::Pubkey },
+            Feature::SolanaProgram => quote! { ::solana_sdk::account_info::AccountInfo<'info> },
+            Feature::Pinocchio => quote! { ::pinocchio::account_info::AccountInfo },
+            Feature::Client => quote! { ::solana_sdk::pubkey::Pubkey },
         }
     }
 }

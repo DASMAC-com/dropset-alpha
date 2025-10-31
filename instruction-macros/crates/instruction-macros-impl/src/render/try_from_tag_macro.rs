@@ -42,7 +42,7 @@ use crate::parse::{
 ///     const _: [(); 3] = [(); MyInstruction::OutOfOrderDiscriminant as usize];
 ///
 ///     match tag {
-///         0..=1 | 3..=5 => Ok(unsafe { core::mem::transmute::<u8, MyInstruction>(tag) }),
+///         0..=1 | 3..=5 => Ok(unsafe { ::core::mem::transmute::<u8, MyInstruction>(tag) }),
 ///         _ => Err(ProgramError::InvalidInstructionData),
 ///     }
 /// }
@@ -102,7 +102,7 @@ pub fn render(
                 #soundness_checks
                 // Safety: Only valid discriminants are transmuted.
                 match tag {
-                    #(#ranges)|* => Ok(unsafe { core::mem::transmute::<u8, #enum_ident>(tag) }),
+                    #(#ranges)|* => Ok(unsafe { ::core::mem::transmute::<u8, #enum_ident>(tag) }),
                     _ => Err($err_variant),
                 }
             }}
