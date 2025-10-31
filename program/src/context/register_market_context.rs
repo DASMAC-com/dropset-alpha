@@ -1,5 +1,8 @@
-use dropset_interface::error::DropsetError;
-use pinocchio::account_info::AccountInfo;
+use dropset_interface::instructions::generated_pinocchio::RegisterMarket;
+use pinocchio::{
+    account_info::AccountInfo,
+    program_error::ProgramError,
+};
 
 use crate::validation::uninitialized_account_info::UninitializedAccountInfo;
 
@@ -13,13 +16,13 @@ pub struct RegisterMarketContext<'a> {
     pub quote_mint: &'a AccountInfo,
     pub base_token_program: &'a AccountInfo,
     pub quote_token_program: &'a AccountInfo,
+    pub _ata_program: &'a AccountInfo,
     pub system_program: &'a AccountInfo,
 }
 
 impl<'a> RegisterMarketContext<'a> {
-    pub fn load(accounts: &'a [AccountInfo]) -> Result<RegisterMarketContext<'a>, DropsetError> {
-        #[rustfmt::skip]
-        let [
+    pub fn load(accounts: &'a [AccountInfo]) -> Result<RegisterMarketContext<'a>, ProgramError> {
+        let RegisterMarket {
             user,
             market_account,
             base_market_ata,
@@ -28,10 +31,9 @@ impl<'a> RegisterMarketContext<'a> {
             quote_mint,
             base_token_program,
             quote_token_program,
+            ata_program,
             system_program,
-        ] = accounts else {
-            return Err(DropsetError::NotEnoughAccountKeys);
-        };
+        } = RegisterMarket::load_accounts(accounts)?;
 
         // Since the market PDA and both of its associated token accounts are created atomically
         // during market registration, all derivations are guaranteed to be correct if the
@@ -51,6 +53,7 @@ impl<'a> RegisterMarketContext<'a> {
             quote_mint,
             base_token_program,
             quote_token_program,
+            _ata_program: ata_program,
             system_program,
         })
     }
