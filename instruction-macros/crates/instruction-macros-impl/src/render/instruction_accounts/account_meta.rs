@@ -20,7 +20,7 @@ impl InstructionAccount {
                     (false, true) => quote! { readonly_signer },
                     (false, false) => quote! { readonly },
                 };
-                quote! { pinocchio::instruction::AccountMeta::#ctor_method(self.#field_ident.key()) }
+                quote! { ::pinocchio::instruction::AccountMeta::#ctor_method(self.#field_ident.key()) }
             }
             Feature::SolanaProgram => {
                 let ctor_method = match self.is_writable {
@@ -28,7 +28,7 @@ impl InstructionAccount {
                     false => quote! { new_readonly },
                 };
                 let is_signer = self.is_signer;
-                quote! { solana_instruction::AccountMeta::#ctor_method(*self.#field_ident.key, #is_signer) }
+                quote! { ::solana_instruction::AccountMeta::#ctor_method(*self.#field_ident.key, #is_signer) }
             }
             Feature::Client => {
                 let ctor_method = match self.is_writable {
@@ -36,7 +36,7 @@ impl InstructionAccount {
                     false => quote! { new_readonly },
                 };
                 let is_signer = format_ident!("{}", self.is_signer);
-                quote! { solana_instruction::AccountMeta::#ctor_method(self.#field_ident, #is_signer) }
+                quote! { ::solana_instruction::AccountMeta::#ctor_method(self.#field_ident, #is_signer) }
             }
         }
     }
