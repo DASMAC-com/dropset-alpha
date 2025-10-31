@@ -21,6 +21,12 @@ pub fn render_account_loader(
     feature: Feature,
     instruction_variant: &InstructionVariant,
 ) -> TokenStream {
+    // `accounts` arg needs to be a slice, and `client` uses owned pubkeys, so return an empty
+    // token stream if this is for `client`.
+    if feature == Feature::Client {
+        return quote! {};
+    }
+
     let lifetimed_ref = feature.lifetimed_ref();
     let account_field_type = feature.account_info_type_path();
     let accounts = instruction_variant
