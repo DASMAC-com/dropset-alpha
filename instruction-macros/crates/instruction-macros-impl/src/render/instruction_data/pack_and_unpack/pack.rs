@@ -27,7 +27,8 @@ pub fn render(
         #(#layout_docs)*
         #[inline(always)]
         pub fn pack(&self) -> [u8; #size_with_tag] {
-            let mut data: [::core::mem::MaybeUninit<u8>; #size_with_tag] = [::core::mem::MaybeUninit::uninit(); #size_with_tag];
+            use ::core::mem::MaybeUninit;
+            let mut data: [MaybeUninit<u8>; #size_with_tag] = [MaybeUninit::uninit(); #size_with_tag];
             data[0].write(super::#enum_ident::#tag_variant as u8);
             #pack_statements_tokens
 
