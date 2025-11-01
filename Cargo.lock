@@ -288,7 +288,6 @@ dependencies = [
  "pinocchio-token",
  "pinocchio-token-2022",
  "pinocchio-token-interface",
- "solana-msg",
  "solana-pubkey",
  "static_assertions",
 ]
