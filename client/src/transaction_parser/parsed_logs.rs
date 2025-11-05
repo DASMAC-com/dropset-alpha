@@ -13,6 +13,7 @@ use crate::{
 
 /// A struct that represents information extracted from a transaction's parsed program logs.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct ParsedLogs {
     /// The instruction invocation index- i.e., the order in which the instruction was executed.
     pub invocation_index: usize,
@@ -22,8 +23,8 @@ pub struct ParsedLogs {
     pub stack_height: usize,
     /// The compute units consumed.
     pub units_consumed: Option<u64>,
-    /// The total compute consumption thus far.
-    pub total_consumption: Option<u64>,
+    /// The compute consumption allowance thus far.
+    pub consumption_allowance: Option<u64>,
     /// The outer/parent index, if this is an inner instruction.
     pub parent_index: Option<usize>,
     /// The program's explicit log messages; i.e., the log messages that start with "Program log:".
@@ -68,8 +69,8 @@ pub fn parse_logs_for_compute(log_messages: &[String]) -> ParseResult<Vec<Groupe
 
             let heights_match = expected_height == stack.stack.last().unwrap().stack_height;
             ensure!(heights_match, "Stack height mismatch");
-        } else if let Some((program_id, used, total)) = parse_compute(trimmed) {
-            stack.push_compute_info(&program_id, used, total)?;
+        } else if let Some((program_id, used, allowed)) = parse_compute(trimmed) {
+            stack.push_compute_info(&program_id, used, allowed)?;
         } else if let Some(program_id) = parse_success(trimmed) {
             stack.push_success(&program_id)?;
         } else if let Some(program_log) = parse_program_log(trimmed) {
@@ -86,10 +87,10 @@ fn parse_compute(log: &str) -> Option<(Pubkey, u64, u64)> {
         let used: u64 = cap[2]
             .parse()
             .expect("Should parse compute used as a number");
-        let total: u64 = cap[3]
+        let allowance: u64 = cap[3]
             .parse()
-            .expect("Should parse total compute used as a number");
-        (program, used, total)
+            .expect("Should parse compute allowance as a number");
+        (program, used, allowance)
     })
 }
 
@@ -148,7 +149,7 @@ impl ComputeBuilder {
             program_id,
             stack_height: self.stack_height(),
             units_consumed: None,
-            total_consumption: None,
+            consumption_allowance: None,
             parent_index,
             program_logs: vec![],
         };
@@ -163,7 +164,7 @@ impl ComputeBuilder {
         &mut self,
         program_id: &Pubkey,
         units_consumed: u64,
-        total_consumption: u64,
+        consumption_allowance: u64,
     ) -> ParseResult<()> {
         let top = self
             .stack
@@ -172,9 +173,9 @@ impl ComputeBuilder {
 
         ensure!(&top.program_id == program_id, "Stack depth mismatch");
         ensure!(&top.program_id == program_id, "Units consumed != None");
-        ensure!(&top.program_id == program_id, "Total consumption != None");
+        ensure!(&top.program_id == program_id, "Consumption allowed != None");
         top.units_consumed.replace(units_consumed);
-        top.total_consumption.replace(total_consumption);
+        top.consumption_allowance.replace(consumption_allowance);
 
         Ok(())
     }
@@ -204,9 +205,9 @@ impl ComputeBuilder {
             &SYSTEM_PROGRAM_ID | &COMPUTE_BUDGET_ID
         );
         let valid_consumed = no_cu_expected || info.units_consumed.is_some();
-        let valid_total = no_cu_expected || info.total_consumption.is_some();
+        let valid_allowance = no_cu_expected || info.consumption_allowance.is_some();
         ensure!(valid_consumed, "Missing units consumed");
-        ensure!(valid_total, "Missing total consumption");
+        ensure!(valid_allowance, "Missing consumption allowance");
 
         self.infos.push(info);
 

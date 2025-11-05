@@ -1,6 +1,9 @@
+use std::str::FromStr;
+
 use solana_sdk::{
     clock::UnixTimestamp,
     pubkey::Pubkey,
+    signature::Signature,
     transaction::TransactionVersion,
 };
 use solana_transaction_status::{
@@ -31,6 +34,7 @@ use crate::transaction_parser::{
 #[derive(Debug)]
 pub struct ParsedTransaction {
     pub version: Option<i8>,
+    pub signature: Signature,
     pub slot: u64,
     pub block_time: Option<UnixTimestamp>,
     pub err: Option<UiTransactionError>,
@@ -69,13 +73,19 @@ impl ParsedTransaction {
             _ => vec![],
         };
 
-        let (outer_instructions, parsed_accounts) = match transaction.transaction {
+        let (outer_instructions, parsed_accounts, signature) = match transaction.transaction {
             EncodedTransaction::Json(UiTransaction {
-                signatures: _,
+                signatures,
                 message,
-            }) => parse_ui_message(message, &addresses),
+            }) => {
+                let (instructions, accounts) = parse_ui_message(message, &addresses);
+                let signature =
+                    Signature::from_str(&signatures[0]).expect("Should be a valid signature");
+                (instructions, accounts, signature)
+            }
             encoded => {
-                let versioned = encoded.decode().expect("Should decode transaction");
+                let versioned: solana_sdk::transaction::VersionedTransaction =
+                    encoded.decode().expect("Should decode transaction");
                 parse_versioned_transaction(versioned, &addresses)
             }
         };
@@ -88,6 +98,7 @@ impl ParsedTransaction {
                 TransactionVersion::Number(v) => v as i8,
                 _ => -1,
             }),
+            signature,
             slot,
             block_time,
             err: meta.err,
@@ -139,5 +150,132 @@ impl ParsedTransaction {
         }
 
         Ok(outers)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        collections::HashMap,
+        fs::File,
+        io::BufReader,
+    };
+
+    use solana_sdk::pubkey::Pubkey;
+
+    use crate::transaction_parser::{
+        parse_logs_for_compute,
+        GroupedParsedLogs,
+        ParsedLogs,
+    };
+
+    #[test]
+    fn parse_goldens_happy_path() {
+        let file = File::open("test_logs.json").expect("File should exist");
+        let reader = BufReader::new(file);
+
+        let map: HashMap<String, Vec<String>> =
+            serde_json::from_reader(reader).unwrap_or_else(|_| HashMap::new());
+
+        for (_signature, log_messages) in map {
+            let res = parse_logs_for_compute(&log_messages);
+            assert!(res.is_ok());
+        }
+    }
+
+    #[test]
+    fn parse_complex() {
+        let complex_txn_sig = "5oQeU4AnZstnyuv77WMsgaDMRhgGnCrgEWC72pKGB2k3P3dqUHSDBGZWALbNDugCJEMBgy8pQnY8C87rP8oHFrZv";
+        let file = File::open("test_logs.json").expect("File should exist");
+        let reader = BufReader::new(file);
+
+        let map: HashMap<String, Vec<String>> =
+            serde_json::from_reader(reader).unwrap_or_else(|_| HashMap::new());
+
+        let parsed_logs = map
+            .get(complex_txn_sig)
+            .and_then(|logs| parse_logs_for_compute(logs).ok())
+            .expect("Should parse");
+
+        let create_compute_budget_instruction = |invocation_index: usize| GroupedParsedLogs {
+            parent: ParsedLogs {
+                invocation_index,
+                program_id: Pubkey::from_str_const("ComputeBudget111111111111111111111111111111"),
+                stack_height: 1,
+                units_consumed: None,
+                consumption_allowance: None,
+                parent_index: None,
+                program_logs: vec![],
+            },
+            children: vec![],
+        };
+
+        let child_logs = |invocation_index: usize,
+                          program_id: &str,
+                          stack_height: usize,
+                          units: Option<u64>,
+                          allowed: Option<u64>,
+                          logs: Vec<&str>| ParsedLogs {
+            invocation_index,
+            program_id: Pubkey::from_str_const(program_id),
+            stack_height,
+            units_consumed: units,
+            consumption_allowance: allowed,
+            // All the children for this transaction have the same parent index, the `TEST` program.
+            parent_index: Some(2),
+            program_logs: logs.iter().map(|s| s.to_string()).collect(),
+        };
+
+        let expected: Vec<GroupedParsedLogs> = vec![
+            // Setting the compute unit limit.
+            create_compute_budget_instruction(0),
+            // Setting the compute unit price.
+            create_compute_budget_instruction(1),
+            // The outer `TEST` program invocation, with inner children.
+            GroupedParsedLogs {
+                parent: ParsedLogs {
+                    invocation_index: 2,
+                    program_id: dropset::ID.into(),
+                    stack_height: 1,
+                    units_consumed: Some(55834),
+                    consumption_allowance: Some(1399700),
+                    parent_index: None,
+                    program_logs: vec![
+                        "TEST program log 0".to_string(),
+                        "TEST program log 1".to_string(),
+                        "TEST program log 2".to_string(),
+                        "TEST program log 3".to_string(),
+                        "TEST program log 4".to_string(),
+                    ],
+                },
+                #[rustfmt::skip]
+                // Inner parsed logs for creating the associated token accounts for base and quote.
+                children: vec![
+                    child_logs(3, "11111111111111111111111111111111", 2, None, None, vec![]),
+                    child_logs(4, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", 2, Some(21990), Some(1394597), vec!["Create", "Initialize the associated token account"]),
+                    child_logs(5, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(1595), Some(1387622), vec!["Instruction: GetAccountDataSize"]),
+                    child_logs(6, "11111111111111111111111111111111", 3, None, None, vec![]),
+                    child_logs(7, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(1405), Some(1381009), vec!["Instruction: InitializeImmutableOwner", "Please upgrade to SPL Token 2022 for immutable owner support"]),
+                    child_logs(8, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(4214), Some(1377125), vec!["Instruction: InitializeAccount3"]),
+                    child_logs(9, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", 2, Some(26490), Some(1370597), vec!["Create", "Initialize the associated token account"]),
+                    child_logs(10, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(1595), Some(1359122), vec!["Instruction: GetAccountDataSize"]),
+                    child_logs(11, "11111111111111111111111111111111", 3, None, None, vec![]),
+                    child_logs(12, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(1405), Some(1352509), vec!["Instruction: InitializeImmutableOwner", "Please upgrade to SPL Token 2022 for immutable owner support"]),
+                    child_logs(13, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", 3, Some(4214), Some(1348625), vec!["Instruction: InitializeAccount3"]),
+                ],
+            },
+        ];
+
+        // Assert equality for expected and parsed values.
+        for (expected_group, parsed_group) in expected.into_iter().zip(parsed_logs) {
+            assert_eq!(expected_group.parent, parsed_group.parent);
+            for (expected_child, parsed_child) in expected_group
+                .children
+                .into_iter()
+                .zip(parsed_group.children)
+            {
+                assert_eq!(expected_child, parsed_child);
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 use solana_sdk::{
     message::MessageHeader,
     pubkey::Pubkey,
+    signature::Signature,
     transaction::VersionedTransaction,
 };
 use solana_transaction_status::{
@@ -56,7 +57,7 @@ pub fn parse_inner_instructions(
 pub fn parse_versioned_transaction(
     versioned: VersionedTransaction,
     addresses: &[Pubkey],
-) -> (Vec<ParsedInstruction>, ParsedAccounts) {
+) -> (Vec<ParsedInstruction>, ParsedAccounts, Signature) {
     let keys = [versioned.message.static_account_keys(), addresses].concat();
     let parsed_accounts = parse_accounts_from_header(&keys, versioned.message.header());
     let parsed_instructions = versioned
@@ -65,7 +66,11 @@ pub fn parse_versioned_transaction(
         .iter()
         .map(|ixn| ParsedInstruction::from_compiled_instruction(ixn, &parsed_accounts))
         .collect();
-    (parsed_instructions, parsed_accounts)
+    (
+        parsed_instructions,
+        parsed_accounts,
+        versioned.signatures[0],
+    )
 }
 
 /// Groups accounts by their read/write and signer/non-signer status according to the info in a
