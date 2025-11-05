@@ -1,6 +1,7 @@
 use pinocchio::program_error::ProgramError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "client", derive(strum_macros::FromRepr))]
 #[repr(u8)]
 pub enum DropsetError {
     InvalidInstructionTag,

@@ -1,0 +1,37 @@
+[package]
+name = "client"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bincode.workspace = true
+borsh.workspace = true
+colored.workspace = true
+derive_more = { workspace = true, features = ["into_iterator", "index", "as_ref", "deref"]}
+dropset = { path = "../program" }
+dropset-interface = { path = "../interface", features = ["client", "solana-program"], default-features = false }
+itertools.workspace = true
+futures.workspace = true
+lazy-regex.workspace = true
+regex.workspace = true
+solana-client.workspace = true
+solana-commitment-config.workspace = true
+solana-compute-budget-interface = { workspace = true, features = ["serde"] }
+solana-cpi.workspace = true
+solana-instruction.workspace = true
+solana-instruction-error.workspace = true
+solana-sdk.workspace = true
+solana-system-interface = { workspace = true, features = ["serde"] }
+solana-transaction-error.workspace = true
+solana-transaction-status.workspace = true
+solana-transaction-status-client-types.workspace = true
+spl-associated-token-account-interface.workspace = true
+spl-token-interface.workspace = true
+spl-token-2022-interface.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

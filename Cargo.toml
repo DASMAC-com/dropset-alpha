@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "client",
   "instruction-macros/crates/instruction-macros",
   "instruction-macros/crates/instruction-macros-impl",
   "instruction-macros/crates/test-fixtures",
@@ -28,6 +29,7 @@ pinocchio-pubkey = { version = "0.3.0" }
 pinocchio-system = { version = "0.3.0" }
 pinocchio-token = { version = "0.4.0" }
 pinocchio-token-2022 = { version = "0.1.0" }
+lazy-regex = "3.4.2"
 regex = "1.12.2"
 solana-address = "1.0.0"
 solana-client = "3.0.7"
