@@ -5,7 +5,6 @@ use dropset_interface::state::SYSTEM_PROGRAM_ID;
 use itertools::Itertools;
 use lazy_regex::*;
 use solana_sdk::pubkey::Pubkey;
-use solana_transaction_status::UiTransactionStatusMeta;
 
 use crate::{
     transaction_parser::ParsedOuterInstruction,
@@ -58,12 +57,10 @@ type ParseResult<T> = Result<T, anyhow::Error>;
 /// invocation index, stack height, and compute usage.
 ///
 /// This also facilitates grouping outer/parent instructions with their inner/child instructions.
-pub fn parse_logs_for_compute(
-    meta: &UiTransactionStatusMeta,
-) -> ParseResult<Vec<GroupedParsedLogs>> {
+pub fn parse_logs_for_compute(log_messages: &[String]) -> ParseResult<Vec<GroupedParsedLogs>> {
     let mut stack = ComputeBuilder::default();
 
-    for log in meta.log_messages.as_ref().unwrap_or(&vec![]) {
+    for log in log_messages {
         let trimmed = log.trim();
 
         if let Some((program_id, expected_height)) = parse_invoke(trimmed) {

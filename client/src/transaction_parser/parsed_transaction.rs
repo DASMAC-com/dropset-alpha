@@ -57,7 +57,8 @@ impl ParsedTransaction {
         let meta = transaction
             .meta
             .ok_or(anyhow::Error::msg("Expected transaction meta"))?;
-        let compute_infos = parse_logs_for_compute(&meta).expect("Should parse");
+        let log_messages = meta.log_messages.unwrap_or(vec![]);
+        let compute_infos = parse_logs_for_compute(&log_messages).expect("Should parse");
 
         let addresses = match meta.loaded_addresses {
             OptionSerializer::Some(addresses) => [addresses.writable, addresses.readonly]
@@ -98,7 +99,7 @@ impl ParsedTransaction {
                 inner_instructions,
                 Some(compute_infos),
             )?,
-            log_messages: meta.log_messages.unwrap_or(vec![]),
+            log_messages,
             pre_token_balances: meta.pre_token_balances.unwrap_or(vec![]),
             post_token_balances: meta.post_token_balances.unwrap_or(vec![]),
             raw_compute_usage: match (meta.compute_units_consumed, meta.cost_units) {
