@@ -487,6 +487,8 @@ dependencies = [
  "itertools 0.14.0",
  "lazy-regex",
  "regex",
+ "serde",
+ "serde_json",
  "solana-client",
  "solana-commitment-config",
  "solana-compute-budget-interface",

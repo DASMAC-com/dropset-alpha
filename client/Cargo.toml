@@ -33,5 +33,9 @@ strum.workspace = true
 strum_macros.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+serde = { version = "1.0.228" }
+serde_json = { version = "1.0.145" }
+
 [lints]
 workspace = true
