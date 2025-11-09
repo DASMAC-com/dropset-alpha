@@ -1,4 +1,7 @@
-use std::collections::HashSet;
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 use client::{
     context::market::MarketContext,
@@ -9,6 +12,7 @@ use client::{
     },
 };
 use dropset_interface::state::sector::SectorIndex;
+use itertools::Itertools;
 use solana_instruction::Instruction;
 use solana_sdk::{
     pubkey::Pubkey,
@@ -38,7 +42,8 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    let signers: Vec<&Keypair> = vec![&USER_1, &USER_2, &USER_3, &USER_4, &USER_5];
+    // Insert out of order to ensure that it's ordered later.
+    let signers: Vec<&Keypair> = vec![&USER_5, &USER_2, &USER_4, &USER_1, &USER_3];
 
     for user in signers.iter() {
         rpc.fund_account(&user.pubkey()).await?;
@@ -52,6 +57,7 @@ async fn main() -> anyhow::Result<()> {
 
     let seat_creations: Vec<Instruction> = user_pks
         .iter()
+        // Deposits 1 base token in order to create the seat.
         .map(|pk| market_ctx.create_seat(*pk))
         .collect();
 
@@ -70,19 +76,52 @@ async fn main() -> anyhow::Result<()> {
         })
         .collect();
 
+    // HashMap<Pubkey, (deposit_amount, withdraw_amount)>
+    let base_amounts: HashMap<Pubkey, (u64, u64)> = HashMap::from([
+        (USER_1.pubkey(), (100, 10)),
+        (USER_2.pubkey(), (100, 20)),
+        (USER_3.pubkey(), (100, 30)),
+        (USER_4.pubkey(), (100, 40)),
+        (USER_5.pubkey(), (100, 50)),
+    ]);
+
     let deposits_and_withdraws: Vec<Instruction> = user_pks
         .iter()
         .zip(seats)
         .flat_map(|(user, seat)| {
+            let (deposit, withdraw) = base_amounts.get(user).unwrap();
             [
-                market_ctx.deposit_base(*user, 100, seat),
-                market_ctx.withdraw_base(*user, 50, seat),
+                market_ctx.deposit_base(*user, *deposit, seat),
+                market_ctx.withdraw_base(*user, *withdraw, seat),
             ]
         })
         .collect();
 
     rpc.send_and_confirm_txn(signers[0], &signers, &deposits_and_withdraws)
         .await?;
+
+    let expected_base = base_amounts
+        .into_iter()
+        .map(|pk_and_amts| {
+            let (pubkey, (deposit, withdraw)) = pk_and_amts;
+            (pubkey, deposit, withdraw)
+        })
+        // Sort by the pubkey.
+        .sorted_by_key(|v| v.0)
+        .collect_vec();
+
+    let market = market_ctx.view_market(rpc)?;
+
+    // Check that seats are ordered by pubkey (ascending) and compare the final state of each user's
+    // seat to the expected state.
+    for (seat, expected_seat) in market.sectors.iter().zip_eq(expected_base) {
+        let (expected_pk, expected_base_dep, expected_base_wd) = expected_seat;
+        assert_eq!(seat.user, expected_pk);
+        let amount_from_create_seat = 1;
+        let base_remaining = (expected_base_dep + amount_from_create_seat) - expected_base_wd;
+        assert_eq!(seat.base_available, base_remaining);
+        assert_eq!(seat.base_deposited, base_remaining);
+    }
 
     Ok(())
 }
