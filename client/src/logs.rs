@@ -2,8 +2,6 @@ use colored::Color;
 
 /// Format a key/value pair with optional color overrides.
 ///
-/// Requires the `colored::Colorize` trait to be in scope.
-///
 /// Examples, where `key_color` and `value_color` are `LogColor` values:
 /// - fmt_kv!(key, value)
 /// - fmt_kv!(key, value, key_color)
@@ -22,6 +20,8 @@ macro_rules! fmt_kv {
         $crate::fmt_kv!($key, $value, $key_color, $crate::LogColor::FadedGray)
     };
     ($key:expr, $value:expr, $key_color:expr, $value_color:expr $(,)?) => {{
+        use ::colored::Colorize;
+
         let __k = ::std::string::ToString::to_string(&$key);
         let __v = ::std::string::ToString::to_string(&$value);
         ::std::format!("{}: {}", __k.color($key_color), __v.color($value_color))
@@ -29,8 +29,6 @@ macro_rules! fmt_kv {
 }
 
 /// Prints a key/value pair with optional color overrides.
-///
-/// Requires the `colored::Colorize` trait to be in scope.
 ///
 /// Examples, where `key_color` and `value_color` are `LogColor` values:
 /// - fmt_kv!(key, value)
@@ -93,8 +91,6 @@ pub use unformatted::*;
 
 #[cfg(test)]
 mod tests {
-    use colored::Colorize;
-
     use super::*;
 
     #[test]

@@ -9,7 +9,6 @@ use client::{
     },
     LogColor,
 };
-use colored::Colorize;
 use dropset_interface::state::sector::NIL;
 use solana_sdk::signer::Signer;
 

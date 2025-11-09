@@ -4,7 +4,6 @@ use anyhow::{
     bail,
     Context,
 };
-use colored::Colorize;
 use solana_client::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
@@ -204,7 +203,7 @@ async fn send_transaction_with_config(
         Err(error) => {
             PrettyInstructionError::new(&error, instructions).inspect(|err| {
                 print!("{err}");
-                print_kv!("Payer: ", payer.pubkey(), LogColor::Error);
+                print_kv!("Payer", payer.pubkey(), LogColor::Error);
             });
             Err(error).context("Failed transaction submission")
         }
