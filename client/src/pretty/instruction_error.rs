@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use colored::Colorize;
 use dropset_interface::{
     error::DropsetError,
     instructions::DropsetInstruction,
