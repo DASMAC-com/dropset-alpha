@@ -1,6 +1,6 @@
 use dropset_interface::{
     error::DropsetError,
-    instructions::generated_pinocchio::WithdrawInstructionData,
+    instructions::generated_pinocchio::*,
     state::node::Node,
 };
 use pinocchio::{
@@ -20,8 +20,7 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::withdraw::Withdraw`]
+/// Caller guarantees the safety contract detailed in [`Withdraw`].
 pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let WithdrawInstructionData {
         amount,

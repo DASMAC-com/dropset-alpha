@@ -1,5 +1,5 @@
 use dropset_interface::{
-    instructions::generated_pinocchio::DepositInstructionData,
+    instructions::generated_pinocchio::*,
     state::{
         market_seat::MarketSeat,
         node::Node,
@@ -36,8 +36,7 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::deposit::Deposit`]
+/// Caller guarantees the safety contract detailed in [`Deposit`].
 pub unsafe fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let DepositInstructionData {
         amount,

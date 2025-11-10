@@ -1,5 +1,5 @@
 use dropset_interface::{
-    instructions::generated_pinocchio::CloseSeatInstructionData,
+    instructions::generated_pinocchio::*,
     state::node::Node,
     utils::is_owned_by_spl_token,
 };
@@ -18,8 +18,7 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::close_seat::CloseSeat`]
+/// Caller guarantees the safety contract detailed in [`CloseSeat`].
 pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let sector_index_hint = CloseSeatInstructionData::unpack(instruction_data)?.sector_index_hint;
     let mut ctx = unsafe { CloseSeatContext::load(accounts) }?;
