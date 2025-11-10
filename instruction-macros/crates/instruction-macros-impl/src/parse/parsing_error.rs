@@ -1,8 +1,13 @@
+//! See [`ParsingError`].
+
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 
 use crate::parse::primitive_arg::PrimitiveArg;
 
+/// Error types for reporting malformed macro inputs.
+///
+/// Can be converted to a clear, user-facing string message.
 pub enum ParsingError {
     NotAnEnum,
     ProgramIdMissing,

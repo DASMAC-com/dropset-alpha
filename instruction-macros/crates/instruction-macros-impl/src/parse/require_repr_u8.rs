@@ -1,3 +1,5 @@
+//! See [`require_repr_u8`].
+
 use syn::{
     punctuated::Punctuated,
     DeriveInput,
@@ -10,6 +12,7 @@ use crate::parse::parsing_error::ParsingError;
 const REPR_IDENT: &str = "repr";
 const U8_IDENT: &str = "u8";
 
+/// Ensures the instruction enum uses a `repr(u8)`-compatible layout and reports violations.
 pub fn require_repr_u8(input: &DeriveInput) -> syn::Result<()> {
     for attr in &input.attrs {
         if !attr.path().is_ident(REPR_IDENT) {

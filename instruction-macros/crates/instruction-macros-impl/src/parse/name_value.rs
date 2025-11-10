@@ -1,3 +1,5 @@
+//! See [`parse_name_value_literal`].
+
 use quote::ToTokens;
 use syn::{
     Expr,
@@ -7,7 +9,8 @@ use syn::{
 
 use crate::ParsingError;
 
-/// Parses a Meta as a `name = "value"` meta, expecting the right-hand expr to be a string literal.
+/// A utility function for parsing `name = "value"` style [`Meta`]s into string values with proper
+/// error reporting.
 pub fn parse_name_value_literal(meta: &Meta) -> syn::Result<String> {
     let expr = &meta.require_name_value()?.value;
     if let Expr::Lit(syn::ExprLit {

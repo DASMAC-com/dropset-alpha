@@ -1,3 +1,6 @@
+//! Internal debug utilities for inspecting generated macro output, including helpers to print
+//! unique multi-segment paths from token streams. Not intended for public consumption.
+
 use std::collections::HashSet;
 
 use itertools::Itertools;

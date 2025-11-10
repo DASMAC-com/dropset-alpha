@@ -1,3 +1,5 @@
+//! See [`require_data_enum`].
+
 use syn::{
     DataEnum,
     DeriveInput,
@@ -5,6 +7,7 @@ use syn::{
 
 use crate::ParsingError;
 
+/// Ensures the macro input is an enum and returns its `DataEnum` representation, or a typed error.
 pub fn require_data_enum(input: DeriveInput) -> syn::Result<DataEnum> {
     match input.data {
         syn::Data::Enum(e) => Ok(e),

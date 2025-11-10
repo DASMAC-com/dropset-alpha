@@ -1,3 +1,6 @@
+//! Derive helper for generating namespaced instruction data types and a `try_from_u8`-style tag
+//! macro from an instruction enum definition.
+
 use instruction_macros_impl::{
     parse::{
         instruction_variant::parse_instruction_variants,

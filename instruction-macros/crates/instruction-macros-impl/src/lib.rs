@@ -1,3 +1,6 @@
+//! Internal implementation crate for `instruction-macros`, providing parsing and rendering
+//! utilities used by the proc macro.
+
 pub mod parse;
 pub mod render;
 

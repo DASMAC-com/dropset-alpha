@@ -1,3 +1,7 @@
+//! Proc-macro entrypoint for `#[derive(ProgramInstruction)]`, generating
+//! namespaced instruction data, account layouts, and helper APIs from an
+//! instruction enum definition.
+
 use instruction_macros_impl::render::merge_namespaced_token_streams;
 use quote::quote;
 use syn::{

@@ -1,8 +1,11 @@
+//! See [`ErrorPath`].
+
 use syn::{
     Ident,
     Path,
 };
 
+/// Helper type for representing fully qualified error paths (base + variant) in generated code.
 #[derive(Debug)]
 pub struct ErrorPath {
     /// The error base segment; e.g. `pinocchio::program_error::ProgramError`

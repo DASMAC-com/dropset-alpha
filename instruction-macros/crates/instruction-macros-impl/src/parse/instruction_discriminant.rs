@@ -1,3 +1,5 @@
+//! See [`try_parse_instruction_discriminant`].
+
 use syn::{
     Expr,
     ExprLit,
@@ -7,6 +9,8 @@ use syn::{
 
 use crate::ParsingError;
 
+/// Parses or infers `u8` discriminants for enum variants, enforcing fieldless variants
+/// and validating explicit literals.
 pub fn try_parse_instruction_discriminant(
     implicit_discriminant: u8,
     variant: &Variant,

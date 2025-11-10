@@ -1,9 +1,15 @@
+//! Utilities for recognizing and handling primitive argument types used in instruction argument
+//! attributes.
+//!
+//! Instruction arguments only support argument types defined in [`PrimitiveArg`].
+
 use std::str::FromStr;
 
 use syn::Type;
 
 use crate::parse::parsing_error::ParsingError;
 
+/// An enum for all of the argument types recognized by the instruction argument attribute.
 #[derive(Debug, Clone, strum_macros::EnumIter, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum PrimitiveArg {
@@ -15,6 +21,7 @@ pub enum PrimitiveArg {
 }
 
 impl PrimitiveArg {
+    /// Returns the byte size of the argument type.
     pub const fn size(&self) -> usize {
         match self {
             Self::U8 => size_of::<u8>(),
