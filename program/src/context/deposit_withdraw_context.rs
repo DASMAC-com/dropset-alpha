@@ -10,6 +10,9 @@ use crate::validation::{
     token_account_info::TokenAccountInfo,
 };
 
+/// The account context for the [`Deposit`] and
+/// [`dropset_interface::instructions::generated_pinocchio::Withdraw`] instructions, verifying token
+/// ownership, mint consistency, and associated token account correctness.
 #[derive(Clone)]
 pub struct DepositWithdrawContext<'a> {
     pub user: &'a AccountInfo,

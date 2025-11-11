@@ -1,3 +1,5 @@
+//! See [`MarketAccountInfo`].
+
 use dropset_interface::{
     error::DropsetError,
     program,
@@ -20,6 +22,8 @@ use pinocchio::{
 
 use crate::shared::account_resize::fund_then_resize_unchecked;
 
+/// A validated wrapper around a raw market [`AccountInfo`], providing safe access
+/// to the market header and sector data after verifying ownership and layout.
 #[derive(Clone)]
 pub struct MarketAccountInfo<'a> {
     /// The account info as a private field. This disallows manual construction, guaranteeing an
