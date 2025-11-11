@@ -1,4 +1,5 @@
 #[cfg(feature = "client")]
+#[cfg(test)]
 mod test {
     use instruction_macros::ProgramInstruction;
 
@@ -6,7 +7,7 @@ mod test {
     #[derive(ProgramInstruction)]
     #[program_id(crate::ID)]
     #[rustfmt::skip]
-    pub enum DropsetInstructionClient {
+    pub enum ClientDropsetInstruction {
         #[account(0, signer,   name = "user",                desc = "The user closing their seat.")]
         #[account(1, writable, name = "market_account",      desc = "The market account PDA.")]
         #[account(2, writable, name = "base_user_ata",       desc = "The user's associated base mint token account.")]
