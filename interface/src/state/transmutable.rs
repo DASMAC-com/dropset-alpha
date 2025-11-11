@@ -14,7 +14,7 @@
 //! - Added validate_bit_patterns requirement
 //! - Made load/load_mut safe for callers
 //!
-//! Original: https://github.com/solana-program/token/blob/75116550519a9ee3fdfa6c819aca91e383fffa39/p-interface/src/state/mod.rs
+//! Original: <https://github.com/solana-program/token/blob/75116550519a9ee3fdfa6c819aca91e383fffa39/p-interface/src/state/mod.rs>
 
 use crate::error::{
     DropsetError,

@@ -1,4 +1,5 @@
 #[cfg(feature = "pinocchio")]
+#[cfg(test)]
 pub mod test {
     use instruction_macros::ProgramInstruction;
 
@@ -19,7 +20,7 @@ pub mod test {
     // #[program_id(crate::ID)]
     #[program_id(crate::pinocchio::test::PROGRAM_ID)]
     #[rustfmt::skip]
-    pub enum DropsetInstructionPinocchio {
+    pub enum PinocchioDropsetInstruction {
         #[account(0, signer,   name = "user",                desc = "The user closing their seat.")]
         #[account(1, writable, name = "market_account",      desc = "The market account PDA.")]
         #[account(2, writable, name = "base_user_ata",       desc = "The user's associated base mint token account.")]
