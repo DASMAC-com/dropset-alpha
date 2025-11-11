@@ -1,3 +1,5 @@
+//! On-chain program logic entry module.
+
 #![no_std]
 
 #[cfg(feature = "std")]

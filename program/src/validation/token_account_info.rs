@@ -1,3 +1,5 @@
+//! See [`TokenAccountInfo`].
+
 use dropset_interface::error::DropsetError;
 use pinocchio::{
     account_info::AccountInfo,
@@ -13,6 +15,8 @@ use pinocchio_token_interface::state::{
     load_unchecked as pinocchio_load_unchecked,
 };
 
+/// A validated wrapper around a raw token account [`AccountInfo`], ensuring correct mint
+/// association, owner authority, and account state.
 #[derive(Clone)]
 pub struct TokenAccountInfo<'a> {
     pub info: &'a AccountInfo,

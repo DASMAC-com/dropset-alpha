@@ -1,3 +1,5 @@
+//! See [`RegisterMarketContext`].
+
 use dropset_interface::instructions::generated_pinocchio::RegisterMarket;
 use pinocchio::{
     account_info::AccountInfo,
@@ -6,7 +8,10 @@ use pinocchio::{
 
 use crate::validation::uninitialized_account_info::UninitializedAccountInfo;
 
+/// The account context for the [`RegisterMarket`] instruction, validating ownership,
+/// initialization, and PDA derivations for market creation.
 #[derive(Clone)]
+
 pub struct RegisterMarketContext<'a> {
     pub user: &'a AccountInfo,
     pub market_account: UninitializedAccountInfo<'a>,

@@ -1,3 +1,5 @@
+//! See [`CloseSeatContext`].
+
 use dropset_interface::instructions::generated_pinocchio::CloseSeat;
 use pinocchio::{
     account_info::AccountInfo,
@@ -10,6 +12,8 @@ use crate::validation::{
     token_account_info::TokenAccountInfo,
 };
 
+/// The account context for the [`CloseSeat`] instruction, ensuring the seat and related resources
+/// are valid for closure.
 #[derive(Clone)]
 pub struct CloseSeatContext<'a> {
     pub user: &'a AccountInfo,

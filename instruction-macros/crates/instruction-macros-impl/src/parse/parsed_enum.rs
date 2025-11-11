@@ -1,3 +1,6 @@
+//! Defines [`ParsedEnum`] and its parsing implementation, the overarching in-memory model for
+//! Solana program instructions defined by the usage of macro attributes.
+
 use syn::{
     DataEnum,
     DeriveInput,
@@ -11,6 +14,7 @@ use crate::parse::{
     require_repr_u8::require_repr_u8,
 };
 
+/// The validated, in-memory model of the instruction enum used by parsing and rendering functions.
 pub struct ParsedEnum {
     pub enum_ident: Ident,
     pub data_enum: DataEnum,

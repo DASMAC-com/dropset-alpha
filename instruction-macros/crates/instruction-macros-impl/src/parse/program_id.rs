@@ -1,3 +1,5 @@
+//! Parsing and validation logic for the program ID configuration attached to the instruction enum.
+
 use syn::{
     parse_quote,
     DeriveInput,

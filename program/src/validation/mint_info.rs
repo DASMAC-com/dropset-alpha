@@ -1,3 +1,5 @@
+//! See [`MintInfo`].
+
 use dropset_interface::{
     error::DropsetError,
     state::market::MarketRef,
@@ -12,6 +14,8 @@ use pinocchio_token_interface::state::{
     mint::Mint,
 };
 
+/// A validated wrapper around a raw mint [`AccountInfo`], exposing verified metadata such as
+/// supply, decimals, and authorities.
 #[derive(Clone)]
 pub struct MintInfo<'a> {
     pub info: &'a AccountInfo,

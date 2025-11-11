@@ -5,7 +5,8 @@ use dropset_interface::{
 };
 use pinocchio::account_info::AccountInfo;
 
-/// Represents a completely uninitialized account.
+/// A validated wrapper around a raw [`AccountInfo`] expected to be uninitialized, confirming it is
+/// writable, rent-exempt, and ready for allocation.
 #[derive(Clone)]
 pub struct UninitializedAccountInfo<'a> {
     pub info: &'a AccountInfo,

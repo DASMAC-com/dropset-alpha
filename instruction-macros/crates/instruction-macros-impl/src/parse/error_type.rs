@@ -1,8 +1,12 @@
+//! See [`ErrorType`].
+
 use crate::{
     parse::error_path::ErrorPath,
     render::Feature,
 };
 
+/// Maps high-level instruction validation errors to concrete `ProgramError` variants
+/// for each supported feature/target.
 pub enum ErrorType {
     IncorrectNumAccounts,
     InvalidInstructionData,

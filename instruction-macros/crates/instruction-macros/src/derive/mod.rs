@@ -1,3 +1,7 @@
+//! Shared derive helpers used by `ProgramInstruction`, responsible for
+//! parsing the instruction enum and rendering instruction-data and account
+//! modules into namespaced token streams.
+
 mod instruction_accounts;
 mod instruction_data;
 

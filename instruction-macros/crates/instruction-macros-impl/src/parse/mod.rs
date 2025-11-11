@@ -1,3 +1,6 @@
+//! Parsing utilities for the instruction macros crate. These utilites parse the instruction enum,
+//! attributes, and metadata into validated intermediate structures.
+
 pub mod data_enum;
 pub mod error_path;
 pub mod error_type;

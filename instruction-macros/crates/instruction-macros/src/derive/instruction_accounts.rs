@@ -1,3 +1,6 @@
+//! Derive helper for generating namespaced instruction account structs and
+//! account metas from an instruction enum definition.
+
 use instruction_macros_impl::{
     parse::{
         instruction_variant::parse_instruction_variants,

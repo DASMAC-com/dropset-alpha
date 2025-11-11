@@ -1,3 +1,6 @@
+//! The parsing implementation for an enum variant's `#[account(...)]` attributes into structured
+//! account metadata, including index, signer/writable flags, names, and descriptions.
+
 use quote::ToTokens;
 use syn::{
     parse::ParseStream,
@@ -17,6 +20,7 @@ use crate::{
     DESCRIPTION,
 };
 
+/// The parsed representation of a single `#[account(...)]` attribute for an enum variant.
 #[derive(Debug, Clone)]
 pub struct InstructionAccount {
     pub index: u8,

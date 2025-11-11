@@ -1,3 +1,8 @@
+//! Solana program entrypoint.
+//!
+//! Forwards incoming instructions from the runtime into the program’s core instruction processing
+//! logic.
+
 use dropset_interface::{
     error::DropsetError,
     instructions::DropsetInstruction,
@@ -36,7 +41,7 @@ pub fn process_instruction(
             DropsetInstruction::Withdraw => process_withdraw(accounts, remaining),
             DropsetInstruction::CloseSeat => process_close_seat(accounts, remaining),
             DropsetInstruction::FlushEvents => process_flush_events(accounts, remaining),
-            DropsetInstruction::Batch => todo!(),
+            DropsetInstruction::Batch => process_batch(accounts, remaining),
         }
     }
 }

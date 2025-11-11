@@ -1,6 +1,8 @@
+//! See [`process_withdraw`].
+
 use dropset_interface::{
     error::DropsetError,
-    instructions::generated_pinocchio::WithdrawInstructionData,
+    instructions::generated_pinocchio::*,
     state::node::Node,
 };
 use pinocchio::{
@@ -16,12 +18,11 @@ use crate::{
     },
 };
 
-/// User withdraws tokens and updates their seat.
+/// Instruction handler logic for withdrawing funds from a market seat.
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::withdraw::Withdraw`]
+/// Caller guarantees the safety contract detailed in [`Withdraw`].
 pub unsafe fn process_withdraw(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let WithdrawInstructionData {
         amount,

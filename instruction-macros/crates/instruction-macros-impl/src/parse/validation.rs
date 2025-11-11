@@ -1,3 +1,6 @@
+//! Higher-level validation over the parsed instruction model, enforcing structural and semantic
+//! invariants.
+
 use crate::{
     parse::{
         instruction_account::InstructionAccount,
@@ -34,7 +37,7 @@ pub fn validate_args(args: &[InstructionArgument], span: proc_macro2::Span) -> s
 fn check_duplicate_names(
     mut names: Vec<String>,
     span: proc_macro2::Span,
-    dupe_type: &str,
+    duplicate_message_type: &str,
 ) -> syn::Result<()> {
     names.sort();
     names
@@ -42,8 +45,10 @@ fn check_duplicate_names(
         .map(|window| <&[String; 2]>::try_from(window).expect("Should have 2"))
         .try_for_each(|[prev_name, curr_name]| {
             if prev_name == curr_name {
-                let duplicate_error =
-                    ParsingError::DuplicateName(dupe_type.to_string(), curr_name.clone());
+                let duplicate_error = ParsingError::DuplicateName(
+                    duplicate_message_type.to_string(),
+                    curr_name.clone(),
+                );
                 Err(duplicate_error.new_err(span))
             } else {
                 Ok(())

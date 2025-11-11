@@ -1,3 +1,9 @@
+//! Generates a helper macro that maps raw instruction tags to their corresponding
+//! enum variants using efficient, `unsafe` but sound transmutations.
+//!
+//! Includes compile-time checks to guarantee the generated code’s soundness. These checks output no
+//! code in release builds.
+
 use itertools::Itertools;
 use proc_macro2::{
     Literal,
@@ -50,11 +56,21 @@ use crate::parse::{
 ///
 /// ## Example
 /// ```
+/// // Use it to implement `TryFrom<u8>`:
+/// impl TryFrom<u8> for MyInstruction {
+///     type Error = ProgramError;
+///   
+///     #[inline(always)]
+///     fn try_from(tag: u8) -> Result<Self, Self::Error> {
+///         MyInstruction_try_from_tag!(tag, ProgramError::InvalidInstructionData)
+///     }
+/// }
+///
 /// // Calling it and matching on the tag variant with an early return:
-/// match my_instruction_tag_try_from_u8!(tag, ProgramError::InvalidInstructionData)? {
-///     MyInstruction::CloseSeat => { // do close seat things } ,
-///     MyInstruction::Deposit => { // do deposit things } ,
-///     _ => // etc,
+/// match MyInstruction::try_from(tag)? {
+///     MyInstruction::CloseSeat => { /* do close seat things */ },
+///     MyInstruction::Deposit => { /* do deposit things */ },
+///     _ => { /* etc */ },
 /// }
 /// ```
 pub fn render(

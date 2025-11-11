@@ -1,3 +1,9 @@
+//! Parses and validates instruction enum variants into a structured, in-memory model.
+//!
+//! Each variant is analyzed for its discriminant, arguments, and accounts, then converted
+//! into a validated representation as an [`InstructionVariant`]— the core input for instruction
+//! code generation.
+
 use syn::{
     spanned::Spanned,
     Attribute,
@@ -20,6 +26,10 @@ use crate::{
     ARGUMENT_IDENTIFIER,
 };
 
+/// A parsed and validated struct representing each instruction variant's validated name,
+/// discriminant, arguments, and accounts.
+///
+/// This is the core model for each instruction variant's generated code.
 #[derive(Clone, Debug)]
 pub struct InstructionVariant {
     pub variant_name: Ident,
@@ -67,6 +77,8 @@ impl TryFrom<(u8, &Variant)> for InstructionVariant {
     }
 }
 
+/// Parses all variants of an instruction enum, assigning discriminants (explicit or implicit)
+/// and converting them into validated instruction representations.
 pub fn parse_instruction_variants(data_enum: &DataEnum) -> syn::Result<Vec<InstructionVariant>> {
     // Implicit discriminants either start at 0 or the last variant that was explicitly set + 1.
     let mut implicit_discriminant = 0;

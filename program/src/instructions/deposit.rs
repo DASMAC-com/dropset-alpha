@@ -1,5 +1,7 @@
+//! See [`process_deposit`].
+
 use dropset_interface::{
-    instructions::generated_pinocchio::DepositInstructionData,
+    instructions::generated_pinocchio::*,
     state::{
         market_seat::MarketSeat,
         node::Node,
@@ -23,7 +25,9 @@ use crate::{
     },
 };
 
-/// User deposits tokens and updates or registers their seat.
+/// Instruction handler logic for depositing funds into a market seat.
+///
+/// There are two paths:
 ///
 /// 1) User provided a non-NIL sector index hint: update an existing seat.
 ///   - Try to find the seat with the user's sector index hint.
@@ -36,8 +40,7 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in
-/// [`dropset_interface::instructions::deposit::Deposit`]
+/// Caller guarantees the safety contract detailed in [`Deposit`].
 pub unsafe fn process_deposit(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let DepositInstructionData {
         amount,

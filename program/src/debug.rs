@@ -1,3 +1,5 @@
+//! Internal debugging helpers for local development and testing.
+
 /// Debug macro that wraps pinocchio_log::log!
 #[macro_export]
 macro_rules! debug {
