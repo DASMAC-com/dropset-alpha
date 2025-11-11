@@ -1,3 +1,5 @@
+//! See [`process_register_market`].
+
 use dropset_interface::{
     error::DropsetError,
     instructions::generated_pinocchio::*,
@@ -24,6 +26,8 @@ use crate::{
     shared::market_operations::initialize_market_account_data,
 };
 
+/// Instruction handler logic for initializing a new market account and its header metadata.
+///
 /// # Safety
 ///
 /// Caller guarantees the safety contract detailed in [`RegisterMarket`].

@@ -1,3 +1,5 @@
+//! See [`process_withdraw`].
+
 use dropset_interface::{
     error::DropsetError,
     instructions::generated_pinocchio::*,
@@ -16,7 +18,7 @@ use crate::{
     },
 };
 
-/// User withdraws tokens and updates their seat.
+/// Instruction handler logic for withdrawing funds from a market seat.
 ///
 /// # Safety
 ///

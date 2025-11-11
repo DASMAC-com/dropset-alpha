@@ -1,9 +1,16 @@
+//! Instruction handlers for the `dropset` program.
+//!
+//! Routes decoded instructions to their corresponding handlers and encapsulates all
+//! on-chain logic for each supported operation.
+
+pub mod batch;
 pub mod close_seat;
 pub mod deposit;
 pub mod flush_events;
 pub mod register_market;
 pub mod withdraw;
 
+pub use batch::process_batch;
 pub use close_seat::process_close_seat;
 pub use deposit::process_deposit;
 pub use flush_events::process_flush_events;

@@ -1,3 +1,5 @@
+//! See [`process_close_seat`].
+
 use dropset_interface::{
     instructions::generated_pinocchio::*,
     state::node::Node,
@@ -14,7 +16,7 @@ use crate::{
     shared::market_operations::find_seat_with_hint,
 };
 
-/// Closes a market seat for a user by withdrawing all base and quote from their seat.
+/// Instruction handler logic for closing an existing market seat and reclaiming associated funds.
 ///
 /// # Safety
 ///

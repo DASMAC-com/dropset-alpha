@@ -1,3 +1,5 @@
+//! See [`process_deposit`].
+
 use dropset_interface::{
     instructions::generated_pinocchio::*,
     state::{
@@ -23,7 +25,9 @@ use crate::{
     },
 };
 
-/// User deposits tokens and updates or registers their seat.
+/// Instruction handler logic for depositing funds into a market seat.
+///
+/// There are two paths:
 ///
 /// 1) User provided a non-NIL sector index hint: update an existing seat.
 ///   - Try to find the seat with the user's sector index hint.
