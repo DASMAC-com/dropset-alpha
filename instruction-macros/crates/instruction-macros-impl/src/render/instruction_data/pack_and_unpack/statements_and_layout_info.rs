@@ -8,15 +8,12 @@ use proc_macro2::{
 use quote::quote;
 use syn::Ident;
 
-use crate::{
-    parse::{
-        argument_type::{
-            ArgumentType,
-            ParsedPackableType,
-        },
-        instruction_variant::InstructionVariant,
+use crate::parse::{
+    argument_type::{
+        ArgumentType,
+        ParsedPackableType,
     },
-    render::instruction_data::packable_type::RenderedPackableType,
+    instruction_variant::InstructionVariant,
 };
 
 pub struct StatementsAndLayoutInfo {

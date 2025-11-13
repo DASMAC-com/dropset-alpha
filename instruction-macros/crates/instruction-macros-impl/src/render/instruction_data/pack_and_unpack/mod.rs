@@ -2,6 +2,7 @@
 //! serialization logic.
 
 mod pack;
+mod statements;
 mod statements_and_layout_info;
 mod unpack;
 
