@@ -18,11 +18,11 @@ pub enum DropsetEventTag {
     #[args(emitted_count: u16, "The number of events in the following event buffer.")]
     Header,
     #[args(amount: u64, "The amount deposited.")]
-    #[args(transfer_type: u8, "The token type: base or quote.")]
+    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    
     #[args(seat_sector_index: u32, "The user's (possibly newly registered) market seat sector index.")]
-    Deposit, 
+    Deposit,
     #[args(amount: u64, "The amount withdrawn.")]
-    #[args(transfer_type: u8, "The token type: base or quote.")]    
+    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    
     Withdraw,
     #[args(market: [u8; 32], "The newly registered market.")]
     RegisterMarket,
