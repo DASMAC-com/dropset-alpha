@@ -103,6 +103,10 @@ fn render_variant(
             /// This is the byte length **not including** the tag byte; i.e., the size of `Self`.
             pub const LEN: usize = #size_without_tag_unsuffixed;
 
+            /// This is the byte length **including** the tag byte; i.e., the size of the full event
+            /// instruction data in an `instruction_data: &[u8]` slice with the tag.
+            pub const LEN_WITH_TAG: usize = #size_without_tag_unsuffixed;
+
             #struct_doc
             #[inline(always)]
             pub fn new(
