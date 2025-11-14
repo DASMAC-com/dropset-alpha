@@ -19,7 +19,7 @@ pub fn render(
     size_with_tag: Literal,
 ) -> TokenStream {
     let discriminant_description =
-        format!(" - `[0]` the **discriminant** `{enum_ident}::{tag_variant}` (`u8`, 1 byte)");
+        format!(" - `[0]` **the discriminant** `{enum_ident}::{tag_variant}` (`u8`, 1 byte)");
 
     let pack_statements_tokens = match pack_statements.len() {
         0 => quote! {},

@@ -13,10 +13,10 @@ pub enum DropsetEvent {
     Header,
     #[args(trader: [u8; 32], "The trader's pubkey.")]
     #[args(amount: u64, "The amount deposited.")]
-    #[args(transfer_type: u8, "The token type: base or quote.")]    
+    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    
     Deposit,
     #[args(trader: [u8; 32], "The trader's pubkey.")]
     #[args(amount: u64, "The amount withdrawn.")]
-    #[args(transfer_type: u8, "The token type: base or quote.")]    
+    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    
     Withdraw,
 }

@@ -33,7 +33,7 @@ pub fn render(
         layout_docs,
         pack_statements,
         unpack_assignments,
-    } = StatementsAndLayoutInfo::new(instruction_variant);
+    } = StatementsAndLayoutInfo::new(instruction_variant, feature);
 
     let pack = pack::render(
         enum_ident,
