@@ -77,6 +77,7 @@ fn render_variant(
     } = InstructionArgumentInfo::new(instruction_args);
 
     let const_assertion = render_const_assertion(instruction_args, total_size_without_tag, &sizes);
+    let size_without_tag_unsuffixed = Literal::usize_unsuffixed(total_size_without_tag);
 
     let (pack_fn, unpack_fn) =
         pack_and_unpack::render(parsed_enum, instruction_variant, &names, feature);
@@ -99,6 +100,9 @@ fn render_variant(
         #const_assertion
 
         impl #struct_name {
+            /// This is the byte length **not including** the tag byte; i.e., the size of `Self`.
+            pub const LEN: usize = #size_without_tag_unsuffixed;
+
             #struct_doc
             #[inline(always)]
             pub fn new(
