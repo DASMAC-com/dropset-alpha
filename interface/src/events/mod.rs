@@ -1,6 +1,8 @@
+mod buffer;
 #[cfg(test)]
 mod tests;
 
+use buffer::*;
 use instruction_macros::ProgramInstructionEvent;
 
 use crate::error::DropsetError;
@@ -13,9 +15,9 @@ use crate::error::DropsetError;
 #[rustfmt::skip]
 pub enum DropsetEventTag {
     #[args(instruction_tag: u8, "The tag of the instruction that emitted the following events.")]
-    #[args(market: [u8; 32], "The market's pubkey.")]
-    #[args(nonce: u64, "The market nonce.")]
     #[args(emitted_count: u16, "The number of events in the following event buffer.")]
+    #[args(nonce: u64, "The market nonce.")]
+    #[args(market: [u8; 32], "The market's pubkey.")]
     Header,
     #[args(amount: u64, "The amount deposited.")]
     #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    

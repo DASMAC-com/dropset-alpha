@@ -76,7 +76,6 @@ impl DropsetEvent {
         };
 
         let tag = DropsetEventTag::try_from(*tag).map_err(|_| EventError::InvalidTag)?;
-
         let err = || EventError::UnpackError(tag);
         match tag {
             DropsetEventTag::Header => Ok(DropsetEvent::Header(
