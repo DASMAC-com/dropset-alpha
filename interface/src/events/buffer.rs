@@ -55,7 +55,13 @@ impl EventBuffer {
         Self { data, len }
     }
 
-    pub fn increment_emitted_count(&mut self) {
+    pub fn flush_events() {}
+
+    pub fn add_event_to_buffer() {}
+
+    /// Increment the emitted count through raw pointer dereferencing using
+    /// the compile-time checked offset and byte size.
+    fn increment_emitted_count(&mut self) {
         // Safety:
         // The first 1 + `HeaderInstructionData::LEN_WITH_TAG` bytes are always initialized.
         // No other reference to this data is currently held.
@@ -76,7 +82,9 @@ impl EventBuffer {
         };
     }
 
-    pub fn increment_nonce(&mut self) {
+    /// Increment the nonce through raw pointer dereferencing using
+    /// the compile-time checked offset and byte size.
+    fn increment_nonce(&mut self) {
         // Safety:
         // The first 1 + `HeaderInstructionData::LEN_WITH_TAG` bytes are always initialized.
         // No other reference to this data is currently held.
