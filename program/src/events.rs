@@ -12,6 +12,10 @@ use dropset_interface::{
     },
     instructions::DropsetInstruction,
     program,
+    state::market::{
+        MarketRef,
+        MarketRefMut,
+    },
 };
 use pinocchio::{
     account_info::AccountInfo,
@@ -76,7 +80,7 @@ const HEADER_SIZE_WITH_TAGS: usize =
 impl<'a> EventBuffer<'a> {
     pub fn new(
         instruction_tag: DropsetInstruction,
-        market: Pubkey,
+        market_pubkey: Pubkey,
         event_authority: &'a AccountInfo,
     ) -> Self {
         let mut data: [MaybeUninit<u8>; 10240] = [MaybeUninit::uninit(); EVENT_BUFFER_LEN];
@@ -84,7 +88,14 @@ impl<'a> EventBuffer<'a> {
         data[0].write(DropsetInstruction::FlushEvents as u8);
         let mut len = 1;
         // Then pack the event header.
-        let header = HeaderInstructionData::new(instruction_tag as u8, 0, 0, market);
+        let header = HeaderInstructionData::new(
+            instruction_tag as u8,
+            0,
+            // The real nonce value is set right before flushing. This is just a placeholder
+            // for the bytes.
+            0,
+            market_pubkey,
+        );
         // HeaderInstructionData::pack(&self)
 
         // Safety: data's length is sufficient and `len` increments by the header's length below.
@@ -103,7 +114,14 @@ impl<'a> EventBuffer<'a> {
     }
 
     /// Flush the event buffer by invoking a CPI with the buffer data.
-    pub fn flush_events(&mut self) {
+    pub fn flush_events(&mut self, market_mut: MarketRefMut) {
+        // Increment the market nonce in the account header data by the current emitted count.
+        market_mut
+            .header
+            .increment_nonce_by(self.get_emitted_count() as u64);
+        // Then write the new nonce value to the nonce value in the event buffer header as well.
+        self.set_nonce(market_mut.header.nonce());
+
         // Safety; `data` has exactly `self.len()` initialized, contiguous bytes.
         let data =
             unsafe { core::slice::from_raw_parts(self.data.as_ptr() as *const u8, self.len()) };
@@ -128,10 +146,11 @@ impl<'a> EventBuffer<'a> {
         self.set_emitted_count(0);
     }
 
-    pub fn add_to_buffer<T: PackIntoSlice>(&mut self, packable_event: T) {
+    #[inline(always)]
+    pub fn add_to_buffer<T: PackIntoSlice>(&mut self, packable_event: T, market_mut: MarketRefMut) {
         let len = self.len();
         if len + T::LEN_WITH_TAG > EVENT_BUFFER_LEN {
-            self.flush_events();
+            self.flush_events(market_mut);
         }
 
         // Since the length isn't checked again after flushing, check the very unlikely
@@ -160,12 +179,12 @@ impl<'a> EventBuffer<'a> {
         self.len
     }
 
-    #[inline(always)]
     /// Safety:
     ///
     /// Caller guarantees that the pointer returned doesn't outlive the `self.data` slice.
     ///
     /// The simplest way to enforce this is to immediately use and drop the pointer.
+    #[inline(always)]
     unsafe fn emitted_count_slice_mut_ptr(&mut self) -> *mut [u8; 2] {
         // Sanity check to ensure that there's no way the `.add` call below could ever result in UB.
         debug_assert!(
@@ -184,8 +203,17 @@ impl<'a> EventBuffer<'a> {
         }
     }
 
-    /// Set the emitted count through raw pointer dereferencing using
-    /// the compile-time checked offset and byte size.
+    #[inline(always)]
+    fn get_emitted_count(&mut self) -> u16 {
+        // Safety: The slice pointer is used and dropped immediately.
+        // The slice pointer always points to fully initialized data because
+        // the header is initialized upon construction.
+        unsafe { u16::from_le_bytes(*self.emitted_count_slice_mut_ptr()) }
+    }
+
+    /// Set the emitted count through raw pointer dereferencing using the compile-time checked
+    /// offset and byte size.
+    #[inline(always)]
     fn set_emitted_count(&mut self, new_count: u16) {
         // Safety:
         // No other reference to this data is currently held.
@@ -201,18 +229,16 @@ impl<'a> EventBuffer<'a> {
     }
 
     /// Increment the emitted count.
+    #[inline(always)]
     fn increment_emitted_count(&mut self) {
-        // Safety: The slice pointer is used and dropped immediately.
-        // The slice pointer always points to fully initialized data because
-        // the header is initialized upon construction.
-        let new_emitted_count =
-            unsafe { u16::from_le_bytes(*self.emitted_count_slice_mut_ptr()) } + 1;
+        let new_emitted_count = self.get_emitted_count() + 1;
         self.set_emitted_count(new_emitted_count);
     }
 
-    /// Increment the nonce through raw pointer dereferencing using
-    /// the compile-time checked offset and byte size.
-    fn increment_nonce(&mut self) {
+    /// Set the nonce through raw pointer dereferencing using the compile-time checked offset and
+    /// byte size.
+    #[inline(always)]
+    fn set_nonce(&mut self, new_nonce: u64) {
         // Safety:
         // The first 1 + `HeaderInstructionData::LEN_WITH_TAG` bytes are always initialized.
         // No other reference to this data is currently held.
@@ -223,10 +249,8 @@ impl<'a> EventBuffer<'a> {
                 // The first byte is the `FlushEvents` tag.
                 .add(size_of::<DropsetInstruction>() + NONCE_OFFSET)
                 as *mut [u8; NONCE_SIZE];
-            let emitted_count = u64::from_le_bytes(*nonce_slice);
-            let incremented = emitted_count + 1;
             core::ptr::copy_nonoverlapping(
-                incremented.to_le_bytes().as_ptr(),
+                new_nonce.to_le_bytes().as_ptr(),
                 nonce_slice as _,
                 NONCE_SIZE,
             );
