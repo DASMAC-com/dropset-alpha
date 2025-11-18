@@ -23,6 +23,8 @@ use pinocchio::{
     pubkey::Pubkey,
 };
 
+use crate::event_authority_signer;
+
 /// The event buffer length, also exactly the max CPI instruction data length.
 /// That value is checked below in unit tests.
 pub const EVENT_BUFFER_LEN: usize = 10 * 1024;
@@ -113,10 +115,10 @@ impl<'a> EventBuffer<'a> {
                 &Instruction {
                     program_id: &program::ID,
                     data,
-                    accounts: &[self.event_authority_meta],
+                    accounts: &[self.event_authority_meta.clone()],
                 },
                 &[self.event_authority.into()],
-                &[seeds::event_authority::SEEDS],
+                &[event_authority_signer!()],
             )
         };
 

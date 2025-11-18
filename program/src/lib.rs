@@ -12,7 +12,6 @@ mod instructions;
 mod shared;
 mod validation;
 
-pub use shared::seeds::market::MARKET_SEED_STR;
 #[cfg(not(feature = "no-entrypoint"))]
 mod entrypoint;
 
