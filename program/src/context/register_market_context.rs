@@ -11,8 +11,9 @@ use crate::validation::uninitialized_account_info::UninitializedAccountInfo;
 /// The account context for the [`RegisterMarket`] instruction, validating ownership,
 /// initialization, and PDA derivations for market creation.
 #[derive(Clone)]
-
 pub struct RegisterMarketContext<'a> {
+    // The event authority is validated by the inevitable `FlushEvents` self-CPI.
+    pub event_authority: &'a AccountInfo,
     pub user: &'a AccountInfo,
     pub market_account: UninitializedAccountInfo<'a>,
     pub base_market_ata: &'a AccountInfo,
@@ -28,6 +29,7 @@ pub struct RegisterMarketContext<'a> {
 impl<'a> RegisterMarketContext<'a> {
     pub fn load(accounts: &'a [AccountInfo]) -> Result<RegisterMarketContext<'a>, ProgramError> {
         let RegisterMarket {
+            event_authority,
             user,
             market_account,
             base_market_ata,
@@ -50,6 +52,7 @@ impl<'a> RegisterMarketContext<'a> {
         let market_account = UninitializedAccountInfo::new(market_account)?;
 
         Ok(Self {
+            event_authority,
             user,
             market_account,
             base_market_ata,

@@ -7,9 +7,11 @@
 extern crate std;
 
 pub mod error;
+pub mod events;
 pub mod instructions;
+pub mod seeds;
 pub mod state;
-pub(crate) mod syscalls;
+pub mod syscalls;
 pub mod utils;
 
 pub mod program {

@@ -98,7 +98,7 @@ impl From<&MarketHeader> for MarketHeaderView {
             base_mint: header.base_mint.into(),
             quote_mint: header.quote_mint.into(),
             market_bump: header.market_bump,
-            nonce: header.nonce(),
+            nonce: header.num_events(),
             _padding: [0; 3],
         }
     }

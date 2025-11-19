@@ -1,3 +1,5 @@
+//! See [`DepositWithdrawContext`].
+
 use dropset_interface::instructions::generated_pinocchio::Deposit;
 use pinocchio::{
     account_info::AccountInfo,
@@ -15,12 +17,13 @@ use crate::validation::{
 /// ownership, mint consistency, and associated token account correctness.
 #[derive(Clone)]
 pub struct DepositWithdrawContext<'a> {
+    // The event authority is validated by the inevitable `FlushEvents` self-CPI.
+    pub event_authority: &'a AccountInfo,
     pub user: &'a AccountInfo,
     pub market_account: MarketAccountInfo<'a>,
     pub user_ata: TokenAccountInfo<'a>,
     pub market_ata: TokenAccountInfo<'a>,
     pub mint: MintInfo<'a>,
-    pub _token_program: &'a AccountInfo,
 }
 
 impl<'a> DepositWithdrawContext<'a> {
@@ -47,12 +50,13 @@ impl<'a> DepositWithdrawContext<'a> {
         // Note `Withdraw`'s fields are checked below with unit tests, since this method is used for
         // both `Deposit` and `Withdraw`.
         let Deposit {
+            event_authority,
             user,
             market_account,
             user_ata,
             market_ata,
             mint,
-            token_program,
+            token_program: _,
         } = Deposit::load_accounts(accounts)?;
 
         // Safety: Scoped borrow of market account data.
@@ -72,12 +76,12 @@ impl<'a> DepositWithdrawContext<'a> {
         };
 
         Ok(Self {
+            event_authority,
             user,
             market_account,
             user_ata,
             market_ata,
             mint,
-            _token_program: token_program,
         })
     }
 }
@@ -101,6 +105,7 @@ fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
 
     // The compiler will raise an error if these fields are incorrect.
     let Withdraw {
+        event_authority,
         user,
         market_account,
         user_ata,
@@ -112,6 +117,7 @@ fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
     let d = d.unwrap();
 
     // And to ensure the same ordering, check the pubkeys field by field.
+    debug_assert_eq!(d.event_authority.key(), event_authority.key());
     debug_assert_eq!(d.user.key(), user.key());
     debug_assert_eq!(d.market_account.key(), market_account.key());
     debug_assert_eq!(d.user_ata.key(), user_ata.key());

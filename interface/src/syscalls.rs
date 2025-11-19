@@ -24,14 +24,14 @@ mod inner {
 #[cfg(all(target_os = "solana", target_feature = "static-syscalls"))]
 /// Syscalls provided by the SVM runtime (SBPFv3 and newer).
 mod inner {
-    pub(crate) unsafe fn sol_memcpy_(dst: *mut u8, src: *const u8, count: u64) {
+    pub unsafe fn sol_memcpy_(dst: *mut u8, src: *const u8, count: u64) {
         // murmur32 hash of "sol_memcpy_"
         let syscall: extern "C" fn(*mut u8, *const u8, u64) =
             unsafe { core::mem::transmute(1904002211u64) };
         syscall(dst, src, count)
     }
 
-    pub(crate) unsafe fn sol_memset_(dst: *mut u8, val: u8, count: u64) {
+    pub unsafe fn sol_memset_(dst: *mut u8, val: u8, count: u64) {
         // murmur32 hash of "sol_memset_"
         let syscall: extern "C" fn(*mut u8, u8, u64) =
             unsafe { core::mem::transmute(930151202u64) };
@@ -48,7 +48,7 @@ mod inner {
     /// # Safety
     ///
     /// Caller should adhere to the safety contract in [`core::ptr::copy_nonoverlapping`].
-    pub(crate) unsafe fn sol_memcpy_(dst: *mut u8, src: *const u8, count: u64) {
+    pub unsafe fn sol_memcpy_(dst: *mut u8, src: *const u8, count: u64) {
         unsafe {
             core::ptr::copy_nonoverlapping(src, dst, count as usize);
         }
@@ -58,8 +58,8 @@ mod inner {
     ///
     /// # Safety
     ///
-    /// However, caller should adhere to the safety contract in [`core::ptr::write_bytes`].
-    pub(crate) unsafe fn sol_memset_(dst: *mut u8, val: u8, count: u64) {
+    /// Caller should adhere to the safety contract in [`core::ptr::write_bytes`].
+    pub unsafe fn sol_memset_(dst: *mut u8, val: u8, count: u64) {
         unsafe {
             core::ptr::write_bytes(dst, val, count as usize);
         }
@@ -67,4 +67,4 @@ mod inner {
 }
 
 #[allow(unused_imports)]
-pub(crate) use inner::*;
+pub use inner::*;

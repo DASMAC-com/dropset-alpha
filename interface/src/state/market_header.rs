@@ -58,8 +58,8 @@ pub struct MarketHeader {
     pub quote_mint: Pubkey,
     /// The bump for the market PDA.
     pub market_bump: u8,
-    /// The u64 market nonce as LE bytes.
-    nonce: LeU64,
+    /// The u64 number of events as LE bytes.
+    num_events: LeU64,
     // Although not necessary, add extra padding to make this alignment 8.
     _padding: [u8; 3],
 }
@@ -106,7 +106,7 @@ impl MarketHeader {
             base_mint: *base_mint,
             quote_mint: *quote_mint,
             market_bump,
-            nonce: [0; U64_SIZE],
+            num_events: [0; U64_SIZE],
             _padding: [0; 3],
         };
         core::ptr::write(header_dst_ptr, header);
@@ -186,12 +186,12 @@ impl MarketHeader {
     }
 
     #[inline(always)]
-    pub fn nonce(&self) -> u64 {
-        u64::from_le_bytes(self.nonce)
+    pub fn num_events(&self) -> u64 {
+        u64::from_le_bytes(self.num_events)
     }
 
     #[inline(always)]
-    pub fn increment_nonce(&mut self) {
-        self.nonce = (self.nonce().saturating_add(1)).to_le_bytes();
+    pub fn increment_num_events_by(&mut self, amount: u64) {
+        self.num_events = (self.num_events().saturating_add(amount)).to_le_bytes();
     }
 }

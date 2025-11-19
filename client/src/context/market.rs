@@ -3,6 +3,7 @@
 
 use dropset_interface::{
     instructions::generated_client::*,
+    seeds::event_authority,
     state::{
         sector::NIL,
         SYSTEM_PROGRAM_ID,
@@ -68,6 +69,7 @@ impl MarketContext {
 
     pub fn register_market(&self, payer: Pubkey, num_sectors: u16) -> Instruction {
         RegisterMarket {
+            event_authority: event_authority::ID.into(),
             user: payer,
             market_account: self.market,
             base_market_ata: self.base_market_ata,
@@ -97,6 +99,7 @@ impl MarketContext {
 
     pub fn close_seat(&self, user: Pubkey, sector_index_hint: u32) -> Instruction {
         CloseSeat {
+            event_authority: event_authority::ID.into(),
             user,
             market_account: self.market,
             base_user_ata: self.get_base_ata(&user),
@@ -134,6 +137,7 @@ impl MarketContext {
     fn deposit(&self, user: Pubkey, data: DepositInstructionData, is_base: bool) -> Instruction {
         match is_base {
             true => Deposit {
+                event_authority: event_authority::ID.into(),
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
@@ -142,6 +146,7 @@ impl MarketContext {
                 token_program: self.base.token_program,
             },
             false => Deposit {
+                event_authority: event_authority::ID.into(),
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),
@@ -156,6 +161,7 @@ impl MarketContext {
     fn withdraw(&self, user: Pubkey, data: WithdrawInstructionData, is_base: bool) -> Instruction {
         match is_base {
             true => Withdraw {
+                event_authority: event_authority::ID.into(),
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
@@ -164,6 +170,7 @@ impl MarketContext {
                 token_program: self.base.token_program,
             },
             false => Withdraw {
+                event_authority: event_authority::ID.into(),
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),

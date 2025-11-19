@@ -16,6 +16,8 @@ use crate::validation::{
 /// are valid for closure.
 #[derive(Clone)]
 pub struct CloseSeatContext<'a> {
+    // The event authority is validated by the inevitable `FlushEvents` self-CPI.
+    pub event_authority: &'a AccountInfo,
     pub user: &'a AccountInfo,
     pub market_account: MarketAccountInfo<'a>,
     pub base_user_ata: TokenAccountInfo<'a>,
@@ -24,13 +26,12 @@ pub struct CloseSeatContext<'a> {
     pub quote_market_ata: TokenAccountInfo<'a>,
     pub base_mint: MintInfo<'a>,
     pub quote_mint: MintInfo<'a>,
-    pub _base_token_program: &'a AccountInfo,
-    pub _quote_token_program: &'a AccountInfo,
 }
 
 impl<'a> CloseSeatContext<'a> {
     pub unsafe fn load(accounts: &'a [AccountInfo]) -> Result<CloseSeatContext<'a>, ProgramError> {
         let CloseSeat {
+            event_authority,
             user,
             market_account,
             base_user_ata,
@@ -39,8 +40,8 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
-            base_token_program,
-            quote_token_program,
+            base_token_program: _,
+            quote_token_program: _,
         } = CloseSeat::load_accounts(accounts)?;
 
         // Safety: Scoped borrow of market account data.
@@ -69,6 +70,7 @@ impl<'a> CloseSeatContext<'a> {
         )?;
 
         Ok(Self {
+            event_authority,
             user,
             market_account,
             base_user_ata,
@@ -77,8 +79,6 @@ impl<'a> CloseSeatContext<'a> {
             quote_market_ata,
             base_mint,
             quote_mint,
-            _base_token_program: base_token_program,
-            _quote_token_program: quote_token_program,
         })
     }
 }
