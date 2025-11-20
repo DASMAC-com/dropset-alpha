@@ -34,7 +34,10 @@ use crate::{
         transaction::PrettyTransaction,
     },
     print_kv,
-    transaction_parser::parse_transaction,
+    transaction_parser::{
+        parse_events,
+        parse_transaction,
+    },
     LogColor,
 };
 
@@ -195,6 +198,16 @@ async fn send_transaction_with_config(
                                 instruction_filter: &config.program_id_filter,
                             }
                         );
+
+                        for ixn in transaction.instructions.iter() {
+                            for inner_ixn in ixn.inner_instructions.iter() {
+                                let events = parse_events(inner_ixn)
+                                    .expect("Should be able to parse events");
+                                for event in events {
+                                    println!("{event:?}");
+                                }
+                            }
+                        }
                     }
                     Err(e) => {
                         eprintln!("{e}");

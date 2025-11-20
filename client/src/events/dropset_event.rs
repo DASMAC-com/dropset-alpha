@@ -7,12 +7,14 @@ use dropset_interface::events::{
     WithdrawEventInstructionData,
 };
 
-#[derive(strum_macros::VariantNames)]
+use crate::events::display_types;
+
+#[derive(Debug, strum_macros::VariantNames)]
 pub enum DropsetEvent {
-    Header(HeaderEventInstructionData),
+    Header(display_types::DisplayHeaderData),
     Deposit(DepositEventInstructionData),
     Withdraw(WithdrawEventInstructionData),
-    RegisterMarket(RegisterMarketEventInstructionData),
+    RegisterMarket(display_types::DisplayRegisterMarketData),
     CloseSeat(CloseSeatEventInstructionData),
 }
 
@@ -28,6 +30,7 @@ impl DropsetEvent {
     }
 }
 
+#[derive(Debug)]
 pub enum EventError {
     HeaderNotFirstEvent,
     InstructionDataTooShort,
@@ -79,7 +82,9 @@ impl DropsetEvent {
         let err = || EventError::UnpackError(tag);
         match tag {
             DropsetEventTag::HeaderEvent => Ok(DropsetEvent::Header(
-                HeaderEventInstructionData::unpack(data).map_err(|_| err())?,
+                HeaderEventInstructionData::unpack(data)
+                    .map_err(|_| err())?
+                    .into(),
             )),
             DropsetEventTag::DepositEvent => Ok(DropsetEvent::Deposit(
                 DepositEventInstructionData::unpack(data).map_err(|_| err())?,
@@ -88,7 +93,9 @@ impl DropsetEvent {
                 WithdrawEventInstructionData::unpack(data).map_err(|_| err())?,
             )),
             DropsetEventTag::RegisterMarketEvent => Ok(DropsetEvent::RegisterMarket(
-                RegisterMarketEventInstructionData::unpack(data).map_err(|_| err())?,
+                RegisterMarketEventInstructionData::unpack(data)
+                    .map_err(|_| err())?
+                    .into(),
             )),
             DropsetEventTag::CloseSeatEvent => Ok(DropsetEvent::CloseSeat(
                 CloseSeatEventInstructionData::unpack(data).map_err(|_| err())?,
