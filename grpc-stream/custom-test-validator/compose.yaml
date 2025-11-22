@@ -1,0 +1,21 @@
+services:
+  solana:
+    build: .
+    container_name: solana-localnet
+    command: >
+      solana-test-validator --reset
+      --limit-ledger-size
+      --geyser-plugin-config /app/geyser-config.json
+    ports:
+      - "8899:8899"   # RPC
+      - "8900:8900"   # WS
+      - "10000:10000" # Yellowstone gRPC
+    volumes:
+      - ledger:/root/.local/share/solana  # persist ledger across restarts
+      - ./geyser-config.json:/app/geyser-config.json:ro
+    environment:
+      - RUST_LOG=yellowstone_grpc_geyser=info,solana_geyser_plugin_manager=info
+
+volumes:
+  ledger: {}
+  

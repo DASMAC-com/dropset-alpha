@@ -1,0 +1,9 @@
+{
+  "libpath": "/opt/yellowstone/target/release/libyellowstone_grpc_geyser.so",
+  "log": { "level": "info" },
+  "grpc": {
+    "address": "0.0.0.0:10000",
+    "channel_capacity": 100000,
+    "unary_disabled": false
+  }
+}
