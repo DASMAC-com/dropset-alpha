@@ -1,3 +1,6 @@
+//! Defines an enum for all `dropset` events that facilitates unpacking them either as individual
+//! events or contiguous instruction data.
+
 use dropset_interface::events::{
     CloseSeatEventInstructionData,
     DepositEventInstructionData,

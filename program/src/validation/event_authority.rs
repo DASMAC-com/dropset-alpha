@@ -1,9 +1,12 @@
+//! See [`EventAuthorityInfo`].
+
 use dropset_interface::{
     error::DropsetError,
     seeds::event_authority,
 };
 use pinocchio::account_info::AccountInfo;
 
+/// A validated wrapper around a raw market [`AccountInfo`] for the event authority account.
 #[derive(Clone)]
 pub struct EventAuthorityInfo<'a> {
     pub _info: &'a AccountInfo,

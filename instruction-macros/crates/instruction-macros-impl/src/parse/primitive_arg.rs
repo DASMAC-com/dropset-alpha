@@ -1,7 +1,5 @@
-//! Utilities for recognizing and handling primitive argument types used in instruction argument
+//! Utilities for recognizing and handling [`PrimitiveArg`] types used in instruction argument
 //! attributes.
-//!
-//! Instruction arguments only support argument types defined in [`PrimitiveArg`].
 
 use std::str::FromStr;
 

@@ -1,6 +1,9 @@
+//! See [`render`].
+
 use proc_macro2::TokenStream;
 use quote::quote;
 
+/// Renders the `PackIntoSlice` trait.
 pub fn render() -> TokenStream {
     quote! {
         pub trait PackIntoSlice {

@@ -1,3 +1,5 @@
+//! See [`parse_events`].
+
 use dropset_interface::instructions::DropsetInstruction;
 
 use crate::{
@@ -11,6 +13,7 @@ use crate::{
 
 pub struct ParsedTransactionWithEvents {}
 
+/// Fallibly parses a [`ParsedInstruction`]'s inner instruction data as `dropset` events.
 pub fn parse_events(
     parsed_instruction: &ParsedInstruction,
 ) -> Result<Vec<DropsetEvent>, EventError> {

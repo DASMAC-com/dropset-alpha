@@ -1,3 +1,6 @@
+//! Parsing implementations for the various [`ArgumentType`]s that can be used for the `args`
+//! derive attribute.
+
 use std::fmt::Display;
 
 use itertools::Itertools;

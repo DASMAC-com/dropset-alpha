@@ -1,3 +1,5 @@
+//! Renders the individual statements/assignments used in the pack/unpack implementations.
+
 use proc_macro2::{
     Literal,
     TokenStream,
