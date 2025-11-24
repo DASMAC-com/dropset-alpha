@@ -9,32 +9,7 @@ use dropset_interface::state::{
     sector::SectorIndex,
     transmutable::Transmutable,
 };
-use solana_sdk::{
-    account::ReadableAccount,
-    pubkey::Pubkey,
-};
-
-use crate::transactions::CustomRpcClient;
-
-pub fn view_market_account(
-    rpc: &CustomRpcClient,
-    market: &Pubkey,
-) -> anyhow::Result<MarketView<MarketSeatView>> {
-    let account = rpc.client.get_account(market)?;
-    if account.owner != dropset::ID.into() {
-        return Err(anyhow::Error::msg("Account isn't owned by dropset program"));
-    }
-
-    let data = account.data();
-
-    if data.len() < MarketHeader::LEN {
-        return Err(anyhow::Error::msg("Account is uninitialized"));
-    }
-
-    // Safety: Length was just checked.
-    let market = unsafe { MarketRef::from_bytes(data) };
-    Ok(market.into())
-}
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Debug)]
 pub struct MarketHeaderView {
@@ -55,6 +30,27 @@ pub struct MarketHeaderView {
 pub struct MarketView<T> {
     pub header: MarketHeaderView,
     pub sectors: Vec<T>,
+}
+
+// Fallibly convert an account's owner and account data into a market view of type T.
+pub fn market_view_try_from_owner_and_data<'a, T>(
+    account_owner: Pubkey,
+    account_data: &'a [u8],
+) -> Result<MarketView<T>, anyhow::Error>
+where
+    MarketView<T>: From<MarketRef<'a>>,
+{
+    if account_owner != dropset::ID.into() {
+        return Err(anyhow::Error::msg("Account isn't owned by dropset program"));
+    }
+
+    if account_data.len() < MarketHeader::LEN {
+        return Err(anyhow::Error::msg("Account is uninitialized"));
+    }
+
+    // Safety: Length was just checked.
+    let market = unsafe { MarketRef::from_bytes(account_data) };
+    Ok(market.into())
 }
 
 #[derive(Debug)]
