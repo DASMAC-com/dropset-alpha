@@ -7,6 +7,7 @@ use pinocchio::program_error::ProgramError;
 #[repr(u8)]
 pub enum DropsetError {
     InvalidInstructionTag,
+    InvalidInstructionEventTag,
     InsufficientByteLength,
     InvalidSectorIndex,
     NoFreeNodesLeft,
@@ -31,6 +32,8 @@ pub enum DropsetError {
     MissingIndexHint,
     InvalidNonZeroInteger,
     InvalidInstructionData,
+    IncorrectEventAuthority,
+    EventAuthorityMustBeSigner,
 }
 
 impl From<DropsetError> for ProgramError {
@@ -44,6 +47,7 @@ impl From<DropsetError> for &'static str {
     fn from(value: DropsetError) -> Self {
         match value {
             DropsetError::InvalidInstructionTag => "Invalid instruction tag",
+            DropsetError::InvalidInstructionEventTag => "Invalid instruction event tag",
             DropsetError::InsufficientByteLength => "Not enough bytes passed",
             DropsetError::InvalidSectorIndex => "Invalid sector index passed",
             DropsetError::NoFreeNodesLeft => "There are no free stack nodes left",
@@ -68,6 +72,8 @@ impl From<DropsetError> for &'static str {
             DropsetError::MissingIndexHint => "Instruction data must include an index hint",
             DropsetError::InvalidNonZeroInteger => "Value passed must be greater than zero",
             DropsetError::InvalidInstructionData => "Instruction data is invalid",
+            DropsetError::IncorrectEventAuthority => "The event authority passed isn't correct.",
+            DropsetError::EventAuthorityMustBeSigner => "The event authority isn't a signer.",
         }
     }
 }

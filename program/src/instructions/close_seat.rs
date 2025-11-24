@@ -1,17 +1,22 @@
 //! See [`process_close_seat`].
 
 use dropset_interface::{
-    instructions::generated_pinocchio::*,
+    events::CloseSeatEventInstructionData,
+    instructions::CloseSeatInstructionData,
     state::node::Node,
     utils::is_owned_by_spl_token,
 };
 use pinocchio::{
     account_info::AccountInfo,
-    ProgramResult,
+    program_error::ProgramError,
 };
 
 use crate::{
-    context::close_seat_context::CloseSeatContext,
+    context::{
+        close_seat_context::CloseSeatContext,
+        EventBufferContext,
+    },
+    events::EventBuffer,
     market_signer,
     shared::market_operations::find_seat_with_hint,
 };
@@ -22,8 +27,13 @@ use crate::{
 ///
 /// Caller guarantees the safety contract detailed in [`CloseSeat`].
 #[inline(never)]
-pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
-    let sector_index_hint = CloseSeatInstructionData::unpack(instruction_data)?.sector_index_hint;
+pub fn process_close_seat<'a>(
+    accounts: &'a [AccountInfo],
+    instruction_data: &[u8],
+    event_buffer: &mut EventBuffer,
+) -> Result<EventBufferContext<'a>, ProgramError> {
+    let sector_index_hint =
+        CloseSeatInstructionData::unpack_pinocchio(instruction_data)?.sector_index_hint;
     let mut ctx = unsafe { CloseSeatContext::load(accounts) }?;
 
     // Get the market bump and the base and quote amounts available for the user.
@@ -119,5 +129,14 @@ pub fn process_close_seat(accounts: &[AccountInfo], instruction_data: &[u8]) -> 
         }
     }
 
-    Ok(())
+    event_buffer.add_to_buffer(
+        CloseSeatEventInstructionData::new(sector_index_hint),
+        ctx.event_authority,
+        ctx.market_account.clone(),
+    )?;
+
+    Ok(EventBufferContext {
+        event_authority: ctx.event_authority,
+        market_account: ctx.market_account,
+    })
 }

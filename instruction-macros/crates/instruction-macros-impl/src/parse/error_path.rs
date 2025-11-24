@@ -6,7 +6,7 @@ use syn::{
 };
 
 /// Helper type for representing fully qualified error paths (base + variant) in generated code.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ErrorPath {
     /// The error base segment; e.g. `pinocchio::program_error::ProgramError`
     pub base: Path,

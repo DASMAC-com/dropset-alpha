@@ -1,5 +1,8 @@
-//! Derive helper for generating namespaced instruction data types and a `try_from_u8`-style tag
-//! macro from an instruction enum definition.
+//! Derive helper for generating the `try_from_tag` macro, `pack`, and `unpack` functions for
+//! instruction event data.
+//!
+//! Notably, the structs for these instruction event data types do *not* implement invoke methods,
+//! since they are solely for emitting event data inside a self-CPI instruction.
 
 use instruction_macros_impl::{
     parse::{
@@ -15,21 +18,23 @@ use instruction_macros_impl::{
 use proc_macro2::TokenStream;
 use syn::DeriveInput;
 
-pub struct DeriveInstructionData {
+pub struct DeriveInstructionEventData {
     pub try_from_u8_macro: TokenStream,
     pub pack_into_slice_trait: TokenStream,
     pub instruction_data: TokenStream,
 }
 
-pub fn derive_instruction_data(input: DeriveInput) -> syn::Result<DeriveInstructionData> {
-    let parsed_enum = ParsedEnum::try_from((false, input))?;
+pub fn derive_instruction_event_data(
+    input: DeriveInput,
+) -> syn::Result<DeriveInstructionEventData> {
+    let parsed_enum = ParsedEnum::try_from((true, input))?;
     let instruction_variants = parse_instruction_variants(&parsed_enum)?;
 
     let try_from_u8_macro = render_try_from_tag_macro(&parsed_enum, &instruction_variants);
-    let instruction_data = render_instruction_data(&parsed_enum, instruction_variants);
+    let instruction_data: TokenStream = render_instruction_data(&parsed_enum, instruction_variants);
     let pack_into_slice_trait = render_pack_into_slice_trait();
 
-    Ok(DeriveInstructionData {
+    Ok(DeriveInstructionEventData {
         try_from_u8_macro,
         pack_into_slice_trait,
         instruction_data,

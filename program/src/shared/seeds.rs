@@ -1,8 +1,4 @@
-//! Defines PDA seed constants and helper macros for deriving PDA addresses.
-
-pub mod market {
-    pub const MARKET_SEED_STR: &[u8] = b"market";
-}
+//! Defines helper macros for deriving PDA addresses.
 
 #[macro_export]
 macro_rules! market_seeds {
@@ -10,7 +6,7 @@ macro_rules! market_seeds {
         &[
             $base.as_ref(),
             $quote.as_ref(),
-            $crate::shared::seeds::market::MARKET_SEED_STR,
+            ::dropset_interface::seeds::market::MARKET_SEED_STR,
         ]
     };
 }
@@ -27,11 +23,29 @@ macro_rules! market_seeds {
 #[macro_export]
 macro_rules! market_signer {
     ( $base_mint:expr, $quote_mint:expr, $bump:expr ) => {
-        pinocchio::instruction::Signer::from(&pinocchio::seeds!(
+        ::pinocchio::instruction::Signer::from(&::pinocchio::seeds!(
             $base_mint.as_ref(),
             $quote_mint.as_ref(),
-            $crate::shared::seeds::market::MARKET_SEED_STR,
+            ::dropset_interface::seeds::market::MARKET_SEED_STR,
             &[$bump]
+        ))
+    };
+}
+
+/// # Example
+///
+/// ```
+/// use dropset::event_authority_signer;
+/// use pinocchio::instruction::Signer;
+///
+/// let signer: Signer = crate::event_authority_signer!();
+/// ```
+#[macro_export]
+macro_rules! event_authority_signer {
+    ( ) => {
+        ::pinocchio::instruction::Signer::from(&::pinocchio::seeds!(
+            ::dropset_interface::seeds::event_authority::EVENT_AUTHORITY_SEED_STR,
+            &[::dropset_interface::seeds::event_authority::BUMP]
         ))
     };
 }

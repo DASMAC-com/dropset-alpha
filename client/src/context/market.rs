@@ -2,7 +2,13 @@
 //! instructions.
 
 use dropset_interface::{
-    instructions::generated_client::*,
+    instructions::{
+        generated_client::*,
+        CloseSeatInstructionData,
+        DepositInstructionData,
+        RegisterMarketInstructionData,
+        WithdrawInstructionData,
+    },
     seeds::event_authority,
     state::{
         sector::NIL,

@@ -1,3 +1,5 @@
+//! See [`UninitializedAccountInfo`].
+
 use dropset_interface::{
     error::DropsetError,
     state::SYSTEM_PROGRAM_ID,

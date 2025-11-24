@@ -19,12 +19,16 @@ pub struct ParsedEnum {
     pub enum_ident: Ident,
     pub data_enum: DataEnum,
     pub program_id_path: Path,
+    pub as_instruction_events: bool,
 }
 
-impl TryFrom<DeriveInput> for ParsedEnum {
+impl TryFrom<(bool, DeriveInput)> for ParsedEnum {
     type Error = syn::Error;
 
-    fn try_from(input: DeriveInput) -> Result<Self, Self::Error> {
+    fn try_from(
+        parse_as_events_and_derive_input: (bool, DeriveInput),
+    ) -> Result<Self, Self::Error> {
+        let (as_instruction_events, input) = parse_as_events_and_derive_input;
         let enum_ident = input.ident.clone();
         let program_id = ProgramID::try_from(&input)?;
         require_repr_u8(&input)?;
@@ -34,6 +38,7 @@ impl TryFrom<DeriveInput> for ParsedEnum {
             data_enum,
             enum_ident,
             program_id_path: program_id.0,
+            as_instruction_events,
         })
     }
 }
