@@ -11,7 +11,6 @@ use instruction_macros_impl::{
         render_pack_into_slice_trait,
         render_try_from_tag_macro,
         render_unpack_trait,
-        NamespacedTokenStream,
     },
 };
 use proc_macro2::TokenStream;
@@ -21,7 +20,7 @@ pub struct DeriveInstructionData {
     pub try_from_u8_macro: TokenStream,
     pub pack_into_slice_trait: TokenStream,
     pub unpack_trait: TokenStream,
-    pub instruction_data: Vec<NamespacedTokenStream>,
+    pub instruction_data: TokenStream,
 }
 
 pub fn derive_instruction_data(input: DeriveInput) -> syn::Result<DeriveInstructionData> {

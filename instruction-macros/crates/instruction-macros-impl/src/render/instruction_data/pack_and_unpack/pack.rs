@@ -42,7 +42,7 @@ pub fn render(
         pub fn pack(&self) -> [u8; #size_with_tag] {
             use ::core::mem::MaybeUninit;
             let mut data: [MaybeUninit<u8>; #size_with_tag] = [MaybeUninit::uninit(); #size_with_tag];
-            data[0].write(super::#enum_ident::#tag_variant as u8);
+            data[0].write(Self::TAG_BYTE);
             #pack_statements_tokens
 
             // All bytes initialized during the construction above.
@@ -51,7 +51,7 @@ pub fn render(
     };
 
     let pack_into_slice = quote! {
-        impl super::PackIntoSlice for #struct_name {
+        impl PackIntoSlice for #struct_name {
             /// This is the byte length **including** the tag byte; i.e., the size of the full event
             /// instruction data in an `instruction_data: &[u8]` slice with the tag.
             const LEN_WITH_TAG: usize = #size_with_tag;

@@ -16,15 +16,15 @@ use crate::{
         instruction_variant::InstructionVariant,
         parsed_enum::ParsedEnum,
     },
-    render::Feature,
+    render::instruction_data::pack_and_unpack::unpack::group_features_by_error_path,
 };
 
-/// Renders an enum instruction variant's `pack` and `unpack` function for each [`Feature`].
+/// Renders an enum instruction variant's `pack` function and each feature-based `Unpack` trait
+/// implementation.
 pub fn render(
     parsed_enum: &ParsedEnum,
     instruction_variant: &InstructionVariant,
     field_names: &[Ident],
-    feature: Feature,
 ) -> (Packs, TokenStream) {
     let enum_ident = &parsed_enum.enum_ident;
     let tag_variant = &instruction_variant.variant_name;
@@ -33,8 +33,8 @@ pub fn render(
         size_with_tag,
         layout_docs,
         pack_statements,
-        unpack_assignments,
-    } = StatementsAndLayoutInfo::new(instruction_variant, feature);
+        unpack_assignments_map,
+    } = StatementsAndLayoutInfo::new(instruction_variant);
 
     let pack = pack::render(
         enum_ident,
@@ -45,7 +45,20 @@ pub fn render(
         size_with_tag,
     );
 
-    let unpack = unpack::render(&size_without_tag, &unpack_assignments, field_names, feature);
+    let unpack_groups = group_features_by_error_path(unpack_assignments_map);
 
-    (pack, unpack)
+    let unpack_trait_impl = unpack_groups
+        .iter()
+        .map(|group| {
+            unpack::render(
+                &size_without_tag,
+                &instruction_variant.instruction_data_struct_ident(),
+                field_names,
+                &group.error_path,
+                group,
+            )
+        })
+        .collect();
+
+    (pack, unpack_trait_impl)
 }

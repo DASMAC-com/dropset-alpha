@@ -27,6 +27,9 @@ pub fn render_invoke_methods(
     instruction_variant: &InstructionVariant,
 ) -> TokenStream {
     let data_ident = instruction_variant.instruction_data_struct_ident();
+    let data_ident = quote! {
+        super::#data_ident
+    };
     let accounts = &instruction_variant.accounts;
     let program_id_path = &parsed_enum.program_id_path;
     let (metas, names) = accounts
@@ -48,7 +51,7 @@ pub fn render_invoke_methods(
 
 fn pinocchio_invoke(
     program_id_path: &Path,
-    instruction_data_type: Ident,
+    instruction_data_type: TokenStream,
     account_metas: Vec<TokenStream>,
     account_names: Vec<Ident>,
 ) -> TokenStream {
@@ -82,7 +85,7 @@ fn pinocchio_invoke(
 
 fn solana_program_invoke(
     program_id_path: &Path,
-    instruction_data_ident: Ident,
+    instruction_data_ident: TokenStream,
     account_metas: Vec<TokenStream>,
     account_names: Vec<Ident>,
 ) -> TokenStream {
@@ -118,7 +121,7 @@ fn solana_program_invoke(
 
 fn client_create_instruction(
     program_id_path: &Path,
-    instruction_data_ident: Ident,
+    instruction_data_ident: TokenStream,
     account_metas: Vec<TokenStream>,
 ) -> TokenStream {
     quote! {

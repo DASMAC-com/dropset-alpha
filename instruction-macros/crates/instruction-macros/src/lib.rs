@@ -2,11 +2,7 @@
 //! namespaced instruction data, account layouts, and helper APIs from an
 //! instruction enum definition.
 
-use instruction_macros_impl::render::{
-    merge_namespaced_token_streams,
-    Feature,
-    FeatureNamespace,
-};
+use instruction_macros_impl::render::merge_namespaced_token_streams;
 use quote::quote;
 use syn::{
     parse_macro_input,
@@ -41,12 +37,12 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(e) => return e.into_compile_error().into(),
     };
 
-    let accounts_render = match derive_accounts(input) {
+    let accounts_render = match derive_accounts(input.clone()) {
         Ok(render) => render,
         Err(e) => return e.into_compile_error().into(),
     };
 
-    let merged_streams = merge_namespaced_token_streams(vec![instruction_data, accounts_render]);
+    let merged_streams = merge_namespaced_token_streams(vec![accounts_render]);
 
     let namespaced_outputs = merged_streams
         .into_iter()
@@ -72,6 +68,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         #try_from_u8_macro
         #pack_into_slice_trait
         #unpack_trait
+        #instruction_data
         #namespaced_outputs
     }
     .into()
@@ -85,35 +82,33 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
         try_from_u8_macro,
         pack_into_slice_trait,
         unpack_trait,
-        client_instruction_data: client_tokens,
+        instruction_data,
     } = match derive_instruction_event_data(input.clone()) {
         Ok(render) => render,
         Err(e) => return e.into_compile_error().into(),
     };
 
-    // Emulate a private namespace that is exposed publicly to ensure the `super::` calls in
-    // generated submodules continue to work.
-    let namespace = FeatureNamespace(Feature::Client);
-
-    let client_instruction_data = quote! {
-            pub use #namespace::*;
-
-            pub(crate) mod #namespace {
-                #client_tokens
-            };
-    };
-
     // Simple command to view all multi-segment paths (note this silences the cargo expand output):
     // DEBUG_PATHS=1 cargo expand 1>/dev/null
     if std::env::var("DEBUG_PATHS").is_ok() {
-        debug::debug_print_multi_segment_paths(&[&try_from_u8_macro, &client_instruction_data]);
+        debug::debug_print_multi_segment_paths(&[&try_from_u8_macro, &instruction_data]);
     }
+
+    eprintln!(
+        "{}",
+        quote! {
+            #try_from_u8_macro
+            #pack_into_slice_trait
+            #unpack_trait
+            #instruction_data
+        }
+    );
 
     quote! {
         #try_from_u8_macro
         #pack_into_slice_trait
         #unpack_trait
-        #client_instruction_data
+        #instruction_data
     }
     .into()
 }

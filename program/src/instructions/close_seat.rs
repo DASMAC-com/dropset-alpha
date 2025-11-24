@@ -2,7 +2,10 @@
 
 use dropset_interface::{
     events::CloseSeatEventInstructionData,
-    instructions::generated_pinocchio::*,
+    instructions::{
+        CloseSeatInstructionData,
+        UnpackPinocchio,
+    },
     state::node::Node,
     utils::is_owned_by_spl_token,
 };

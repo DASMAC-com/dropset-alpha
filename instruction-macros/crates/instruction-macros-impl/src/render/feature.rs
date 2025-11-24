@@ -12,7 +12,7 @@ use quote::{
 };
 use strum_macros::EnumIter;
 
-#[derive(Clone, Copy, strum_macros::Display, EnumIter, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, strum_macros::Display, EnumIter, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "kebab-case")]
 pub enum Feature {
     SolanaProgram,

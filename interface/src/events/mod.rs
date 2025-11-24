@@ -35,7 +35,7 @@ pub enum DropsetEventTag {
     #[args(market: [u8; 32], "The market's pubkey.")]
     HeaderEvent,
     #[args(amount: u64, "The amount deposited.")]
-    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]    
+    #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]
     #[args(seat_sector_index: u32, "The user's (possibly newly registered) market seat sector index.")]
     DepositEvent,
     #[args(amount: u64, "The amount withdrawn.")]

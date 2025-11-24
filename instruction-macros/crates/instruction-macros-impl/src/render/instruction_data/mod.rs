@@ -13,7 +13,6 @@ use quote::{
     format_ident,
     quote,
 };
-use strum::IntoEnumIterator;
 use syn::Ident;
 
 use crate::{
@@ -22,16 +21,9 @@ use crate::{
         instruction_variant::InstructionVariant,
         parsed_enum::ParsedEnum,
     },
-    render::{
-        feature_namespace::{
-            FeatureNamespace,
-            NamespacedTokenStream,
-        },
-        instruction_data::{
-            pack_and_unpack::Packs,
-            unzipped_argument_infos::InstructionArgumentInfo,
-        },
-        Feature,
+    render::instruction_data::{
+        pack_and_unpack::Packs,
+        unzipped_argument_infos::InstructionArgumentInfo,
     },
 };
 
@@ -44,24 +36,18 @@ impl InstructionVariant {
 pub fn render(
     parsed_enum: &ParsedEnum,
     instruction_variants: Vec<InstructionVariant>,
-) -> Vec<NamespacedTokenStream> {
+) -> TokenStream {
     instruction_variants
         .into_iter()
         // Don't render anything for instructions that have no accounts/arguments.
         .filter(|instruction_variant| instruction_variant.at_least_one_account_or_arg)
-        .flat_map(|instruction_variant| {
-            Feature::iter().map(move |feature| NamespacedTokenStream {
-                tokens: render_variant(parsed_enum, &instruction_variant, feature),
-                namespace: FeatureNamespace(feature),
-            })
-        })
+        .map(|instruction_variant| render_variant(parsed_enum, &instruction_variant))
         .collect::<_>()
 }
 
 fn render_variant(
     parsed_enum: &ParsedEnum,
     instruction_variant: &InstructionVariant,
-    feature: Feature,
 ) -> TokenStream {
     let tag_variant = &instruction_variant.variant_name;
     let struct_name = instruction_variant.instruction_data_struct_ident();
@@ -88,8 +74,8 @@ fn render_variant(
             pack: pack_fn,
             pack_into_slice,
         },
-        unpack_fn,
-    ) = pack_and_unpack::render(parsed_enum, instruction_variant, &names, feature);
+        unpack_trait_impl,
+    ) = pack_and_unpack::render(parsed_enum, instruction_variant, &names);
 
     // Outputs:
     // - The instruction data struct with doc comments
@@ -118,7 +104,7 @@ fn render_variant(
             pub const LEN_WITH_TAG: usize = #size_with_tag_unsuffixed;
 
             /// This is the instruction variant discriminant as a `u8` byte.
-            pub const TAG_BYTE: u8 = super::#enum_ident::#tag_variant as u8;
+            pub const TAG_BYTE: u8 = #enum_ident::#tag_variant as u8;
 
             #struct_doc
             #[inline(always)]
@@ -130,10 +116,10 @@ fn render_variant(
 
             #pack_fn
 
-            #unpack_fn
         }
 
         #pack_into_slice
+        #unpack_trait_impl
     }
 }
 
