@@ -2,7 +2,10 @@
 
 use dropset_interface::{
     events::DepositEventInstructionData,
-    instructions::generated_pinocchio::*,
+    instructions::{
+        generated_pinocchio::*,
+        UnpackPinocchio,
+    },
     state::{
         market_seat::MarketSeat,
         node::Node,
@@ -54,7 +57,7 @@ pub unsafe fn process_deposit<'a>(
     let DepositInstructionData {
         amount,
         sector_index_hint,
-    } = DepositInstructionData::unpack(instruction_data)?;
+    } = <DepositInstructionData as UnpackPinocchio>::unpack(instruction_data)?;
 
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
     let amount_deposited = unsafe { deposit_non_zero_to_market(&ctx, amount) }?;
