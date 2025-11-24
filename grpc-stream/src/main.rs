@@ -1,3 +1,5 @@
+//! See [`main`].
+
 use std::collections::HashMap;
 
 use dropset_interface::{
@@ -20,6 +22,8 @@ use yellowstone_grpc_proto::{
     prelude::*,
 };
 
+/// An example for streaming and parsing `dropset` events from an active, local GRPC stream on
+/// a `geyser`-enabled client.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let endpoint = "http://localhost:10000";

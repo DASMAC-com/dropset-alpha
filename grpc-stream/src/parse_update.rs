@@ -1,5 +1,10 @@
+//! See [`parse_update`].
+
 use solana_sdk::pubkey::Pubkey;
-use transaction_parser::ParseDropsetEvents;
+use transaction_parser::{
+    events::dropset_event::DropsetEvent,
+    ParseDropsetEvents,
+};
 use yellowstone_grpc_proto::{
     geyser::{
         subscribe_update::UpdateOneof,
@@ -41,11 +46,17 @@ impl ParsedInnerInstruction {
     }
 }
 
+struct ParsedUpdate {
+    pub logs: Vec<String>,
+    pub events: Vec<DropsetEvent>,
+}
+
+/// Parses the `dropset` market account updates and events emitted in inner instruction data.
 pub fn parse_update(update: UpdateOneof) {
     match update {
         UpdateOneof::Account(acc) => {
-            if let Some(_account) = acc.account {
-                // println!("Account data: {:?}", &account.data[0..100]);
+            if let Some(account_info) = acc.account {
+                // account_info.data
             }
         }
         UpdateOneof::Transaction(update) => {
