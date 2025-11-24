@@ -3,7 +3,7 @@
 use dropset_interface::{
     error::DropsetError,
     events::WithdrawEventInstructionData,
-    instructions::generated_pinocchio::*,
+    instructions::WithdrawInstructionData,
     state::node::Node,
 };
 use pinocchio::{
@@ -37,7 +37,7 @@ pub unsafe fn process_withdraw<'a>(
     let WithdrawInstructionData {
         amount,
         sector_index_hint,
-    } = WithdrawInstructionData::unpack(instruction_data)?;
+    } = WithdrawInstructionData::unpack_pinocchio(instruction_data)?;
 
     // Safety: Scoped immutable borrow of market, user token, and market token accounts to validate.
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;

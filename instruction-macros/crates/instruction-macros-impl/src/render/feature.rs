@@ -6,11 +6,13 @@ use proc_macro2::{
     TokenStream,
 };
 use quote::{
+    format_ident,
     quote,
     ToTokens,
     TokenStreamExt,
 };
 use strum_macros::EnumIter;
+use syn::Ident;
 
 #[derive(Debug, Clone, Copy, strum_macros::Display, EnumIter, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "kebab-case")]
@@ -49,6 +51,15 @@ impl Feature {
             Feature::SolanaProgram => quote! { ::solana_sdk::account_info::AccountInfo<'info> },
             Feature::Pinocchio => quote! { ::pinocchio::account_info::AccountInfo },
             Feature::Client => quote! { ::solana_sdk::pubkey::Pubkey },
+        }
+    }
+
+    /// The method name of the `unpack_*` function for a feature.
+    pub fn unpack_method_name(&self) -> Ident {
+        match self {
+            Feature::SolanaProgram => format_ident!("unpack_solana_program"),
+            Feature::Pinocchio => format_ident!("unpack_pinocchio"),
+            Feature::Client => format_ident!("unpack_client"),
         }
     }
 }

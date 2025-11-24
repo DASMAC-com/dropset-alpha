@@ -2,11 +2,7 @@
 
 use dropset_interface::{
     events::CloseSeatEventInstructionData,
-    instructions::{
-        CloseSeatInstructionData,
-        Unpack,
-        UnpackPinocchio,
-    },
+    instructions::CloseSeatInstructionData,
     state::node::Node,
     utils::is_owned_by_spl_token,
 };
@@ -37,8 +33,7 @@ pub fn process_close_seat<'a>(
     event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
     let sector_index_hint =
-        <CloseSeatInstructionData as Unpack<ProgramError>>::unpack(instruction_data)?
-            .sector_index_hint;
+        CloseSeatInstructionData::unpack_pinocchio(instruction_data)?.sector_index_hint;
     let mut ctx = unsafe { CloseSeatContext::load(accounts) }?;
 
     // Get the market bump and the base and quote amounts available for the user.

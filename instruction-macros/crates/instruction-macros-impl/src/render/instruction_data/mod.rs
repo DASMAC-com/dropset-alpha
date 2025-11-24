@@ -74,7 +74,7 @@ fn render_variant(
             pack: pack_fn,
             pack_into_slice,
         },
-        unpack_trait_impl,
+        unpacks,
     ) = pack_and_unpack::render(parsed_enum, instruction_variant, &names);
 
     // Outputs:
@@ -115,11 +115,10 @@ fn render_variant(
             }
 
             #pack_fn
-
+            #unpacks
         }
 
         #pack_into_slice
-        #unpack_trait_impl
     }
 }
 

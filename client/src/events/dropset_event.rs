@@ -85,23 +85,23 @@ impl DropsetEvent {
         let err = || EventError::UnpackError(tag);
         match tag {
             DropsetEventTag::HeaderEvent => Ok(DropsetEvent::Header(
-                HeaderEventInstructionData::unpack(data)
+                HeaderEventInstructionData::unpack_client(data)
                     .map_err(|_| err())?
                     .into(),
             )),
             DropsetEventTag::DepositEvent => Ok(DropsetEvent::Deposit(
-                DepositEventInstructionData::unpack(data).map_err(|_| err())?,
+                DepositEventInstructionData::unpack_client(data).map_err(|_| err())?,
             )),
             DropsetEventTag::WithdrawEvent => Ok(DropsetEvent::Withdraw(
-                WithdrawEventInstructionData::unpack(data).map_err(|_| err())?,
+                WithdrawEventInstructionData::unpack_client(data).map_err(|_| err())?,
             )),
             DropsetEventTag::RegisterMarketEvent => Ok(DropsetEvent::RegisterMarket(
-                RegisterMarketEventInstructionData::unpack(data)
+                RegisterMarketEventInstructionData::unpack_client(data)
                     .map_err(|_| err())?
                     .into(),
             )),
             DropsetEventTag::CloseSeatEvent => Ok(DropsetEvent::CloseSeat(
-                CloseSeatEventInstructionData::unpack(data).map_err(|_| err())?,
+                CloseSeatEventInstructionData::unpack_client(data).map_err(|_| err())?,
             )),
         }
     }

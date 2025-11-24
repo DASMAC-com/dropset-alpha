@@ -30,7 +30,6 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInstructionData {
         try_from_u8_macro,
         pack_into_slice_trait,
-        unpack_trait,
         instruction_data,
     } = match derive_instruction_data(input.clone()) {
         Ok(render) => render,
@@ -67,7 +66,6 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     quote! {
         #try_from_u8_macro
         #pack_into_slice_trait
-        #unpack_trait
         #instruction_data
         #namespaced_outputs
     }
@@ -81,7 +79,6 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let DeriveInstructionEventData {
         try_from_u8_macro,
         pack_into_slice_trait,
-        unpack_trait,
         instruction_data,
     } = match derive_instruction_event_data(input.clone()) {
         Ok(render) => render,
@@ -94,20 +91,9 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
         debug::debug_print_multi_segment_paths(&[&try_from_u8_macro, &instruction_data]);
     }
 
-    eprintln!(
-        "{}",
-        quote! {
-            #try_from_u8_macro
-            #pack_into_slice_trait
-            #unpack_trait
-            #instruction_data
-        }
-    );
-
     quote! {
         #try_from_u8_macro
         #pack_into_slice_trait
-        #unpack_trait
         #instruction_data
     }
     .into()

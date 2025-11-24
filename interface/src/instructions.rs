@@ -85,9 +85,6 @@ pub enum DropsetInstruction {
     Batch,
 }
 
-pub trait UnpackPinocchio: Unpack<pinocchio::program_error::ProgramError> {}
-impl<T: Unpack<pinocchio::program_error::ProgramError>> UnpackPinocchio for T {}
-
 impl TryFrom<u8> for DropsetInstruction {
     type Error = DropsetError;
 

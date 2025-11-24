@@ -13,7 +13,6 @@ use instruction_macros_impl::{
         render_instruction_data,
         render_pack_into_slice_trait,
         render_try_from_tag_macro,
-        render_unpack_trait,
     },
 };
 use proc_macro2::TokenStream;
@@ -22,7 +21,6 @@ use syn::DeriveInput;
 pub struct DeriveInstructionEventData {
     pub try_from_u8_macro: TokenStream,
     pub pack_into_slice_trait: TokenStream,
-    pub unpack_trait: TokenStream,
     pub instruction_data: TokenStream,
 }
 
@@ -35,12 +33,10 @@ pub fn derive_instruction_event_data(
     let try_from_u8_macro = render_try_from_tag_macro(&parsed_enum, &instruction_variants);
     let instruction_data: TokenStream = render_instruction_data(&parsed_enum, instruction_variants);
     let pack_into_slice_trait = render_pack_into_slice_trait();
-    let unpack_trait = render_unpack_trait();
 
     Ok(DeriveInstructionEventData {
         try_from_u8_macro,
         pack_into_slice_trait,
-        unpack_trait,
         instruction_data,
     })
 }

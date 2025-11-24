@@ -3,7 +3,6 @@
 
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use proc_macro2::{
     Literal,
     TokenStream,
@@ -19,34 +18,35 @@ use crate::{
     render::Feature,
 };
 
-/// Render the inner body of the fallible `unpack` method.
+/// Render the fallible `unpack_*` method for each feature config.
 ///
-/// `unpack` deserializes raw instruction data bytes into structured arguments according to the
+/// `unpack_*` deserializes raw instruction data bytes into structured arguments according to the
 /// corresponding instruction variant's instruction arguments.
+///
+/// The various `unpack_*` functions are exactly the same except for the error they return based
+/// on the feature SDK they're implemented for.
+///
+/// For example, `unpack_pinocchio` returns the `pinocchio` `ProgramError` type.
 pub fn render(
     size_without_tag: &Literal,
-    struct_name: &Ident,
     field_names: &[Ident],
-    error_path: &ErrorPath,
-    group: &UnpackGroup,
+    unpack_assignments_map: HashMap<Feature, Vec<TokenStream>>,
 ) -> TokenStream {
-    let ErrorPath { base, variant } = error_path;
+    unpack_assignments_map
+        .into_iter()
+        .map(|(feature, unpack_assignments)| {
+            render_variant(size_without_tag, &unpack_assignments, field_names, feature)
+        })
+        .collect()
+}
 
-    let unpack_assignments = &group.assignments;
-
-    // Build the cfg output.
-    let feature_flag = match group.features.as_slice() {
-        [] => quote! {},
-        [one_feature] => {
-            quote! { #[cfg(feature = #one_feature)] }
-        }
-        // multiple features → #[cfg(any(feature = "a", feature = "b", ...))]
-        multiple_features => {
-            quote! {
-                #[cfg(any( #(feature = #multiple_features),* ))]
-            }
-        }
-    };
+fn render_variant(
+    size_without_tag: &Literal,
+    unpack_assignments: &[TokenStream],
+    field_names: &[Ident],
+    feature: Feature,
+) -> TokenStream {
+    let ErrorPath { base, variant } = ErrorType::InvalidInstructionData.to_path(feature);
 
     let unpack_body = match size_without_tag.to_string().as_str() {
         // If the instruction has 0 bytes of data after the tag, simply return the Ok(empty data
@@ -69,86 +69,17 @@ pub fn render(
         },
     };
 
+    let feature_flag = quote! { #[cfg(feature = #feature)] };
+    let method_name = feature.unpack_method_name();
+
     quote! {
-        /// This implementation handles unpacking instruction data that comes *after* the
-        /// discriminant has already been peeled off of the front of the slice.
+        /// This method unpacks the instruction data that comes *after* the discriminant has
+        /// already been peeled off of the front of the slice.
         /// Trailing bytes are ignored; the length must be sufficient, not exact.
         #feature_flag
-        impl Unpack<#base> for #struct_name {
-            #[inline(always)]
-            fn unpack(instruction_data: &[u8]) -> Result<Self, #base> {
-                #unpack_body
-            }
+        #[inline(always)]
+        pub fn #method_name(instruction_data: &[u8]) -> Result<Self, #base> {
+            #unpack_body
         }
     }
-}
-
-/// For combining error type paths into a single hash map entry.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ErrorPathKey {
-    base: String,
-    variant: String,
-}
-
-impl ErrorPathKey {
-    fn from_error_path(ep: &ErrorPath) -> Self {
-        let base = &ep.base;
-        ErrorPathKey {
-            base: quote::quote! {#base}.to_string(),
-            variant: ep.variant.to_string(),
-        }
-    }
-}
-
-pub fn group_features_by_error_path(
-    feature_map: HashMap<Feature, Vec<TokenStream>>,
-) -> Vec<UnpackGroup> {
-    let entries = make_entries(feature_map);
-    let mut groups: HashMap<ErrorPathKey, UnpackGroup> = HashMap::new();
-
-    for (key, error_path, feature, assignments) in entries {
-        groups
-            .entry(key)
-            .and_modify(|g| {
-                if g.assignments
-                    .iter()
-                    .zip_eq(assignments.iter())
-                    .any(|(a, b)| a.to_string() != b.to_string())
-                {
-                    panic!("conflicting unpack assignments for same ErrorPath");
-                }
-                g.features.push(feature);
-            })
-            .or_insert(UnpackGroup {
-                features: vec![feature],
-                assignments,
-                error_path,
-            });
-    }
-
-    groups.into_values().collect()
-}
-
-fn make_entries(
-    feature_map: HashMap<Feature, Vec<TokenStream>>,
-) -> Vec<(ErrorPathKey, ErrorPath, Feature, Vec<TokenStream>)> {
-    feature_map
-        .into_iter()
-        .map(|(feature, assignments)| {
-            // Compute the error type for this feature
-            let error_path = ErrorType::InvalidInstructionData.to_path(feature);
-
-            // Turn it into a hashable grouping key
-            let key = ErrorPathKey::from_error_path(&error_path);
-
-            (key, error_path, feature, assignments)
-        })
-        .collect()
-}
-
-#[derive(Debug, Clone)]
-pub struct UnpackGroup {
-    pub features: Vec<Feature>,
-    pub assignments: Vec<TokenStream>,
-    pub error_path: ErrorPath,
 }

@@ -11,12 +11,9 @@ use proc_macro2::TokenStream;
 use statements_and_layout_info::*;
 use syn::Ident;
 
-use crate::{
-    parse::{
-        instruction_variant::InstructionVariant,
-        parsed_enum::ParsedEnum,
-    },
-    render::instruction_data::pack_and_unpack::unpack::group_features_by_error_path,
+use crate::parse::{
+    instruction_variant::InstructionVariant,
+    parsed_enum::ParsedEnum,
 };
 
 /// Renders an enum instruction variant's `pack` function and each feature-based `Unpack` trait
@@ -45,20 +42,7 @@ pub fn render(
         size_with_tag,
     );
 
-    let unpack_groups = group_features_by_error_path(unpack_assignments_map);
+    let unpack = unpack::render(&size_without_tag, field_names, unpack_assignments_map);
 
-    let unpack_trait_impl = unpack_groups
-        .iter()
-        .map(|group| {
-            unpack::render(
-                &size_without_tag,
-                &instruction_variant.instruction_data_struct_ident(),
-                field_names,
-                &group.error_path,
-                group,
-            )
-        })
-        .collect();
-
-    (pack, unpack_trait_impl)
+    (pack, unpack)
 }
