@@ -16,17 +16,20 @@ use dropset_interface::{
     },
 };
 use solana_instruction::Instruction;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{
+    account::ReadableAccount,
+    pubkey::Pubkey,
+};
+use transaction_parser::views::{
+    market_view_try_from_owner_and_data,
+    MarketSeatView,
+    MarketView,
+};
 
 use crate::{
     context::token::TokenContext,
     pda::find_market_address,
     transactions::CustomRpcClient,
-    views::{
-        view_market_account,
-        MarketSeatView,
-        MarketView,
-    },
 };
 
 /// A struct containing contextual fields for a market.
@@ -92,7 +95,8 @@ impl MarketContext {
     }
 
     pub fn view_market(&self, rpc: &CustomRpcClient) -> anyhow::Result<MarketView<MarketSeatView>> {
-        view_market_account(rpc, &self.market)
+        let account = rpc.client.get_account(&self.market)?;
+        market_view_try_from_owner_and_data(account.owner, account.data())
     }
 
     pub fn find_seat(
