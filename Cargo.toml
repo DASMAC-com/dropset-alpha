@@ -8,7 +8,7 @@ members = [
   "interface",
   "grpc-stream",
   "program",
-  "transaction-parser",
+  "transaction-parser", "price",
 ]
 
 [workspace.package]
