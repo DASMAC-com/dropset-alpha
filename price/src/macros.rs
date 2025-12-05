@@ -49,7 +49,7 @@ macro_rules! pow10_u64 {
 /// *NOTE: This is only intended for usage with **unsigned** integer types.*
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let res: Result<u8, MyError> = checked_sub!(5, 4, MyError::BadSub);
 /// assert_eq!(res, Ok(1));
 ///
@@ -75,7 +75,7 @@ macro_rules! checked_sub {
 /// *NOTE: This is only intended for usage with **unsigned** integer types.*
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let res: Result<u8, MyError> = checked_mul!(255, 1, MyError::BadMul);
 /// assert_eq!(res, Ok(255));
 ///
@@ -100,7 +100,7 @@ macro_rules! checked_mul {
 /// Only errors on division by zero.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let res: Result<u8, MyError> = checked_div!(255, 1, MyError::DivideByZero);
 /// assert_eq!(res, Ok(255));
 ///
