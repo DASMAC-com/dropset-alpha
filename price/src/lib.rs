@@ -1,16 +1,38 @@
-use pinocchio::hint;
+mod decoded_price;
+mod encoded_price;
+mod error;
+mod macros;
+mod validated_mantissa;
+
+pub use decoded_price::*;
+pub use encoded_price::*;
+pub use error::*;
+pub use validated_mantissa::*;
 
 const MANTISSA_DIGITS_LOWER_BOUND: u32 = 10_000_000;
 const MANTISSA_DIGITS_UPPER_BOUND: u32 = 99_999_999;
 
+const U32_BITS: u8 = 32;
 const PRICE_MANTISSA_BITS: u8 = 27;
 
-/// The base-10 bias of the exponents passed to price functions.
-/// # Example
-/// // Say you want to divide some value by
-const BIAS: u8 = 15;
-// TODO: wip- finish  the bias implementation here/above/in the pow10_* calls
-const BIAS_: u8 = 1 << (32 - PRICE_MANTISSA_BITS);
+#[allow(dead_code)]
+/// The number of exponent bits is simply the remaining bits in a u32 after storing the price
+/// mantissa bits.
+const EXPONENT_BITS: u8 = U32_BITS - PRICE_MANTISSA_BITS;
+#[allow(dead_code)]
+/// The full range of valid biased exponent values. That is, 0 <= biased_exponent <= EXPONENT_RANGE.
+const EXPONENT_RANGE: u8 = (1 << (EXPONENT_BITS)) - 1;
+
+/// [`BIAS`] is the number that satisfies: `BIAS + SMALLEST_POSSIBLE_EXPONENT == 0`.
+/// That is, if the exponent range is 32 values from -16 <= n <= 15, the smallest possible exponent
+/// is -16, so the BIAS must be 16.
+/// Note the decision to use a larger negative range instead of a larger positive range (i.e.,
+/// [-16, 15] instead of [-15, 16]) is because [-16, 15] has a tighter range in terms of the
+/// difference in orders of magnitude for the smallest and largest exponent values.
+pub const BIAS: u8 = 16;
+
+/// The bitmask for the price mantissa calculated from the number of bits it uses.
+pub const PRICE_MANTISSA_MASK: u32 = u32::MAX >> ((U32_BITS - PRICE_MANTISSA_BITS) as usize);
 
 #[cfg(debug_assertions)]
 mod debug_assertions {
@@ -18,240 +40,141 @@ mod debug_assertions {
 
     use super::*;
 
-    const U32_BITS: usize = 32;
+    // The max price mantissa representable with `PRICE_MANTISSA_BITS` should exceed the upper bound
+    // used to ensure a fixed number of digits for the price mantissa.
+    const_assert!(MANTISSA_DIGITS_UPPER_BOUND < PRICE_MANTISSA_MASK);
 
+    #[allow(dead_code)]
     /// The bitmask for the price exponent calculated from the number of bits in the price mantissa.
     pub const PRICE_EXPONENT_MASK: u32 = u32::MAX << (PRICE_MANTISSA_BITS as usize);
 
-    /// The bitmask for the price mantissa calculated from the number of bits it uses.
-    pub const PRICE_MANTISSA_MASK: u32 = u32::MAX >> (U32_BITS - PRICE_MANTISSA_BITS as usize);
-
-    // The max price mantissa is its bitmask. Ensure the mantissa's upper bound doesn't exceed that.
-    const_assert!(MANTISSA_DIGITS_UPPER_BOUND < PRICE_MANTISSA_MASK);
-
-    // The price exponent and mantissa bit masks xor'd should just be a u32 with all hi bits.
+    // XOR'ing the price exponent and mantissa bit masks should result in a u32 with all 1 bits,
+    // aka u32::MAX.
     const_assert_eq!(PRICE_EXPONENT_MASK ^ PRICE_MANTISSA_MASK, u32::MAX);
 }
 
-#[derive(Copy, Clone, Debug)]
-/// The encoded price as a u32.
-///
-/// If `N` = the number of exponent bits and `M` = the number of price bits, the u32 bit layout is:
-///
-/// ```text
-///          N                M
-/// |-----------------|--------------|
-/// [ exponent_bits ] | [ price_bits ]
-/// |--------------------------------|
-///                 32
-/// ```
-pub struct EncodedPrice(pub u32);
-
-impl EncodedPrice {
-    #[inline(always)]
-    pub fn new(price_exponent: u8, price_mantissa: ValidatedPriceMantissa) -> Self {
-        let exponent_bits = (price_exponent as u32) << PRICE_MANTISSA_BITS;
-
-        // No need to mask the price mantissa since it has already been range checked/validated.
-        // Thus it will only occupy the lower M bits where M = PRICE_MANTISSA_BITS.
-        Self(exponent_bits | price_mantissa.0)
-    }
-}
-
-pub struct ValidatedPriceMantissa(pub u32);
-
-impl TryFrom<u32> for ValidatedPriceMantissa {
-    type Error = OrderInfoError;
-
-    #[inline(always)]
-    fn try_from(price_mantissa: u32) -> Result<Self, Self::Error> {
-        if (MANTISSA_DIGITS_LOWER_BOUND..MANTISSA_DIGITS_UPPER_BOUND).contains(&price_mantissa) {
-            Ok(Self(price_mantissa))
-        } else {
-            hint::cold_path();
-            Err(OrderInfoError::InvalidPriceMantissa)
-        }
-    }
-}
-
 #[repr(C)]
+#[cfg_attr(test, derive(Debug))]
 pub struct OrderInfo {
-    pub price: EncodedPrice,
+    pub encoded_price: EncodedPrice,
     pub base_atoms: u64,
     pub quote_atoms: u64,
-}
-
-#[repr(u8)]
-#[derive(Debug)]
-#[cfg_attr(test, derive(strum_macros::Display))]
-pub enum OrderInfoError {
-    InvalidBaseExponent,
-    InvalidQuoteExponent,
-    BaseMinusQuoteUnderflow,
-    ArithmeticOverflow,
-    InvalidPriceMantissa,
-    InvalidBiasedExponent,
 }
 
 pub fn to_order_info(
     price_mantissa: u32,
     base_scalar: u64,
-    base_exponent_with_bias: u8,
-    quote_exponent_with_bias: u8,
+    base_exponent_biased: u8,
+    quote_exponent_biased: u8,
 ) -> Result<OrderInfo, OrderInfoError> {
-    let b_biased = base_exponent_with_bias;
-    let q_biased = quote_exponent_with_bias;
-    let b_checked_bias =
-        checked_sub_unsigned!(b_biased, BIAS, OrderInfoError::InvalidBiasedExponent)?;
-    let biased_q = checked_sub_unsigned!(q_biased, BIAS, OrderInfoError::InvalidBiasedExponent)?;
-
-    // let base = checked_mul_unsigned!(base_scalar, )
-
-    // TODO: Implement bias for these values (these values represent bias factored in)
-    // 1: this means making sure these checks are correct (the checks below)
-    // 2: and factoring in negative exponents in the pow10 calculations..?
-
-    let lot_exp = base_exponent_with_bias
-        .checked_sub(BIAS)
-        .ok_or(OrderInfoError::InvalidBiasedExponent)?;
-    let tick_exp = quote_exponent_with_bias
-        .checked_sub(BIAS)
-        .ok_or(OrderInfoError::InvalidBiasedExponent)?;
-
-    let base = base_scalar
-        .checked_mul(pow10_u64!(lot_exp, OrderInfoError::InvalidBaseExponent))
-        .ok_or(OrderInfoError::InvalidBaseExponent)?;
-
-    let significand_times_lots = price_mantissa
-        .checked_mul(base_scalar)
-        .ok_or(OrderInfoError::ArithmeticOverflow)?;
-
-    let quote = significand_times_lots
-        .checked_mul(pow10_u64!(tick_exp, OrderInfoError::InvalidBaseExponent))
-        .ok_or(OrderInfoError::ArithmeticOverflow)?;
-
-    if lot_exp > tick_exp {
-        hint::cold_path();
-        return Err(OrderInfoError::BaseMinusQuoteUnderflow);
-    }
-    // Safety: the underflow condition was just checked; it returns early if underflow would occur.
-    let price_exponent = unsafe { tick_exp.unchecked_sub(lot_exp) };
-
     let validated_mantissa = ValidatedPriceMantissa::try_from(price_mantissa)?;
 
+    let base_atoms = pow10_u64!(base_scalar, base_exponent_biased)?;
+
+    let price_mantissa_times_base_scalar = checked_mul!(
+        validated_mantissa.get() as u64,
+        base_scalar,
+        OrderInfoError::ArithmeticOverflow
+    )?;
+    let quote_atoms = pow10_u64!(price_mantissa_times_base_scalar, quote_exponent_biased)?;
+
+    // Ultimately, the price mantissa is multiplied by:
+    // 10 ^ (quote_exponent_biased - base_exponent_biased)
+    // aka 10 ^ (q - b)
+    // which means q - b may be negative and must be re-biased. Underflow only occurs if the
+    // re-biased exponent difference is negative.
+    let price_exponent_rebiased = checked_sub!(
+        quote_exponent_biased + BIAS,
+        base_exponent_biased,
+        OrderInfoError::BaseMinusQuoteUnderflow
+    )?;
+
     Ok(OrderInfo {
-        price: EncodedPrice::new(price_exponent, validated_mantissa),
+        encoded_price: EncodedPrice::new(price_exponent_rebiased, validated_mantissa),
         base_atoms,
         quote_atoms,
     })
 }
 
-/// Returns `10^exp` inline using a `match` on the exponent.
-///
-/// The `exp`
-///
-/// Supported exponents map directly to their corresponding power-of-ten
-/// value. Any unsupported exponent causes the macro to emit an early
-/// `return Err($err)` from the surrounding function.
-///
-/// # Example
-///
-/// ```
-/// let scale = pow10_u64!(3, MyError::InvalidExponent);
-/// assert_eq!(scale, 1000); // 10^3
-/// ```
-#[macro_export]
-macro_rules! pow10_u64 {
-    ($exp:expr, $err:expr) => {{
-        match $exp {
-            0 => 1u64,
-            1 => 10,
-            2 => 100,
-            3 => 1_000,
-            4 => 10_000,
-            5 => 100_000,
-            6 => 1_000_000,
-            this needs to be 0 - 15 for negative exponents and then 15 - 31 for positive exponents
-            needs to factor in bias
-            7 => 10_000_000,
-            8 => 100_000_000,
-            9 => 1_000_000_000,
-            10 => 10_000_000_000,
-            11 => 100_000_000_000,
-            12 => 1_000_000_000_000,
-            13 => 10_000_000_000_000,
-            14 => 100_000_000_000_000,
-            15 => 1_000_000_000_000_000,
-            _ => return Err($err),
-        }
-    }};
-}
-
-/// A checked subtraction with a custom error return value and the error path marked as cold.
-///
-/// This is only intended for usage with **unsigned** integer types.
-///
-/// # Example
-/// ```rust
-/// let res: Result<u8, MyError> = checked_sub!(5, 4, MyError::BadSub);
-/// assert_eq!(res, Ok(1));
-///
-/// let res: Result<u8, MyError> = checked_sub!(5, 6, MyError::BadSub);
-/// assert_eq!(res, Err(MyError::BadSub));
-/// ```
-#[macro_export]
-macro_rules! checked_sub_unsigned {
-    ($lhs:expr, $rhs:expr, $err:expr $(,)?) => {{
-        let lhs = $lhs;
-        let rhs = $rhs;
-        if lhs >= rhs {
-            Ok(lhs - rhs)
-        } else {
-            ::pinocchio::hint::cold_path();
-            Err($err)
-        }
-    }};
-}
-
-/// A checked multiplication with a custom error return value and the error path marked as cold.
-///
-/// This is only intended for usage with **unsigned** integer types.
-///
-/// # Example
-/// ```rust
-/// let res: Result<u8, MyError> = checked_mul!(255, 1, MyError::BadMul);
-/// assert_eq!(res, Ok(255));
-///
-/// let res: Result<u8, MyError> = checked_mul!(255, 2, MyError::BadMul);
-/// assert_eq!(res, Err(MyError::BadMul));
-/// ```
-#[macro_export]
-macro_rules! checked_mul_unsigned {
-    ($lhs:expr, $rhs:expr, $err:expr $(,)?) => {{
-        let lhs = $lhs;
-        let rhs = $rhs;
-        match lhs.checked_mul(rhs) {
-            Some(val) => Ok(val),
-            None => {
-                ::pinocchio::hint::cold_path();
-                Err($err)
-            }
-        }
-    }};
-}
-
 #[cfg(test)]
 mod tests {
+    use std::ops::Mul;
+
+    use static_assertions::*;
+
     use super::*;
 
     #[test]
     fn happy_path_simple_price() {
-        let price = to_order_info(1234, 1, 0, 0).expect("Should calculate price");
-        assert_eq!(price.base_atoms, 1);
-        assert_eq!(price.quote_atoms, 1234);
-        assert_eq!(price.price, 1234);
+        let base_biased_exponent = to_biased_exponent!(0);
+        let quote_biased_exponent = to_biased_exponent!(-4);
+        let order = to_order_info(12_340_000, 1, base_biased_exponent, quote_biased_exponent)
+            .expect("Should calculate price");
+        assert_eq!(order.base_atoms, 1);
+        assert_eq!(order.quote_atoms, 1234);
+
+        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
+            .expect("Should decode")
+            .into();
+        assert_eq!(decoded_price, "1234".parse().unwrap());
     }
 
     #[test]
-    fn hi_encoded_price_bits() {}
+    fn price_with_max_sig_digits() {
+        let order = to_order_info(12345678, 1, to_biased_exponent!(0), to_biased_exponent!(0))
+            .expect("Should calculate price");
+        assert_eq!(order.base_atoms, 1);
+        assert_eq!(order.quote_atoms, 12345678);
+
+        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
+            .expect("Should decode")
+            .into();
+        assert_eq!(decoded_price, "12345678".parse().unwrap());
+    }
+
+    #[test]
+    fn decimal_price() {
+        let mantissa = 12345678;
+        let order = to_order_info(mantissa, 1, to_biased_exponent!(8), to_biased_exponent!(0))
+            .expect("Should calculate price");
+        assert_eq!(order.quote_atoms, 12345678);
+        assert_eq!(order.base_atoms, 100000000);
+
+        let decoded_price = DecodedPrice::try_from(order.encoded_price).expect("Should decode");
+        let decoded_f64: f64 = decoded_price.clone().into();
+        assert_eq!(decoded_price.price_mantissa.get(), mantissa);
+        assert_eq!(decoded_f64, "0.12345678".parse().unwrap());
+        assert_eq!(
+            (decoded_price.price_mantissa.get() as f64)
+                .mul(10f64.powi(decoded_price.price_exponent_biased as i32 - BIAS as i32)),
+            decoded_f64
+        );
+    }
+
+    #[test]
+    fn bias_ranges() {
+        const_assert_eq!(16, BIAS);
+
+        let val_156_e_neg_16: u64 = 1_560_000_000_000_000_000;
+        let calculated = val_156_e_neg_16 / 10u64.pow(BIAS as u32);
+        let expected = 156;
+        assert_eq!(
+            pow10_u64!(val_156_e_neg_16, 0).expect("0 is a valid biased exponent"),
+            calculated,
+        );
+        assert_eq!(calculated, expected);
+
+        let val: u64 = 156;
+        let max_exponent = EXPONENT_RANGE as u32;
+        let calculated = val
+            * 10u64
+                .checked_pow(max_exponent - BIAS as u32)
+                .expect("Shouldn't overflow");
+        let expected: u64 = 156_000_000_000_000_000;
+        assert_eq!(
+            pow10_u64!(val, max_exponent).expect("Exponent should be valid"),
+            calculated
+        );
+        assert_eq!(calculated, expected);
+    }
 }
