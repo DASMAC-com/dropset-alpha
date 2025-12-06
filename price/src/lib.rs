@@ -34,10 +34,14 @@ pub const BIAS: u8 = 16;
 /// The minimum unbiased exponent value.
 #[cfg(test)]
 const UNBIASED_MIN: i16 = 0 - BIAS as i16;
-
 /// The maximum unbiased exponent value.
 #[cfg(test)]
 const UNBIASED_MAX: i16 = (BIAS as i16) - 1;
+
+#[allow(dead_code)]
+const MAX_BIASED_EXPONENT: u8 = 31;
+// Ensure that adding the bias to the max biased exponent never overflows.
+static_assertions::const_assert!((MAX_BIASED_EXPONENT as u16) + (BIAS as u16) < (u8::MAX as u16));
 
 /// The bitmask for the price mantissa calculated from the number of bits it uses.
 pub const PRICE_MANTISSA_MASK: u32 = u32::MAX >> ((U32_BITS - PRICE_MANTISSA_BITS) as usize);
@@ -92,7 +96,9 @@ pub fn to_order_info(
     // which means q - b may be negative and must be re-biased. Underflow only occurs if the
     // re-biased exponent difference is negative.
     let price_exponent_rebiased = checked_sub!(
-        quote_exponent_biased + BIAS,
+        // Safety: The quote exponent must be <= MAX_BIASED_EXPONENT, and const assertions ensure
+        // that `MAX_BIASED_EXPONENT + BIAS` is always less than `u8::MAX`.
+        unsafe { quote_exponent_biased.unchecked_add(BIAS) },
         base_exponent_biased,
         OrderInfoError::BaseMinusQuoteUnderflow
     )?;

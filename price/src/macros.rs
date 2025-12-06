@@ -7,7 +7,7 @@ macro_rules! pow10_u64 {
     ($value:expr, $biased_exponent:expr) => {{
         ::static_assertions::const_assert_eq!($crate::BIAS - 16, 0);
         match $biased_exponent {
-            /* BIAS - 16 */  0 => Ok($value / 10000000000000000),
+            /* BIAS - 16 */  0 => Ok($value / 10000000000000000u64),
             /* BIAS - 15 */  1 => Ok($value / 1000000000000000),
             /* BIAS - 14 */  2 => Ok($value / 100000000000000),
             /* BIAS - 13 */  3 => Ok($value / 10000000000000),
@@ -117,13 +117,31 @@ macro_rules! to_biased_exponent {
 #[cfg(test)]
 mod tests {
     use crate::{
+        OrderInfoError,
         BIAS,
+        MAX_BIASED_EXPONENT,
         UNBIASED_MAX,
         UNBIASED_MIN,
     };
 
     #[test]
-    fn biased_exponent_happy_paths() {
+    fn check_max_biased_exponent() {
+        // The max biased exponent should be valid.
+        assert_eq!(
+            pow10_u64!(2u64, MAX_BIASED_EXPONENT).unwrap(),
+            2 * 10u64
+                .checked_pow(MAX_BIASED_EXPONENT as u32 - BIAS as u32)
+                .unwrap()
+        );
+        // One past the max biased exponent should result in an error.
+        assert!(matches!(
+            pow10_u64!(2u64, MAX_BIASED_EXPONENT + 1),
+            Err(OrderInfoError::InvalidBiasedExponent)
+        ));
+    }
+
+    #[test]
+    fn unbiased_exponent_happy_paths() {
         let expected_min = (UNBIASED_MIN + BIAS as i16) as u8;
         assert_eq!(to_biased_exponent!(UNBIASED_MIN), expected_min);
 
