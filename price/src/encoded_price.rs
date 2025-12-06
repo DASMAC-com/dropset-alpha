@@ -27,7 +27,7 @@ impl EncodedPrice {
         Self(exponent_bits | price_mantissa.get())
     }
 
-    /// The encoded price representation of a market buy/taker order with no contraints on the
+    /// The encoded price representation of a market buy/taker order with no constraints on the
     /// maximum filled ask price.
     #[inline(always)]
     pub const fn infinity() -> Self {
