@@ -8,4 +8,5 @@ pub enum OrderInfoError {
     ArithmeticOverflow,
     InvalidPriceMantissa,
     InvalidBiasedExponent,
+    InfinityIsNotAFloat,
 }

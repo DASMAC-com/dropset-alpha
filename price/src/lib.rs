@@ -113,9 +113,9 @@ mod tests {
         assert_eq!(order.base_atoms, 1);
         assert_eq!(order.quote_atoms, 1234);
 
-        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
-            .expect("Should decode")
-            .into();
+        let decoded_price: f64 = DecodedPrice::from(order.encoded_price)
+            .try_into()
+            .expect("Should be a valid f64");
         assert_eq!(decoded_price, "1234".parse().unwrap());
     }
 
@@ -126,9 +126,9 @@ mod tests {
         assert_eq!(order.base_atoms, 1);
         assert_eq!(order.quote_atoms, 12345678);
 
-        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
-            .expect("Should decode")
-            .into();
+        let decoded_price: f64 = DecodedPrice::from(order.encoded_price)
+            .try_into()
+            .expect("Should be a valid f64");
         assert_eq!(decoded_price, "12345678".parse().unwrap());
     }
 
@@ -140,13 +140,19 @@ mod tests {
         assert_eq!(order.quote_atoms, 12345678);
         assert_eq!(order.base_atoms, 100000000);
 
-        let decoded_price = DecodedPrice::try_from(order.encoded_price).expect("Should decode");
-        let decoded_f64: f64 = decoded_price.clone().into();
-        assert_eq!(decoded_price.price_mantissa.get(), mantissa);
+        let decoded_price = DecodedPrice::from(order.encoded_price);
+
+        let (decoded_exponent, decoded_mantissa) = decoded_price
+            .as_exponent_and_mantissa()
+            .expect("Should be exponent + mantissa");
+        let decoded_f64: f64 = decoded_price
+            .clone()
+            .try_into()
+            .expect("Should be a valid f64");
+        assert_eq!(decoded_mantissa.get(), mantissa);
         assert_eq!(decoded_f64, "0.12345678".parse().unwrap());
         assert_eq!(
-            (decoded_price.price_mantissa.get() as f64)
-                .mul(10f64.powi(decoded_price.price_exponent_biased as i32 - BIAS as i32)),
+            (decoded_mantissa.get() as f64).mul(10f64.powi(*decoded_exponent as i32 - BIAS as i32)),
             decoded_f64
         );
     }

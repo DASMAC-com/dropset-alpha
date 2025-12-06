@@ -17,6 +17,9 @@ use crate::{
 /// ```
 pub struct EncodedPrice(pub u32);
 
+pub const ENCODED_PRICE_INFINITY: u32 = u32::MAX;
+pub const ENCODED_PRICE_ZERO: u32 = 0;
+
 impl EncodedPrice {
     #[inline(always)]
     pub fn new(price_exponent_biased: u8, price_mantissa: ValidatedPriceMantissa) -> Self {
@@ -31,24 +34,24 @@ impl EncodedPrice {
     /// maximum filled ask price.
     #[inline(always)]
     pub const fn infinity() -> Self {
-        Self(u32::MAX)
+        Self(ENCODED_PRICE_INFINITY)
     }
 
     #[inline(always)]
     pub fn is_infinity(&self) -> bool {
-        self.0 == u32::MAX
+        self.0 == ENCODED_PRICE_INFINITY
     }
 
     /// The encoded price representation of a market sell/taker order with no constraints on the
     /// minimum filled bid price.
     #[inline(always)]
     pub const fn zero() -> Self {
-        Self(0)
+        Self(ENCODED_PRICE_ZERO)
     }
 
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
-        self.0 == 0
+        self.0 == ENCODED_PRICE_ZERO
     }
 }
 
