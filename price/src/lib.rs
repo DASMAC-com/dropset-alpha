@@ -19,9 +19,11 @@ const PRICE_MANTISSA_BITS: u8 = 27;
 /// The number of exponent bits is simply the remaining bits in a u32 after storing the price
 /// mantissa bits.
 const EXPONENT_BITS: u8 = U32_BITS - PRICE_MANTISSA_BITS;
+
 #[allow(dead_code)]
-/// The full range of valid biased exponent values. That is, 0 <= biased_exponent <= EXPONENT_RANGE.
-const EXPONENT_RANGE: u8 = (1 << (EXPONENT_BITS)) - 1;
+/// The max biased exponent. This also determines the range of valid exponents.
+/// I.e., 0 <= biased_exponent <= [`MAX_BIASED_EXPONENT`].
+const MAX_BIASED_EXPONENT: u8 = (1 << (EXPONENT_BITS)) - 1;
 
 /// [`BIAS`] is the number that satisfies: `BIAS + SMALLEST_POSSIBLE_EXPONENT == 0`.
 /// That is, if the exponent range is 32 values from -16 <= n <= 15, the smallest possible exponent
@@ -38,8 +40,6 @@ const UNBIASED_MIN: i16 = 0 - BIAS as i16;
 #[cfg(test)]
 const UNBIASED_MAX: i16 = (BIAS as i16) - 1;
 
-#[allow(dead_code)]
-const MAX_BIASED_EXPONENT: u8 = 31;
 // Ensure that adding the bias to the max biased exponent never overflows.
 static_assertions::const_assert!((MAX_BIASED_EXPONENT as u16) + (BIAS as u16) < (u8::MAX as u16));
 
@@ -185,7 +185,7 @@ mod tests {
         assert_eq!(calculated, expected);
 
         let val: u64 = 156;
-        let max_exponent = EXPONENT_RANGE as u32;
+        let max_exponent = MAX_BIASED_EXPONENT as u32;
         let calculated = val
             * 10u64
                 .checked_pow(max_exponent - BIAS as u32)
