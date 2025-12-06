@@ -88,6 +88,7 @@ pub fn to_order_info(
         base_scalar,
         OrderInfoError::ArithmeticOverflow
     )?;
+
     let quote_atoms = pow10_u64!(price_mantissa_times_base_scalar, quote_exponent_biased)?;
 
     // Ultimately, the price mantissa is multiplied by:
@@ -98,6 +99,7 @@ pub fn to_order_info(
     let price_exponent_rebiased = checked_sub!(
         // Safety: The quote exponent must be <= MAX_BIASED_EXPONENT, and const assertions ensure
         // that `MAX_BIASED_EXPONENT + BIAS` is always less than `u8::MAX`.
+        // Unit tests also guarantee this invariant.
         unsafe { quote_exponent_biased.unchecked_add(BIAS) },
         base_exponent_biased,
         OrderInfoError::ExponentUnderflow
@@ -196,5 +198,24 @@ mod tests {
             calculated
         );
         assert_eq!(calculated, expected);
+    }
+
+    #[test]
+    fn ensure_invalid_quote_exponent_fails() {
+        let e_base = to_biased_exponent!(0);
+        let e_quote = MAX_BIASED_EXPONENT + 1;
+
+        // Ensure the base exponent is valid so that it can't be the trigger for the error.
+        let _one_to_the_base_exponent = pow10_u64!(1u64, e_base).unwrap();
+
+        let all_good = to_order_info(10_000_000, 1, e_base, e_base);
+        let arithmetic_overflow = to_order_info(10_000_000, 1, e_base, e_quote - 1);
+        let invalid_biased_exponent = to_order_info(10_000_000, 1, e_base, e_quote);
+
+        assert!(all_good.is_ok());
+        #[rustfmt::skip]
+        assert!(matches!(arithmetic_overflow, Err(OrderInfoError::ArithmeticOverflow)));
+        #[rustfmt::skip]
+        assert!(matches!(invalid_biased_exponent, Err(OrderInfoError::InvalidBiasedExponent)));
     }
 }
