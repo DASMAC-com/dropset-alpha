@@ -24,8 +24,8 @@ impl EncodedPrice {
     /// Creates a new [`EncodedPrice`] from a biased price exponent and a validated price mantissa.
     #[inline(always)]
     pub fn new(price_exponent_biased: u8, price_mantissa: ValidatedPriceMantissa) -> Self {
-        // The biased price exponent doesn't need to be checked, because the bit shift will always
-        // truncate to a value <= the max possible exponent value.
+        // The biased price exponent doesn't need to be checked because a leftwards bitshift will
+        // always discard irrelevant bits.
         let exponent_bits = (price_exponent_biased as u32) << PRICE_MANTISSA_BITS;
 
         // No need to mask the price mantissa since it has already been range checked/validated.
