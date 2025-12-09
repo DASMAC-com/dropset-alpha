@@ -56,8 +56,8 @@ mod debug_assertions {
     // used to ensure a fixed number of digits for the price mantissa.
     const_assert!(MANTISSA_DIGITS_UPPER_BOUND < PRICE_MANTISSA_MASK);
 
-    #[allow(dead_code)]
     /// The bitmask for the price exponent calculated from the number of bits in the price mantissa.
+    #[allow(dead_code)]
     pub const PRICE_EXPONENT_MASK: u32 = u32::MAX << (PRICE_MANTISSA_BITS as usize);
 
     // XOR'ing the price exponent and mantissa bit masks should result in a u32 with all 1 bits,
