@@ -102,8 +102,10 @@ pub fn to_order_info(
     // Ultimately, the price mantissa is multiplied by:
     // 10 ^ (quote_exponent_biased - base_exponent_biased)
     // aka 10 ^ (q - b)
-    // which means q - b may be negative and must be re-biased. Underflow only occurs if the
-    // re-biased exponent difference is negative.
+    // which means q - b may be negative and must be re-biased.
+    //
+    // Exponent underflow only occurs here if:
+    //   `quote_exponent_biased + BIAS < base_exponent_biased`.
     let price_exponent_rebiased = checked_sub!(
         // Safety: The quote exponent must be <= MAX_BIASED_EXPONENT, and const assertions ensure
         // that `MAX_BIASED_EXPONENT + BIAS` is always <= `u8::MAX`.
@@ -230,6 +232,19 @@ mod tests {
                 to_biased_exponent!(0)
             ),
             Err(OrderInfoError::ArithmeticOverflow)
+        ));
+    }
+
+    #[test]
+    fn ensure_exponent_underflow() {
+        let price_mantissa = 10_000_000;
+        let base_scalar = 1;
+
+        assert!(to_order_info(price_mantissa, base_scalar, BIAS, 0).is_ok());
+
+        assert!(matches!(
+            to_order_info(price_mantissa, base_scalar, BIAS + 1, 0),
+            Err(OrderInfoError::ExponentUnderflow)
         ));
     }
 
