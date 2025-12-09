@@ -1,9 +1,5 @@
 use static_assertions::const_assert_eq;
 
-/// Macro utility for calculating the value of an operation given a biased exponent, where a biased
-/// exponent represents the base 10 positive or negative exponent value without using negative
-/// values.
-
 // Static assertions for macro invariants.
 static_assertions::const_assert_eq!(crate::BIAS - 16, 0);
 static_assertions::const_assert_eq!(crate::MAX_BIASED_EXPONENT, 31);
@@ -15,15 +11,18 @@ const _: () = {
 };
 
 /// Performs base-10 exponentiation on a value using a biased exponent.
+/// 
+/// This facilitates representing negative exponent values with unsigned integers by ensuring the
+/// biased exponent is never negative. The unbiased exponent is therefore the real exponent value.
 ///
 /// # Parameters
 /// - `$value`: The `u64` to be scaled by a power of 10.
 /// - `$biased_exponent`: A biased exponent in the range `0..=31`.
 ///
 /// # Biased Exponent Concept
-/// The actual exponent is:
+/// The actual (aka unbiased) exponent is:
 ///
-///     `exponent = $biased_exponent - BIAS`
+/// `exponent = $biased_exponent - price::BIAS`
 ///
 /// With the current `BIAS = 16`, this means:
 /// - `0`  → exponent `-16` (division by 10^16)
