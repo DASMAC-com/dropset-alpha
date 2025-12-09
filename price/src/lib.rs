@@ -65,11 +65,19 @@ mod debug_assertions {
     const_assert_eq!(PRICE_EXPONENT_MASK ^ PRICE_MANTISSA_MASK, u32::MAX);
 }
 
+/// The fixed struct layout for information about a `dropset` order.
+///
+/// This struct is a C-style struct to facilitate a predictable, fixed layout for on-chain function
+/// calls related to `dropset` orders.
 #[repr(C)]
 #[cfg_attr(test, derive(Debug))]
 pub struct OrderInfo {
+    /// The encoded price, containing an exponent and price mantissa.
+    /// See [`EncodedPrice`] for more details.
     pub encoded_price: EncodedPrice,
+    /// The indivisible units (aka atoms) of base token.
     pub base_atoms: u64,
+    /// The indivisible units (aka atoms) of quote token.
     pub quote_atoms: u64,
 }
 
