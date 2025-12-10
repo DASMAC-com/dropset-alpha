@@ -42,20 +42,20 @@ const _: () = {
 /// ```markdown
 /// # With [-2, 1] as the smallest/largest exponents
 /// |                      | Smallest exponent   | Largest exponent    |
-/// | -------------------- | ----------------------------------------- |
+/// | -------------------- | ------------------- | ------------------- |
 /// | Smallest mantissa    | 1.00 * 10^-2 = 0.01 | 1.00 * 10^1 =   10  |
 /// | Largest mantissa     | 9.99 * 10^-2 = ~0.1 | 9.99 * 10^1 = ~100  |
-/// | -------------------- | ----------------------------------------- |
+/// | -------------------- | -------------------|--------------------- |
 ///
 /// Both the smallest and largest products (0.01 and 100) are 2 orders
 /// of magnitude below/above `1`.
 ///
 /// # With [-1, 2] as the smallest/largest exponents
-/// |                      | Smallest exponent   | Largest exponent    |
-/// | -------------------- | ----------------------------------------- |
+/// |                      | Smallest exponent  | Largest exponent     |
+/// | -------------------- | ------------------ | -------------------- |
 /// | Smallest mantissa    | 1.00 * 10^-1 = 0.1 | 1.00 * 10^2 =   100  |
 /// | Largest mantissa     | 9.99 * 10^-1 =  ~1 | 9.99 * 10^2 = ~1000  |
-/// | -------------------- | ----------------------------------------- |
+/// | -------------------- | -------------------|--------------------- |
 ///
 /// The lower product (0.1) is 1 order of magnitude below `1` and the higher
 /// product (1000) is 3 orders of magnitude above `1`.
