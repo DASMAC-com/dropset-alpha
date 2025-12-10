@@ -83,6 +83,14 @@ pub struct OrderInfo {
     pub quote_atoms: u64,
 }
 
+/// # Safety note:
+///
+/// In the rebiased exponent calculation, there is an unchecked add that is actually safe. It's
+/// safe because the prior function body ensures the quote exponent is <= MAX_BIASED_EXPONENT, and
+/// const assertions ensure that `MAX_BIASED_EXPONENT + BIAS` is always <= `u8::MAX`.
+///
+/// [`tests::ensure_invalid_quote_exponent_fails_early`] ensures that the function fails early if
+/// the quote exponent isn't <= MAX_BIASED_EXPONENT prior to the unchecked add.
 pub fn to_order_info(
     price_mantissa: u32,
     base_scalar: u64,
@@ -109,9 +117,7 @@ pub fn to_order_info(
     // Exponent underflow only occurs here if:
     //   `quote_exponent_biased + BIAS < base_exponent_biased`.
     let price_exponent_rebiased = checked_sub!(
-        // Safety: The quote exponent must be <= MAX_BIASED_EXPONENT, and const assertions ensure
-        // that `MAX_BIASED_EXPONENT + BIAS` is always <= `u8::MAX`.
-        // Unit tests also check this condition.
+        // Safety: See the function documentation.
         unsafe { quote_exponent_biased.unchecked_add(BIAS) },
         base_exponent_biased,
         OrderInfoError::ExponentUnderflow
@@ -251,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn ensure_invalid_quote_exponent_fails() {
+    pub(crate) fn ensure_invalid_quote_exponent_fails_early() {
         let e_base = to_biased_exponent!(0);
         let e_quote = MAX_BIASED_EXPONENT + 1;
 
