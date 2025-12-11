@@ -1,7 +1,11 @@
+use static_assertions::const_assert_eq;
+
 use crate::{
     ValidatedPriceMantissa,
     PRICE_MANTISSA_BITS,
 };
+
+const U32_SIZE: usize = core::mem::size_of::<u32>();
 
 /// The encoded price as a u32.
 ///
@@ -65,6 +69,37 @@ impl EncodedPrice {
         self.0 == ENCODED_PRICE_ZERO
     }
 }
+
+/// An [`EncodedPrice`] stored as little-endian bytes.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LeEncodedPrice([u8; U32_SIZE]);
+
+impl LeEncodedPrice {
+    #[inline(always)]
+    pub fn new(encoded_price: EncodedPrice) -> Self {
+        Self(encoded_price.as_u32().to_le_bytes())
+    }
+
+    #[inline(always)]
+    pub fn get(&self) -> &[u8; U32_SIZE] {
+        &self.0
+    }
+
+    #[inline(always)]
+    pub fn zero() -> Self {
+        LeEncodedPrice::new(EncodedPrice::zero())
+    }
+}
+
+impl From<EncodedPrice> for LeEncodedPrice {
+    #[inline(always)]
+    fn from(value: EncodedPrice) -> Self {
+        Self(value.0.to_le_bytes())
+    }
+}
+
+const_assert_eq!(size_of::<EncodedPrice>(), U32_SIZE);
 
 #[cfg(test)]
 mod tests {

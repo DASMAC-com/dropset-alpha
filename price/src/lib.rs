@@ -7,7 +7,6 @@ mod validated_mantissa;
 pub use decoded_price::*;
 pub use encoded_price::*;
 pub use error::*;
-use static_assertions::const_assert_eq;
 pub use validated_mantissa::*;
 
 pub const MANTISSA_DIGITS_LOWER_BOUND: u32 = 10_000_000;
