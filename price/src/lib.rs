@@ -32,7 +32,6 @@ const MAX_BIASED_EXPONENT: u8 = (1 << (EXPONENT_BITS)) - 1;
 /// is -16, so the BIAS must be 16.
 ///
 /// See [`pow10_u64`] for more information on the reasoning behind the exponent range.
-/// ```
 pub const BIAS: u8 = 16;
 
 /// The minimum unbiased exponent value.
