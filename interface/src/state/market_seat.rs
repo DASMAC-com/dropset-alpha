@@ -25,8 +25,8 @@ pub struct MarketSeat {
     // The amount of quote the maker can withdraw
     // Needs to be updated on place, cancel, deposit, withdraw
     quote_available: [u8; U64_SIZE],
-    // The collection of a user's orders, grouped by the order's encoded_price and sector_index.
-    user_orders: UserOrderSectors,
+    // The mapping for a user's order prices to order sector indices.
+    user_order_sectors: UserOrderSectors,
 }
 
 impl MarketSeat {
@@ -35,7 +35,7 @@ impl MarketSeat {
             user,
             base_available: base.to_le_bytes(),
             quote_available: quote.to_le_bytes(),
-            user_orders: UserOrderSectors::default(),
+            user_order_sectors: UserOrderSectors::default(),
         }
     }
 
