@@ -493,10 +493,7 @@ mod tests {
         // Check the final result in whole.
         let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS as usize] = [
             (1, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
-            (
-                new_sector_index,
-                ValidatedPriceMantissa::try_from(new_mantissa).unwrap(),
-            ),
+            (7, ValidatedPriceMantissa::try_from(77_777_777).unwrap()),
             (3, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),
             (4, ValidatedPriceMantissa::try_from(44_444_444).unwrap()),
             (5, ValidatedPriceMantissa::try_from(55_555_555).unwrap()),
