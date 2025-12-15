@@ -42,8 +42,10 @@ pub const MARKET_ACCOUNT_DISCRIMINANT: u64 = 0xd00d00b00b00f00du64;
 pub struct MarketHeader {
     /// The u64 market account's account discriminant as LE bytes.
     discriminant: LeU64,
-    /// The u32 total number of fully initialized orders as LE bytes.
+    /// The u32 total number of fully initialized seats as LE bytes.
     num_seats: LeU32,
+    /// The u32 total number of fully initialized orders as LE bytes.
+    num_orders: LeU32,
     /// The u32 total number of sectors in the free stack as LE bytes.
     num_free_sectors: LeU32,
     /// The u32 sector index of the first node in the stack of free nodes as LE bytes.
@@ -79,6 +81,7 @@ unsafe impl Transmutable for MarketHeader {
     const LEN: usize = 0
     /* discriminant */     + size_of::<LeU64>()
     /* num_seats */        + size_of::<LeU32>()
+    /* num_orders */       + size_of::<LeU32>()
     /* num_free_sectors */ + size_of::<LeU32>()
     /* free_stack_top */   + size_of::<LeSectorIndex>()
     /* seats_dll_head */   + size_of::<LeSectorIndex>()
@@ -118,6 +121,7 @@ impl MarketHeader {
         let header = MarketHeader {
             discriminant: MARKET_ACCOUNT_DISCRIMINANT.to_le_bytes(),
             num_seats: [0; U32_SIZE],
+            num_orders: [0; U32_SIZE],
             num_free_sectors: [0; U32_SIZE],
             free_stack_top: LE_NIL,
             seats_dll_head: LE_NIL,
@@ -159,6 +163,21 @@ impl MarketHeader {
     #[inline(always)]
     pub fn decrement_num_seats(&mut self) {
         self.num_seats = self.num_seats().saturating_sub(1).to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn num_orders(&self) -> u32 {
+        u32::from_le_bytes(self.num_orders)
+    }
+
+    #[inline(always)]
+    pub fn increment_num_orders(&mut self) {
+        self.num_orders = self.num_orders().saturating_add(1).to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn decrement_num_orders(&mut self) {
+        self.num_orders = self.num_orders().saturating_sub(1).to_le_bytes();
     }
 
     #[inline(always)]

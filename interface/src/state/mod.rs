@@ -8,6 +8,7 @@ pub mod market_header;
 pub mod market_seat;
 pub mod node;
 pub mod order;
+pub mod orders_dll;
 pub mod seats_dll;
 pub mod sector;
 pub mod transmutable;
