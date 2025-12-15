@@ -8,7 +8,7 @@ use crate::state::{
         MarketHeader,
         MARKET_ACCOUNT_DISCRIMINANT,
     },
-    // orders_dll::OrdersLinkedList,
+    orders_dll::OrdersLinkedList,
     seats_dll::SeatsLinkedList,
     sector::SECTOR_SIZE,
     transmutable::Transmutable,
@@ -79,10 +79,10 @@ impl<'a> MarketRefMut<'a> {
         SeatsLinkedList::new_from_parts(self.header, self.sectors)
     }
 
-    // #[inline(always)]
-    // pub fn order_list(&mut self) -> OrdersLinkedList {
-    //     OrdersLinkedList::new_from_parts(self.header, self.sectors)
-    // }
+    #[inline(always)]
+    pub fn order_list(&mut self) -> OrdersLinkedList {
+        OrdersLinkedList::new_from_parts(self.header, self.sectors)
+    }
 }
 
 impl<H: AsRef<MarketHeader>, S: AsRef<[u8]>> Market<H, S> {
