@@ -42,7 +42,7 @@ pub const MARKET_ACCOUNT_DISCRIMINANT: u64 = 0xd00d00b00b00f00du64;
 pub struct MarketHeader {
     /// The u64 market account's account discriminant as LE bytes.
     discriminant: LeU64,
-    /// The u32 total number of fully initialized seats as LE bytes.
+    /// The u32 total number of fully initialized orders as LE bytes.
     num_seats: LeU32,
     /// The u32 total number of sectors in the free stack as LE bytes.
     num_free_sectors: LeU32,
@@ -52,6 +52,11 @@ pub struct MarketHeader {
     seats_dll_head: LeSectorIndex,
     /// The u32 sector index of the last node in the doubly linked list of seat nodes as LE bytes.
     seats_dll_tail: LeSectorIndex,
+    /// The u32 sector index of the first node in the doubly linked list of order nodes as LE
+    /// bytes.
+    orders_dll_head: LeSectorIndex,
+    /// The u32 sector index of the last node in the doubly linked list of order nodes as LE bytes.
+    orders_dll_tail: LeSectorIndex,
     /// The market's base mint public key.
     pub base_mint: Pubkey,
     /// The market's quote mint public key.
@@ -78,6 +83,8 @@ unsafe impl Transmutable for MarketHeader {
     /* free_stack_top */   + size_of::<LeSectorIndex>()
     /* seats_dll_head */   + size_of::<LeSectorIndex>()
     /* seats_dll_tail */   + size_of::<LeSectorIndex>()
+    /* orders_dll_head */  + size_of::<LeSectorIndex>()
+    /* orders_dll_tail */  + size_of::<LeSectorIndex>()
     /* base_mint */        + size_of::<Pubkey>()
     /* quote_mint */       + size_of::<Pubkey>()
     /* market_bump */      + size_of::<u8>()
@@ -115,6 +122,8 @@ impl MarketHeader {
             free_stack_top: LE_NIL,
             seats_dll_head: LE_NIL,
             seats_dll_tail: LE_NIL,
+            orders_dll_head: LE_NIL,
+            orders_dll_tail: LE_NIL,
             base_mint: *base_mint,
             quote_mint: *quote_mint,
             market_bump,
@@ -195,6 +204,26 @@ impl MarketHeader {
     #[inline(always)]
     pub fn set_seats_dll_tail(&mut self, index: SectorIndex) {
         self.seats_dll_tail = index.to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn orders_dll_head(&self) -> SectorIndex {
+        u32::from_le_bytes(self.orders_dll_head)
+    }
+
+    #[inline(always)]
+    pub fn set_orders_dll_head(&mut self, index: SectorIndex) {
+        self.orders_dll_head = index.to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn orders_dll_tail(&self) -> SectorIndex {
+        u32::from_le_bytes(self.orders_dll_tail)
+    }
+
+    #[inline(always)]
+    pub fn set_orders_dll_tail(&mut self, index: SectorIndex) {
+        self.orders_dll_tail = index.to_le_bytes();
     }
 
     #[inline(always)]
