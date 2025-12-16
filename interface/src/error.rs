@@ -1,6 +1,7 @@
 //! Common error types and conversion helpers to represent them as error message strings.
 
 use pinocchio::program_error::ProgramError;
+use price::OrderInfoError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "client", derive(strum_macros::FromRepr))]
@@ -37,12 +38,29 @@ pub enum DropsetError {
     OrderWithPriceAlreadyExists,
     UserHasMaxOrders,
     OrderNotFound,
+    ExponentUnderflow,
+    ArithmeticOverflow,
+    InvalidPriceMantissa,
+    InvalidBiasedExponent,
+    InfinityIsNotAFloat,
 }
 
 impl From<DropsetError> for ProgramError {
     #[inline(always)]
     fn from(e: DropsetError) -> Self {
         ProgramError::Custom(e as u32)
+    }
+}
+
+impl From<OrderInfoError> for DropsetError {
+    fn from(order_error: OrderInfoError) -> Self {
+        match order_error {
+            OrderInfoError::ExponentUnderflow => DropsetError::ExponentUnderflow,
+            OrderInfoError::ArithmeticOverflow => DropsetError::ArithmeticOverflow,
+            OrderInfoError::InvalidPriceMantissa => DropsetError::InvalidPriceMantissa,
+            OrderInfoError::InvalidBiasedExponent => DropsetError::InvalidBiasedExponent,
+            OrderInfoError::InfinityIsNotAFloat => DropsetError::InfinityIsNotAFloat,
+        }
     }
 }
 
@@ -80,6 +98,11 @@ impl From<DropsetError> for &'static str {
             DropsetError::OrderWithPriceAlreadyExists => "An order with this price already exists",
             DropsetError::UserHasMaxOrders => "User already has the max number of open orders",
             DropsetError::OrderNotFound => "Order not found",
+            DropsetError::ExponentUnderflow => "Order exponent underflow",
+            DropsetError::ArithmeticOverflow => "Order arithmetic overflow",
+            DropsetError::InvalidPriceMantissa => "Invalid price mantissa in price calculation",
+            DropsetError::InvalidBiasedExponent => "Invalid biased exponent in price calculation",
+            DropsetError::InfinityIsNotAFloat => "Can't convert infinity to a float value",
         }
     }
 }
