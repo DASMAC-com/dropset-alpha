@@ -25,7 +25,8 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in [`CloseSeat`].
+/// Caller guarantees the safety contract detailed in
+/// [`dropset_interface::instructions::generated_pinocchio::CloseSeat`].
 #[inline(never)]
 pub fn process_close_seat<'a>(
     accounts: &'a [AccountInfo],

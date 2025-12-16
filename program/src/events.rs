@@ -36,7 +36,7 @@ pub const EVENT_BUFFER_LEN: usize = 1024;
 /// Self-CPIs on event instruction data facilitates emitting events
 /// without having to store it in account data.
 ///
-/// The buffer `data` always begins with a [`HeaderInstructionData`]
+/// The buffer `data` always begins with a [`HeaderEventInstructionData`]
 /// event, tracking the number of events currently stored in the buffer
 /// and other various info about the transaction/instruction.
 ///
@@ -52,10 +52,10 @@ pub struct EventBuffer {
     /// The stack-allocated, possibly initialized buffer bytes.
     ///
     /// The layout for the data is:
-    /// - `[0]`: the instruction tag of the instruction that created this event buffer.
-    /// - `[1..HeaderInstructionData::LEN_WITH_TAG]`: the header instruction data.
-    /// - `[HeaderInstructionData::LEN_WITH_TAG..]`: the byte data for the other non-header events
-    ///   in the buffer.
+    /// - \[0\]: the instruction tag of the instruction that created this event buffer.
+    /// - [1..[HeaderEventInstructionData::LEN_WITH_TAG]]: the header instruction data.
+    /// - [[HeaderEventInstructionData::LEN_WITH_TAG]..]: the byte data for the other non-header
+    ///   events in the buffer.
     pub data: [MaybeUninit<u8>; EVENT_BUFFER_LEN],
     /// The number of events in the buffer that come after the header.
     emitted_count: u16,

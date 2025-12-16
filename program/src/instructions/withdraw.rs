@@ -27,7 +27,8 @@ use crate::{
 ///
 /// # Safety
 ///
-/// Caller guarantees the safety contract detailed in [`Withdraw`].
+/// Caller guarantees the safety contract detailed in
+/// [`dropset_interface::instructions::generated_pinocchio::Withdraw`].
 #[inline(never)]
 pub unsafe fn process_withdraw<'a>(
     accounts: &'a [AccountInfo],
