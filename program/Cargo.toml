@@ -17,6 +17,7 @@ pinocchio-system.workspace = true
 pinocchio-token.workspace = true
 pinocchio-token-interface.workspace = true
 pinocchio-token-2022.workspace = true
+price = { path = "../price" }
 static_assertions.workspace = true
 
 [dev-dependencies]

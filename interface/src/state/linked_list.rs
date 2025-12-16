@@ -204,6 +204,13 @@ impl<'a, T: LinkedListOperations> LinkedList<'a, T> {
             sectors: self.sectors,
         }
     }
+
+    pub fn iter_rev(&self) -> LinkedListRevIter<'_> {
+        LinkedListRevIter {
+            curr: T::tail(self.header),
+            sectors: self.sectors,
+        }
+    }
 }
 
 pub struct LinkedListIter<'a> {
@@ -225,6 +232,29 @@ impl<'a> Iterator for LinkedListIter<'a> {
         let res = (self.curr, node);
 
         self.curr = node.next();
+        Some(res)
+    }
+}
+
+pub struct LinkedListRevIter<'a> {
+    pub curr: SectorIndex,
+    pub sectors: &'a [u8],
+}
+
+impl<'a> Iterator for LinkedListRevIter<'a> {
+    type Item = (SectorIndex, &'a Node);
+
+    /// Returns the prev node if it's non-NIL, otherwise, returns `None`.
+    fn next(&mut self) -> Option<(SectorIndex, &'a Node)> {
+        if self.curr == NIL {
+            return None;
+        }
+
+        // Safety: `self.curr` is non-NIL and per the linked list impl, must be in-bounds.
+        let node = unsafe { Node::from_sector_index(self.sectors, self.curr) };
+        let res = (self.curr, node);
+
+        self.curr = node.prev();
         Some(res)
     }
 }
