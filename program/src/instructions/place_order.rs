@@ -82,9 +82,9 @@ pub unsafe fn process_place_order<'a>(
         let order_sector_index_bytes = order_sector_index.to_le_bytes();
 
         // 1. Check that the user has enough collateral to place the order and update their seat
-        // with the resulting decremented amount.
+        //    with the resulting decremented amount.
         // 2. Update the user seat's mapped order sectors. This also checks for duplicate prices so
-        // that all of a user's orders have a unique price.
+        //    that all of a user's orders have a unique price.
         if is_bid {
             // 1. If the user is placing a bid, they intend to provide quote and receive base.
             user_seat.try_decrement_quote_available(quote_atoms)?;
