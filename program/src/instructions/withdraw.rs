@@ -18,7 +18,7 @@ use crate::{
     },
     events::EventBuffer,
     shared::{
-        market_operations::find_mut_seat_with_hint,
+        seat_operations::find_mut_seat_with_hint,
         token_utils::market_transfers::withdraw_non_zero_from_market,
     },
 };

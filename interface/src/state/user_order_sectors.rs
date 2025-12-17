@@ -24,7 +24,7 @@ use crate::{
 pub const MAX_ORDERS: u8 = 5;
 
 /// The [`OrderSectors`] that maps the prices of a user's bids and asks to their corresponding
-/// sector indices in the market account data.
+/// orders' sector indices in the market account data.
 ///
 /// `bids` and `asks` both have a maximum [`MAX_ORDERS`] orders.
 #[repr(C)]
@@ -35,8 +35,9 @@ pub struct UserOrderSectors {
 }
 
 /// An array of [`MAX_ORDERS`] [`PriceToIndex`]s that maps unique prices to a sector index.
-/// By default, [`PriceToIndex`]s are free orders and map an encoded price u32 value of `0`
-/// to the [`LE_NIL`] sector index.
+///
+/// By default, each [`PriceToIndex`] represents an unused item by mapping an encoded price u32
+/// value of `0` to the [`LE_NIL`] sector index.
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderSectors([PriceToIndex; MAX_ORDERS as usize]);
@@ -72,7 +73,11 @@ impl OrderSectors {
     /// The `sector_index` passed to this method should be non-NIL or the node after mutation will
     /// continue to be treated as a free node.
     #[inline(always)]
-    pub fn add(&mut self, new_price: &LeEncodedPrice, new_index: &LeSectorIndex) -> DropsetResult {
+    pub fn add(
+        &mut self,
+        new_price: &LeEncodedPrice,
+        order_index: &LeSectorIndex,
+    ) -> DropsetResult {
         // Check if the price already exists in a node and fail early if it does.
         if self
             .iter()
@@ -87,7 +92,7 @@ impl OrderSectors {
             .ok_or(DropsetError::UserHasMaxOrders)?;
 
         node.encoded_price = *new_price;
-        node.sector_index = *new_index;
+        node.sector_index = *order_index;
 
         Ok(())
     }

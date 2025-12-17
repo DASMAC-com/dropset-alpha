@@ -53,6 +53,7 @@ impl From<DropsetError> for ProgramError {
 }
 
 impl From<OrderInfoError> for DropsetError {
+    #[inline(always)]
     fn from(order_error: OrderInfoError) -> Self {
         match order_error {
             OrderInfoError::ExponentUnderflow => DropsetError::ExponentUnderflow,

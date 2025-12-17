@@ -6,6 +6,7 @@
 pub mod close_seat_context;
 pub mod deposit_withdraw_context;
 pub mod flush_events_context;
+pub mod place_order_context;
 pub mod register_market_context;
 
 /// The account infos necessary to emit events with the event buffer.

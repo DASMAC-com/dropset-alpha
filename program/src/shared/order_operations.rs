@@ -3,7 +3,6 @@
 use dropset_interface::{
     error::DropsetError,
     state::{
-        market_seat::MarketSeat,
         order::Order,
         orders_dll::OrdersLinkedList,
         sector::{
@@ -13,16 +12,16 @@ use dropset_interface::{
     },
 };
 
-pub fn try_insert_order(
+/// Insert a new user order into the orders collection.
+///
+/// NOTE: this function solely inserts the order into the orders collection. It doesn't update the
+/// user's seat nor does it check for duplicate prices posted by the same user.
+pub fn insert_order(
     list: &mut OrdersLinkedList,
     order: Order,
-    seat: &mut MarketSeat,
     is_bid: bool,
 ) -> Result<SectorIndex, DropsetError> {
     let sector_index = {
-        // Note this doesn't check for duplicate prices among the same user, because the
-        // insertion into the user order sectors must also check for duplicates and is a smaller
-        // set of comparisons.
         let next_index = find_new_order_next_index(list, &order, is_bid);
         let order_bytes = order.as_bytes();
 
@@ -35,11 +34,6 @@ pub fn try_insert_order(
             unsafe { list.insert_before(next_index, order_bytes) }
         }
     }?;
-
-    // Update the user order sectors and check for duplicates in the user's order prices as well.
-    seat.user_order_sectors
-        .bids
-        .add(order.le_encoded_price(), &sector_index.to_le_bytes())?;
 
     Ok(sector_index)
 }

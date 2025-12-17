@@ -21,9 +21,9 @@ use crate::{
     },
     events::EventBuffer,
     shared::{
-        market_operations::{
+        seat_operations::{
             find_mut_seat_with_hint,
-            insert_market_seat,
+            try_insert_market_seat,
         },
         token_utils::market_transfers::deposit_non_zero_to_market,
     },
@@ -106,7 +106,7 @@ pub unsafe fn process_deposit<'a>(
         };
 
         // Attempts to insert the user into the linked list. If the user already exists, this fails.
-        insert_market_seat(&mut market.seat_list(), seat)?
+        try_insert_market_seat(&mut market.seat_list(), seat)?
     };
 
     event_buffer.add_to_buffer(

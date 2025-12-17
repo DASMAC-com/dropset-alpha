@@ -1,0 +1,111 @@
+//! See [`process_register_market`].
+
+use dropset_interface::{
+    error::DropsetError,
+    instructions::PlaceOrderInstructionData,
+    state::{
+        node::Node,
+        order::Order,
+    },
+};
+use pinocchio::{
+    account_info::AccountInfo,
+    program_error::ProgramError,
+};
+use price::to_order_info;
+
+use crate::{
+    context::{
+        place_order_context::PlaceOrderContext,
+        EventBufferContext,
+    },
+    events::EventBuffer,
+    shared::{
+        order_operations::insert_order,
+        seat_operations::find_mut_seat_with_hint,
+    },
+};
+
+/// Instruction handler logic for placing a user's bid or ask order on the market's order book.
+///
+/// # Safety
+///
+/// Caller guarantees the safety contract detailed in
+/// [`dropset_interface::instructions::generated_pinocchio::PlaceOrder`].
+#[inline(never)]
+pub unsafe fn process_place_order<'a>(
+    accounts: &'a [AccountInfo],
+    instruction_data: &[u8],
+    event_buffer: &mut EventBuffer,
+) -> Result<EventBufferContext<'a>, ProgramError> {
+    let PlaceOrderInstructionData {
+        price_mantissa,
+        base_scalar,
+        base_exponent_biased,
+        quote_exponent_biased,
+        is_bid,
+        sector_index_hint,
+    } = PlaceOrderInstructionData::unpack_pinocchio(instruction_data)?;
+    let mut ctx = PlaceOrderContext::load(accounts)?;
+
+    let order_info = to_order_info(
+        price_mantissa,
+        base_scalar,
+        base_exponent_biased,
+        quote_exponent_biased,
+    )
+    .map_err(DropsetError::from)?;
+
+    let (base_atoms, quote_atoms) = (order_info.base_atoms, order_info.quote_atoms);
+
+    // To avoid convoluted borrow checking rules, optimistically insert the order into the tree
+    // with the index hint passed in, assuming it's valid. It's verified later when mutating the
+    // market seat.
+    let order = Order::new(order_info, sector_index_hint);
+    let le_encoded_price = *order.le_encoded_price();
+    let order_sector_index = {
+        // Safety: Scoped mutable borrow of the market account to insert the order.
+        let mut market = unsafe { ctx.market_account.load_unchecked_mut() };
+        let mut order_list = market.order_list();
+        insert_order(&mut order_list, order, is_bid)?
+    };
+
+    {
+        // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
+        let market = unsafe { ctx.market_account.load_unchecked_mut() };
+        Node::check_in_bounds(market.sectors, sector_index_hint)?;
+        // Find and verify the user's seat with the given index hint.
+        // Safety: The index hint was just verified as in-bounds.
+        let user_seat = find_mut_seat_with_hint(market, sector_index_hint, ctx.user.key())?;
+
+        let order_sector_index_bytes = order_sector_index.to_le_bytes();
+
+        // 1. Check that the user has enough collateral to place the order and update their seat
+        // with the resulting decremented amount.
+        // 2. Update the user seat's mapped order sectors. This also checks for duplicate prices so
+        // that all of a user's orders have a unique price.
+        if is_bid {
+            // 1. If the user is placing a bid order, they intend to provide quote and receive base.
+            user_seat.try_decrement_quote_available(quote_atoms)?;
+            // 2. Add the order to the user's bids.
+            user_seat
+                .user_order_sectors
+                .bids
+                .add(&le_encoded_price, &order_sector_index_bytes)?;
+        } else {
+            // 1. If the user is placing an ask order, they intend to provide base and receive
+            //    quote.
+            user_seat.try_decrement_base_available(base_atoms)?;
+            // 2. Add the order to the user's asks.
+            user_seat
+                .user_order_sectors
+                .asks
+                .add(&le_encoded_price, &order_sector_index_bytes)?;
+        }
+    }
+
+    Ok(EventBufferContext {
+        event_authority: ctx.event_authority,
+        market_account: ctx.market_account,
+    })
+}

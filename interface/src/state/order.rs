@@ -1,6 +1,6 @@
 use price::{
-    EncodedPrice,
     LeEncodedPrice,
+    OrderInfo,
 };
 use static_assertions::const_assert_eq;
 
@@ -28,23 +28,23 @@ pub struct Order {
     encoded_price: LeEncodedPrice,
     /// This enables O(1) indexing from a user/maker's orders -> their seat.
     user_seat: LeSectorIndex,
-    /// The u64 number of atoms left remaining to fill as LE bytes.
-    remaining: [u8; U64_SIZE],
-    /// The u64 initial order size (in atoms) when posted as LE bytes.
-    initial: [u8; U64_SIZE],
+    /// The u64 number of base atoms left remaining to fill as LE bytes.
+    base_remaining: [u8; U64_SIZE],
+    /// The u64 number of quote atoms left remaining to fill as LE bytes.
+    quote_remaining: [u8; U64_SIZE],
     /// Padding to fill the rest of the node payload size.
     _padding: [u8; ORDER_PADDING],
 }
 
 impl Order {
+    /// Create a new order from the order info and the user seat.
     #[inline(always)]
-    pub fn new(encoded_price: EncodedPrice, user_seat: SectorIndex, order_size: u64) -> Self {
-        let le_size = order_size.to_le_bytes();
+    pub fn new(order_info: OrderInfo, user_seat: SectorIndex) -> Self {
         Self {
-            encoded_price: encoded_price.into(),
+            encoded_price: order_info.encoded_price.into(),
             user_seat: user_seat.to_le_bytes(),
-            remaining: le_size,
-            initial: le_size,
+            base_remaining: order_info.base_atoms.to_le_bytes(),
+            quote_remaining: order_info.quote_atoms.to_le_bytes(),
             _padding: [0u8; ORDER_PADDING],
         }
     }
@@ -66,22 +66,22 @@ impl Order {
 
     #[inline(always)]
     pub fn remaining(&self) -> u64 {
-        u64::from_le_bytes(self.remaining)
+        u64::from_le_bytes(self.base_remaining)
     }
 
     #[inline(always)]
     pub fn set_remaining(&mut self, amount: u64) {
-        self.remaining = amount.to_le_bytes();
+        self.base_remaining = amount.to_le_bytes();
     }
 
     #[inline(always)]
     pub fn initial(&self) -> u64 {
-        u64::from_le_bytes(self.initial)
+        u64::from_le_bytes(self.quote_remaining)
     }
 
     #[inline(always)]
     pub fn set_initial(&mut self, amount: u64) {
-        self.initial = amount.to_le_bytes();
+        self.quote_remaining = amount.to_le_bytes();
     }
 
     /// This method is sound because:

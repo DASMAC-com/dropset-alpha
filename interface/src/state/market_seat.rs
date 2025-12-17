@@ -3,14 +3,20 @@
 use pinocchio::pubkey::Pubkey;
 use static_assertions::const_assert_eq;
 
-use crate::state::{
-    node::{
-        NodePayload,
-        NODE_PAYLOAD_SIZE,
+use crate::{
+    error::{
+        DropsetError,
+        DropsetResult,
     },
-    transmutable::Transmutable,
-    user_order_sectors::UserOrderSectors,
-    U64_SIZE,
+    state::{
+        node::{
+            NodePayload,
+            NODE_PAYLOAD_SIZE,
+        },
+        transmutable::Transmutable,
+        user_order_sectors::UserOrderSectors,
+        U64_SIZE,
+    },
 };
 
 /// Represents a user's position within a market.
@@ -58,6 +64,30 @@ impl MarketSeat {
     #[inline(always)]
     pub fn set_quote_available(&mut self, amount: u64) {
         self.quote_available = amount.to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn try_decrement_base_available(&mut self, amount: u64) -> DropsetResult {
+        let remaining = price::checked_sub!(
+            self.base_available(),
+            amount,
+            DropsetError::InsufficientUserBalance
+        )?;
+        self.set_base_available(remaining);
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn try_decrement_quote_available(&mut self, amount: u64) -> DropsetResult {
+        let remaining = price::checked_sub!(
+            self.quote_available(),
+            amount,
+            DropsetError::InsufficientUserBalance
+        )?;
+        self.set_quote_available(remaining);
+
+        Ok(())
     }
 
     /// This method is sound because:

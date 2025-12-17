@@ -18,7 +18,7 @@ use crate::{
     },
     events::EventBuffer,
     market_signer,
-    shared::market_operations::find_seat_with_hint,
+    shared::seat_operations::find_seat_with_hint,
 };
 
 /// Instruction handler logic for closing an existing market seat and reclaiming associated funds.

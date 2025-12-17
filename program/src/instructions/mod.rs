@@ -7,6 +7,7 @@ pub mod batch;
 pub mod close_seat;
 pub mod deposit;
 pub mod flush_events;
+pub mod place_order;
 pub mod register_market;
 pub mod withdraw;
 
@@ -14,5 +15,6 @@ pub use batch::process_batch;
 pub use close_seat::process_close_seat;
 pub use deposit::process_deposit;
 pub use flush_events::process_flush_events;
+pub use place_order::process_place_order;
 pub use register_market::process_register_market;
 pub use withdraw::process_withdraw;
