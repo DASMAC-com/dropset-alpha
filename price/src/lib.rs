@@ -90,6 +90,7 @@ pub struct OrderInfo {
 ///
 /// [`tests::ensure_invalid_quote_exponent_fails_early`] ensures that the function fails early if
 /// the quote exponent isn't <= MAX_BIASED_EXPONENT prior to the unchecked add.
+#[allow(rustdoc::broken_intra_doc_links)]
 pub fn to_order_info(
     price_mantissa: u32,
     base_scalar: u64,
