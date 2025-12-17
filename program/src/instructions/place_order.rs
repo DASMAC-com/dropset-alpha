@@ -1,8 +1,9 @@
 //! See [`process_place_order`].
 
+#[cfg(feature = "debug")]
+use dropset_interface::events::PlaceOrderEventInstructionData;
 use dropset_interface::{
     error::DropsetError,
-    events::PlaceOrderEventInstructionData,
     instructions::PlaceOrderInstructionData,
     state::{
         node::Node,
@@ -20,7 +21,6 @@ use crate::{
         place_order_context::PlaceOrderContext,
         EventBufferContext,
     },
-    debug,
     events::EventBuffer,
     shared::{
         order_operations::insert_order,
@@ -38,7 +38,7 @@ use crate::{
 pub unsafe fn process_place_order<'a>(
     accounts: &'a [AccountInfo],
     instruction_data: &[u8],
-    event_buffer: &mut EventBuffer,
+    _event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
     let PlaceOrderInstructionData {
         price_mantissa,
@@ -105,7 +105,8 @@ pub unsafe fn process_place_order<'a>(
         }
     }
 
-    event_buffer.add_to_buffer(
+    #[cfg(feature = "debug")]
+    _event_buffer.add_to_buffer(
         PlaceOrderEventInstructionData::new(
             is_bid,
             user_sector_index_hint,

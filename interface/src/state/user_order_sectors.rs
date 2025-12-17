@@ -137,7 +137,7 @@ impl OrderSectors {
 /// If the sector index equals [`LE_NIL`], it's considered a freed node, otherwise, it contains an
 /// existing, valid pair of encoded price to sector index.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct PriceToIndex {
     pub encoded_price: LeEncodedPrice,
     pub sector_index: LeSectorIndex,
@@ -222,6 +222,33 @@ unsafe impl Transmutable for PriceToIndex {
 const_assert_eq!(PriceToIndex::LEN, size_of::<PriceToIndex>());
 const_assert_eq!(align_of::<PriceToIndex>(), 1);
 
+// -------------------------------------------------------------------------------------------------
+// Create readable debug views for the encoded price to order sector mapping.
+#[allow(dead_code)]
+#[derive(Debug)]
+struct PriceToIndexView {
+    pub encoded_price: u32,
+    pub sector_index: SectorIndex,
+}
+
+impl From<&PriceToIndex> for PriceToIndexView {
+    fn from(value: &PriceToIndex) -> Self {
+        Self {
+            encoded_price: u32::from_le_bytes(value.encoded_price.as_array()),
+            sector_index: SectorIndex::from_le_bytes(value.sector_index),
+        }
+    }
+}
+
+impl core::fmt::Debug for PriceToIndex {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let is_in_use = !self.is_free();
+        let node: Option<PriceToIndexView> = is_in_use.then(|| self.into());
+        write!(f, "{:#?}", node)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use price::{

@@ -6,8 +6,10 @@ use dropset_interface::state::{
     market_header::MarketHeader,
     market_seat::MarketSeat,
     node::Node,
+    order::Order,
     sector::SectorIndex,
     transmutable::Transmutable,
+    user_order_sectors::UserOrderSectors,
 };
 use solana_sdk::pubkey::Pubkey;
 
@@ -41,6 +43,7 @@ pub struct MarketView<T> {
 pub struct MarketViewAll {
     pub header: MarketHeaderView,
     pub seats: Vec<MarketSeatView>,
+    pub orders: Vec<OrderView>,
 }
 
 /// Attempts to parse a Dropset market account from raw Solana account fields and convert it into a
@@ -81,6 +84,18 @@ pub struct MarketSeatView {
     pub user: Pubkey,
     pub base_available: u64,
     pub quote_available: u64,
+    pub user_order_sectors: UserOrderSectors,
+}
+
+#[derive(Debug)]
+pub struct OrderView {
+    pub prev_index: SectorIndex,
+    pub index: SectorIndex,
+    pub next_index: SectorIndex,
+    pub encoded_price: u32,
+    pub user_seat: SectorIndex,
+    pub base_remaining: u64,
+    pub quote_remaining: u64,
 }
 
 impl From<(SectorIndex, &Node)> for MarketSeatView {
@@ -94,6 +109,23 @@ impl From<(SectorIndex, &Node)> for MarketSeatView {
             user: seat.user.into(),
             base_available: seat.base_available(),
             quote_available: seat.quote_available(),
+            user_order_sectors: seat.user_order_sectors.clone(),
+        }
+    }
+}
+
+impl From<(SectorIndex, &Node)> for OrderView {
+    fn from(index_and_order: (SectorIndex, &Node)) -> Self {
+        let (sector_index, node) = index_and_order;
+        let order = node.load_payload::<Order>();
+        Self {
+            prev_index: node.prev(),
+            index: sector_index,
+            next_index: node.next(),
+            encoded_price: order.encoded_price(),
+            user_seat: order.user_seat(),
+            base_remaining: order.base_remaining(),
+            quote_remaining: order.quote_remaining(),
         }
     }
 }
@@ -128,11 +160,21 @@ impl From<MarketRef<'_>> for MarketView<MarketSeatView> {
     }
 }
 
+impl From<MarketRef<'_>> for MarketView<OrderView> {
+    fn from(market: MarketRef<'_>) -> Self {
+        Self {
+            header: market.header.into(),
+            sectors: market.iter_orders().map(OrderView::from).collect(),
+        }
+    }
+}
+
 impl From<MarketRef<'_>> for MarketViewAll {
     fn from(market: MarketRef<'_>) -> Self {
         Self {
             header: market.header.into(),
             seats: market.iter_seats().map(MarketSeatView::from).collect(),
+            orders: market.iter_orders().map(OrderView::from).collect(),
         }
     }
 }

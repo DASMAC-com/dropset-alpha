@@ -10,6 +10,7 @@ dropset = { path = "../program" }
 dropset-interface = { path = "../interface", features = ["client", "solana-program"], default-features = false }
 itertools.workspace = true
 lazy-regex.workspace = true
+price = { path = "../price" }
 solana-sdk.workspace = true
 solana-transaction-status.workspace = true
 solana-transaction-status-client-types.workspace = true

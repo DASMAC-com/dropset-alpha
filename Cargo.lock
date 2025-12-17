@@ -5878,6 +5878,7 @@ dependencies = [
  "dropset-interface",
  "itertools 0.14.0",
  "lazy-regex",
+ "price",
  "serde",
  "serde_json",
  "solana-sdk",

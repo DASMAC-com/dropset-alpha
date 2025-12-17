@@ -3,10 +3,7 @@
 use dropset_interface::{
     error::DropsetError,
     state::{
-        market::{
-            MarketRef,
-            MarketRefMut,
-        },
+        market::MarketRef,
         node::Node,
         order::Order,
         orders_dll::OrdersLinkedList,
@@ -98,7 +95,7 @@ fn find_new_order_next_index(
     NIL
 }
 
-/// Converts a sector index to a mutable order given a sector index.
+/// Converts a sector index to an order given a sector index.
 ///
 /// Caller should ensure that `validated_sector_index` is indeed a sector index pointing to a valid
 /// order.
@@ -106,13 +103,11 @@ fn find_new_order_next_index(
 /// # Safety
 ///
 /// Caller guarantees `validated_sector_index` is in-bounds of `market.sectors` bytes.
-pub unsafe fn load_mut_order_from_sector_index<'a>(
-    market: MarketRefMut<'a>,
+pub unsafe fn load_order_from_sector_index(
+    market: MarketRef<'_>,
     validated_sector_index: SectorIndex,
-) -> &'a mut Order {
+) -> &'_ Order {
     // Safety: Caller guarantees 'validated_sector_index' is in-bounds.
-    let node = unsafe { Node::from_sector_index_mut(market.sectors, validated_sector_index) };
-
-    // Safety: All bit patterns are valid for order structs.
-    unsafe { node.load_payload_mut::<Order>() }
+    let node = unsafe { Node::from_sector_index(market.sectors, validated_sector_index) };
+    node.load_payload::<Order>()
 }

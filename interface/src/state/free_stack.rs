@@ -10,6 +10,7 @@ use crate::{
     state::{
         market_header::MarketHeader,
         node::{
+            AllBitPatternsValid,
             Node,
             NodePayload,
             NODE_PAYLOAD_SIZE,
@@ -58,6 +59,9 @@ const_assert_eq!(1, align_of::<FreeNodePayload>());
 
 // Safety: FreeNodePayload's size is checked below.
 unsafe impl NodePayload for FreeNodePayload {}
+
+// Safety: All bit patterns are valid.
+unsafe impl AllBitPatternsValid for FreeNodePayload {}
 
 const_assert_eq!(size_of::<FreeNodePayload>(), NODE_PAYLOAD_SIZE);
 

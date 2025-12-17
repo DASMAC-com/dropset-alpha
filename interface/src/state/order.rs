@@ -6,6 +6,7 @@ use static_assertions::const_assert_eq;
 
 use crate::state::{
     node::{
+        AllBitPatternsValid,
         NodePayload,
         NODE_PAYLOAD_SIZE,
     },
@@ -115,3 +116,6 @@ const_assert_eq!(align_of::<Order>(), 1);
 
 // Safety: Const asserts ensure size_of::<Order>() == NODE_PAYLOAD_SIZE.
 unsafe impl NodePayload for Order {}
+
+// Safety: All bit patterns are valid.
+unsafe impl AllBitPatternsValid for Order {}

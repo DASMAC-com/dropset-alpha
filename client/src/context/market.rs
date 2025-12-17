@@ -4,6 +4,7 @@
 use dropset_interface::{
     instructions::{
         generated_client::*,
+        CancelOrderInstructionData,
         CloseSeatInstructionData,
         DepositInstructionData,
         PlaceOrderInstructionData,
@@ -182,6 +183,22 @@ impl MarketContext {
         .create_instruction(data)
         .try_into()
         .expect("Should be a single singer instruction")
+    }
+
+    pub fn cancel_order(
+        &self,
+        user: Pubkey,
+        data: CancelOrderInstructionData,
+    ) -> SingleSignerInstruction {
+        CancelOrder {
+            event_authority: event_authority::ID.into(),
+            user,
+            market_account: self.market,
+            dropset_program: dropset::ID.into(),
+        }
+        .create_instruction(data)
+        .try_into()
+        .expect("Should be a single signer instruction")
     }
 
     fn deposit(

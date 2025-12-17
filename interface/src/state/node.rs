@@ -50,6 +50,17 @@ pub struct Node {
 /// [`NodePayload`].
 pub unsafe trait NodePayload: Transmutable {}
 
+/// Marker trait to indicate that the type is valid for all bit patterns as long as the size
+/// constraint is satisfied. It therefore doesn't require a check on individual bytes prior to
+/// transmutation.
+///
+/// That is, it has no invalid enum variants, isn't a bool, etc.
+///
+/// # Safety
+///
+/// Implementor guarantees that all bit patterns are valid for some `T:`[`AllBitPatternsValid`].
+pub unsafe trait AllBitPatternsValid: Transmutable {}
+
 // Safety:
 //
 // - Stable layout with `#[repr(C)]`.
@@ -109,20 +120,14 @@ impl Node {
         }
     }
 
-    /// # Safety:
-    ///
-    /// Caller guarantees that all bit patterns are valid for type `T`.
     #[inline(always)]
-    pub unsafe fn load_payload<T: NodePayload>(&self) -> &T {
+    pub fn load_payload<T: NodePayload + AllBitPatternsValid>(&self) -> &T {
         // Safety: All `NodePayload` implementations should have a length of `NODE_PAYLOAD_SIZE`.
         unsafe { T::load_unchecked(&self.payload) }
     }
 
-    /// # Safety:
-    ///
-    /// Caller guarantees that all bit patterns are valid for type `T`.
     #[inline(always)]
-    pub unsafe fn load_payload_mut<T: NodePayload>(&mut self) -> &mut T {
+    pub fn load_payload_mut<T: NodePayload + AllBitPatternsValid>(&mut self) -> &mut T {
         // Safety: All `NodePayload` implementations should have a length of `NODE_PAYLOAD_SIZE`.
         unsafe { T::load_unchecked_mut(&mut self.payload) }
     }
