@@ -43,6 +43,12 @@ pub enum DropsetEventTag {
     WithdrawEvent,
     #[args(market: [u8; 32], "The newly registered market.")]
     RegisterMarketEvent,
+    #[args(is_bid: bool, "Whether or not the order is a bid. If false, the order is an ask.")]
+    #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
+    #[args(order_sector_index: u32, "The placed order's sector index.")]
+    #[args(base_atoms: u64, "The size of the order's base atoms to fill.")]
+    #[args(quote_atoms: u64, "The size of the order's quote atoms to fill.")]
+    PlaceOrderEvent,
     #[args(seat_sector_index: u32, "The user's market seat sector index.")]
     CloseSeatEvent,
 }

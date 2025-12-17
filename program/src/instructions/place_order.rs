@@ -2,6 +2,7 @@
 
 use dropset_interface::{
     error::DropsetError,
+    events::PlaceOrderEventInstructionData,
     instructions::PlaceOrderInstructionData,
     state::{
         node::Node,
@@ -44,7 +45,7 @@ pub unsafe fn process_place_order<'a>(
         base_exponent_biased,
         quote_exponent_biased,
         is_bid,
-        sector_index_hint,
+        user_sector_index_hint,
     } = PlaceOrderInstructionData::unpack_pinocchio(instruction_data)?;
     let mut ctx = PlaceOrderContext::load(accounts)?;
 
@@ -61,7 +62,7 @@ pub unsafe fn process_place_order<'a>(
     // To avoid convoluted borrow checking rules, optimistically insert the order into the tree
     // with the index hint passed in, assuming it's valid. It's verified later when mutating the
     // market seat.
-    let order = Order::new(order_info, sector_index_hint);
+    let order = Order::new(order_info, user_sector_index_hint);
     let le_encoded_price = *order.le_encoded_price();
     let order_sector_index = {
         // Safety: Scoped mutable borrow of the market account to insert the order.
@@ -73,10 +74,10 @@ pub unsafe fn process_place_order<'a>(
     {
         // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
-        Node::check_in_bounds(market.sectors, sector_index_hint)?;
+        Node::check_in_bounds(market.sectors, user_sector_index_hint)?;
         // Find and verify the user's seat with the given index hint.
         // Safety: The index hint was just verified as in-bounds.
-        let user_seat = find_mut_seat_with_hint(market, sector_index_hint, ctx.user.key())?;
+        let user_seat = find_mut_seat_with_hint(market, user_sector_index_hint, ctx.user.key())?;
 
         let order_sector_index_bytes = order_sector_index.to_le_bytes();
 
@@ -85,7 +86,7 @@ pub unsafe fn process_place_order<'a>(
         // 2. Update the user seat's mapped order sectors. This also checks for duplicate prices so
         // that all of a user's orders have a unique price.
         if is_bid {
-            // 1. If the user is placing a bid order, they intend to provide quote and receive base.
+            // 1. If the user is placing a bid, they intend to provide quote and receive base.
             user_seat.try_decrement_quote_available(quote_atoms)?;
             // 2. Add the order to the user's bids.
             user_seat
@@ -93,8 +94,7 @@ pub unsafe fn process_place_order<'a>(
                 .bids
                 .add(&le_encoded_price, &order_sector_index_bytes)?;
         } else {
-            // 1. If the user is placing an ask order, they intend to provide base and receive
-            //    quote.
+            // 1. If the user is placing an ask, they intend to provide base and receive quote.
             user_seat.try_decrement_base_available(base_atoms)?;
             // 2. Add the order to the user's asks.
             user_seat
@@ -103,6 +103,18 @@ pub unsafe fn process_place_order<'a>(
                 .add(&le_encoded_price, &order_sector_index_bytes)?;
         }
     }
+
+    event_buffer.add_to_buffer(
+        PlaceOrderEventInstructionData::new(
+            is_bid,
+            user_sector_index_hint,
+            order_sector_index,
+            base_atoms,
+            quote_atoms,
+        ),
+        ctx.event_authority,
+        ctx.market_account.clone(),
+    )?;
 
     Ok(EventBufferContext {
         event_authority: ctx.event_authority,

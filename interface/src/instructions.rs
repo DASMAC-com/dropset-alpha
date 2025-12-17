@@ -86,7 +86,7 @@ pub enum DropsetInstruction {
     #[args(base_exponent_biased: u8, "The biased base exponent.")]
     #[args(quote_exponent_biased: u8, "The biased quote exponent.")]
     #[args(is_bid: bool, "Whether or not the order is a bid. If false, the order is an ask.")]
-    #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
+    #[args(user_sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
     PlaceOrder,
 
     // FlushEvents is an internal instruction and can only be called by the program. It does have
