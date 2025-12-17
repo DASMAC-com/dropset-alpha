@@ -204,13 +204,6 @@ impl<'a, T: LinkedListOperations> LinkedList<'a, T> {
             sectors: self.sectors,
         }
     }
-
-    pub fn iter_rev(&self) -> LinkedListRevIter<'_> {
-        LinkedListRevIter {
-            curr: T::tail(self.header),
-            sectors: self.sectors,
-        }
-    }
 }
 
 pub struct LinkedListIter<'a> {
