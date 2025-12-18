@@ -64,8 +64,6 @@ pub unsafe fn process_post_order<'a>(
     )
     .map_err(DropsetError::from)?;
 
-    {}
-
     let (base_atoms, quote_atoms) = (order_info.base_atoms, order_info.quote_atoms);
 
     // To avoid convoluted borrow checking rules, optimistically insert the order into the tree
