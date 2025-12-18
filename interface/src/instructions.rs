@@ -90,7 +90,7 @@ pub enum DropsetInstruction {
     PostOrder,
 
     #[account(0,           name = "event_authority", desc = "The event authority PDA signer.")]
-    #[account(1, signer,   name = "user",            desc = "The user posting an order.")]
+    #[account(1, signer,   name = "user",            desc = "The user canceling an order.")]
     #[account(2, writable, name = "market_account",  desc = "The market account PDA.")]
     #[account(3,           name = "dropset_program", desc = "The dropset program itself, used for the self-CPI.")]
     #[args(encoded_price: u32, "The encoded price for the order to cancel.")]
