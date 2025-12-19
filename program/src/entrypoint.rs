@@ -64,6 +64,9 @@ pub fn process_instruction(
             DropsetInstruction::CancelOrder => {
                 process_cancel_order(accounts, instruction_data, event_buffer)
             }
+            DropsetInstruction::MarketOrder => {
+                process_market_order(accounts, instruction_data, event_buffer)
+            }
             DropsetInstruction::FlushEvents => {
                 return process_flush_events(accounts, instruction_data)
             }

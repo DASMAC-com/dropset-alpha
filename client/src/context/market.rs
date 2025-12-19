@@ -7,6 +7,7 @@ use dropset_interface::{
         CancelOrderInstructionData,
         CloseSeatInstructionData,
         DepositInstructionData,
+        MarketOrderInstructionData,
         PostOrderInstructionData,
         RegisterMarketInstructionData,
         WithdrawInstructionData,
@@ -195,6 +196,39 @@ impl MarketContext {
             user,
             market_account: self.market,
             dropset_program: dropset::ID.into(),
+        }
+        .create_instruction(data)
+        .try_into()
+        .expect("Should be a single signer instruction")
+    }
+
+    pub fn market_order(
+        &self,
+        user: Pubkey,
+        data: MarketOrderInstructionData,
+    ) -> SingleSignerInstruction {
+        // A market buy means the taker receives base and transfers quote
+        match data.is_buy {
+            true => MarketOrder {
+                event_authority: event_authority::ID.into(),
+                user,
+                market_account: self.market,
+                user_ata: self.get_base_ata(&user),
+                market_ata: self.base_market_ata,
+                mint: self.base.mint,
+                token_program: self.base.token_program,
+                dropset_program: dropset::ID.into(),
+            },
+            false => MarketOrder {
+                event_authority: event_authority::ID.into(),
+                user,
+                market_account: self.market,
+                user_ata: self.get_base_ata(&user),
+                market_ata: self.base_market_ata,
+                mint: self.base.mint,
+                token_program: self.base.token_program,
+                dropset_program: dropset::ID.into(),
+            },
         }
         .create_instruction(data)
         .try_into()

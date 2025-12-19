@@ -7,6 +7,7 @@
     "examples:deposit_and_withdraw": "cargo run --example deposit_and_withdraw",
     "examples:close_seat": "cargo run --example close_seat",
     "examples:many_instructions": "cargo run --example many_instructions",
+    "examples:market_order": "cargo run --example market_order",
     "examples:post_asks": "cargo run --example post_asks",
     "examples:post_and_cancel": "cargo run --example post_and_cancel",
     "examples:two_seats": "cargo run --example two_seats"

@@ -52,7 +52,12 @@ pub enum DropsetEventTag {
     #[args(is_bid: bool, "Whether or not the order is a bid. If false, the order is an ask.")]
     #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
     CancelOrderEvent,
-    #[args(seat_sector_index: u32, "The user's market seat sector index.")]
+    #[args(order_size_base: u64, "The order size denominated in base atoms.")]
+    #[args(is_buy: bool, "Whether or not the order is a market buy. If not, it's a market sell.")]
+    #[args(base_filled: u64, "The amount of base atoms filled.")]
+    #[args(quote_filled: u64, "The amount of quote atoms filled.")]
+    MarketOrderEvent,
+    #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
     CloseSeatEvent,
 }
 
