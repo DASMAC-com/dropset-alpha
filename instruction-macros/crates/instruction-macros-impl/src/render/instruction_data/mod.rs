@@ -84,7 +84,7 @@ fn render_variant(
     // - The implementations for `pack` and `unpack`
     quote! {
         #struct_doc
-        #[derive(Debug)]
+        #[derive(Clone, Debug, PartialEq, Eq)]
         pub struct #struct_name {
             #(
                 #doc_descriptions
