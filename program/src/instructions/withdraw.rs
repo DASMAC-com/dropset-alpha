@@ -42,7 +42,15 @@ pub unsafe fn process_withdraw<'a>(
 
     // Safety: Scoped immutable borrow of market, user token, and market token accounts to validate.
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
-    unsafe { withdraw_non_zero_from_market(&ctx, amount) }?;
+    unsafe {
+        withdraw_non_zero_from_market(
+            &ctx.user_ata,
+            &ctx.market_ata,
+            &ctx.market_account,
+            &ctx.mint,
+            amount,
+        )
+    }?;
 
     // Safety: Scoped mutable borrow of market account data to update the user's seat.
     let market = unsafe { ctx.market_account.load_unchecked_mut() };

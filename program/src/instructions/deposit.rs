@@ -58,7 +58,10 @@ pub unsafe fn process_deposit<'a>(
     } = DepositInstructionData::unpack_pinocchio(instruction_data)?;
 
     let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
-    let amount_deposited = unsafe { deposit_non_zero_to_market(&ctx, amount) }?;
+    // Safety: No account data is currently borrowed.
+    let amount_deposited = unsafe {
+        deposit_non_zero_to_market(&ctx.user_ata, &ctx.market_ata, ctx.user, &ctx.mint, amount)
+    }?;
 
     // 1) Update an existing seat.
     let sector_index = if sector_index_hint != NIL {
