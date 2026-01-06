@@ -353,9 +353,9 @@ unsafe fn ensure_order_has_been_removed<const IS_BUY: bool>(
     ctx: &'_ MarketOrderContext,
     top_order: &TopOfBookOrder,
 ) {
-    // Safety: Single, scoped mutable borrow of the market account data.
-
     use price::LeEncodedPrice;
+
+    // Safety: Single, scoped mutable borrow of the market account data.
     let market = ctx.market_account.load_unchecked();
     // Safety: The user seat sector index is in-bounds, as it came from the order.
     let node = unsafe { Node::from_sector_index(market.sectors, top_order.maker_seat_sector) };
