@@ -15,7 +15,7 @@ use pinocchio_token_interface::state::{
     load_unchecked as pinocchio_load_unchecked,
 };
 
-/// A validated wrapper around a raw token account [`AccountInfo`], ensuring correct mint
+/// A validated wrapper around a raw associated token account [`AccountInfo`], ensuring correct mint
 /// association, owner authority, and account state.
 #[derive(Clone)]
 pub struct TokenAccountInfo<'a> {
