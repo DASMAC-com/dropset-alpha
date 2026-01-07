@@ -62,18 +62,6 @@ fn try_market_from_owner_and_data(
     Ok(market)
 }
 
-// Fallibly convert an account's owner and account data into a market view of type T.
-pub fn try_market_view_from_owner_and_data<'a, T>(
-    account_owner: Pubkey,
-    account_data: &'a [u8],
-) -> Result<MarketView<T>, anyhow::Error>
-where
-    MarketView<T>: From<MarketRef<'a>>,
-{
-    let market = try_market_from_owner_and_data(account_owner, account_data)?;
-    Ok(market.into())
-}
-
 // Fallibly convert an account's owner and account data into a market view of all types.
 pub fn try_market_view_all_from_owner_and_data(
     account_owner: Pubkey,
