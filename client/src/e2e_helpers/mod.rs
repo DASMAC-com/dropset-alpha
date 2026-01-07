@@ -29,22 +29,19 @@ pub struct Trader<'a> {
     pub base: u64,
     pub quote: u64,
     pub keypair: &'a Keypair,
-    pubkey: Pubkey,
 }
 
 impl<'a> Trader<'a> {
     pub fn new(keypair: &'a Keypair, base: u64, quote: u64) -> Self {
-        let pubkey = keypair.pubkey();
         Self {
             base,
             quote,
             keypair,
-            pubkey,
         }
     }
 
     pub fn pubkey(&self) -> Pubkey {
-        self.pubkey
+        self.keypair.pubkey()
     }
 }
 
@@ -65,7 +62,7 @@ impl E2e {
         // Then fund and create the trader accounts and their base/quote associated token accounts.
         // Mint and deposit the specified base/quote amounts to each trader.
         for trader in traders.as_ref().iter() {
-            rpc.fund_account(&trader.pubkey).await?;
+            rpc.fund_account(&trader.pubkey()).await?;
 
             let account = rpc
                 .client
@@ -75,7 +72,7 @@ impl E2e {
                 // Fail if any of the traders already exist, as this can cause unexpected behavior.
                 return Err(anyhow::Error::msg(format!(
                     "Trader account {} already exists.",
-                    trader.pubkey,
+                    trader.pubkey(),
                 )));
             }
 
