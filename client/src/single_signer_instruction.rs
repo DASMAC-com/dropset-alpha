@@ -16,21 +16,23 @@ impl TryFrom<Instruction> for SingleSignerInstruction {
     type Error = anyhow::Error;
 
     fn try_from(instruction: Instruction) -> Result<Self, Self::Error> {
-        if instruction.accounts.iter().fold(
-            0,
-            |acc, meta| {
-                if meta.is_signer {
-                    acc + 1
-                } else {
-                    acc
-                }
-            },
-        ) != 1
-        {
-            return Err(anyhow::Error::msg(
-                "This instruction requires more than one signer.",
+        let num_signers =
+            instruction.accounts.iter().fold(
+                0,
+                |acc, meta| {
+                    if meta.is_signer {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                },
+            );
+        if num_signers != 1 {
+            return Err(anyhow::anyhow!(
+                "Expected a single signer instruction, got {num_signers} signers."
             ));
         };
+
         Ok(Self(instruction))
     }
 }
