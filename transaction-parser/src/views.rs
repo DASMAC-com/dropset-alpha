@@ -2,7 +2,10 @@
 //! structs.
 
 use dropset_interface::state::{
-    market::MarketRef,
+    market::{
+        Market,
+        MarketRef,
+    },
     market_header::MarketHeader,
     market_seat::MarketSeat,
     node::Node,
@@ -17,8 +20,8 @@ pub struct MarketHeaderView {
     pub num_seats: u32,
     pub num_free_sectors: u32,
     pub free_stack_top: SectorIndex,
-    pub seat_dll_head: SectorIndex,
-    pub seat_dll_tail: SectorIndex,
+    pub seats_dll_head: SectorIndex,
+    pub seats_dll_tail: SectorIndex,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
     pub market_bump: u8,
@@ -26,20 +29,24 @@ pub struct MarketHeaderView {
     pub _padding: [u8; 3],
 }
 
+/// A view on a market account's data with the collection of type T nodes.
 #[derive(Debug)]
 pub struct MarketView<T> {
     pub header: MarketHeaderView,
     pub sectors: Vec<T>,
 }
 
-// Fallibly convert an account's owner and account data into a market view of type T.
-pub fn market_view_try_from_owner_and_data<'a, T>(
+/// A view on a market account's data showing all collections of all node types.
+#[derive(Debug)]
+pub struct MarketViewAll {
+    pub header: MarketHeaderView,
+    pub seats: Vec<MarketSeatView>,
+}
+
+fn try_market_from_owner_and_data(
     account_owner: Pubkey,
-    account_data: &'a [u8],
-) -> Result<MarketView<T>, anyhow::Error>
-where
-    MarketView<T>: From<MarketRef<'a>>,
-{
+    account_data: &[u8],
+) -> Result<Market<&MarketHeader, &[u8]>, anyhow::Error> {
     if account_owner != dropset::ID.into() {
         return Err(anyhow::Error::msg("Account isn't owned by dropset program"));
     }
@@ -50,6 +57,28 @@ where
 
     // Safety: Length was just checked.
     let market = unsafe { MarketRef::from_bytes(account_data) };
+
+    Ok(market)
+}
+
+// Fallibly convert an account's owner and account data into a market view of type T.
+pub fn try_market_view_from_owner_and_data<'a, T>(
+    account_owner: Pubkey,
+    account_data: &'a [u8],
+) -> Result<MarketView<T>, anyhow::Error>
+where
+    MarketView<T>: From<MarketRef<'a>>,
+{
+    let market = try_market_from_owner_and_data(account_owner, account_data)?;
+    Ok(market.into())
+}
+
+// Fallibly convert an account's owner and account data into a market view of all types.
+pub fn try_market_view_all_from_owner_and_data(
+    account_owner: Pubkey,
+    account_data: &[u8],
+) -> Result<MarketViewAll, anyhow::Error> {
+    let market = try_market_from_owner_and_data(account_owner, account_data)?;
     Ok(market.into())
 }
 
@@ -89,8 +118,8 @@ impl From<&MarketHeader> for MarketHeaderView {
             num_seats: header.num_seats(),
             num_free_sectors: header.num_free_sectors(),
             free_stack_top: header.free_stack_top(),
-            seat_dll_head: header.seat_dll_head(),
-            seat_dll_tail: header.seat_dll_tail(),
+            seats_dll_head: header.seats_dll_head(),
+            seats_dll_tail: header.seats_dll_tail(),
             base_mint: header.base_mint.into(),
             quote_mint: header.quote_mint.into(),
             market_bump: header.market_bump,
@@ -105,6 +134,15 @@ impl From<MarketRef<'_>> for MarketView<MarketSeatView> {
         Self {
             header: market.header.into(),
             sectors: market.iter_seats().map(MarketSeatView::from).collect(),
+        }
+    }
+}
+
+impl From<MarketRef<'_>> for MarketViewAll {
+    fn from(market: MarketRef<'_>) -> Self {
+        Self {
+            header: market.header.into(),
+            seats: market.iter_seats().map(MarketSeatView::from).collect(),
         }
     }
 }
