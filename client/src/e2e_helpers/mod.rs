@@ -1,4 +1,4 @@
-use anyhow::Context;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Keypair,
@@ -14,7 +14,6 @@ use crate::{
     transactions::{
         CustomRpcClient,
         ParsedTransactionWithEvents,
-        DEFAULT_FUND_AMOUNT,
     },
 };
 
@@ -67,15 +66,16 @@ impl E2e {
         // Mint and deposit the specified base/quote amounts to each trader.
         for trader in traders.as_ref().iter() {
             rpc.fund_account(&trader.pubkey).await?;
-            // Fail if any of the traders already exist, as this can cause unexpected balances.
-            let trader_balance = rpc
+
+            let account = rpc
                 .client
-                .get_balance(&trader.pubkey)
-                .context("Couldn't retrieve the trader balance")?;
-            if trader_balance != DEFAULT_FUND_AMOUNT {
+                .get_account_with_commitment(&trader.pubkey(), CommitmentConfig::confirmed());
+            let account_exists = account.is_ok_and(|v| v.value.is_some());
+            if account_exists {
+                // Fail if any of the traders already exist, as this can cause unexpected behavior.
                 return Err(anyhow::Error::msg(format!(
-                    "Trader {}'s balance {} doesn't match the default fund amount: {}",
-                    trader.pubkey, trader_balance, DEFAULT_FUND_AMOUNT
+                    "Trader account {} already exists.",
+                    trader.pubkey,
                 )));
             }
 
