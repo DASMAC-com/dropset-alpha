@@ -1,4 +1,3 @@
-use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Keypair,
