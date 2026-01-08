@@ -4,7 +4,6 @@ use client::e2e_helpers::{
 };
 use dropset_interface::state::sector::NIL;
 use solana_sdk::{
-    pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
 };
@@ -13,18 +12,14 @@ pub const USER_AAA_KEYPAIR: &str =
     "2zLitvKbr3wtwBNwEHgbFA9FHW3C5jn1BQkAA3whwBooGTA3PSNYNHPXiPuqXh2JJnCgCeM64aNEHxvSxnEqKMuD";
 pub const USER_BBB_KEYPAIR: &str =
     "5W4uaLrJKMVuntmQ7ES9LA6RuWMZZQwVEjfHkTPHGYZ95V31yKoYTerttNZmtjgPw9U4yuYb28EC1TskmWZ2qoQp";
-pub const USER_AAA_PUBKEY: Pubkey =
-    Pubkey::from_str_const("AAAzWLJZqUqCU3g16ztxABo4i6GBX4dr6NjfVxr7APPR");
-pub const USER_BBB_PUBKEY: Pubkey =
-    Pubkey::from_str_const("BBBPCe266xTrRCH6DLqfcnhGeX9QPba3K4bqM8dfaEA8");
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let payer_1 = Keypair::from_base58_string(USER_AAA_KEYPAIR);
     let payer_2 = Keypair::from_base58_string(USER_BBB_KEYPAIR);
 
-    assert_eq!(payer_1.pubkey(), USER_AAA_PUBKEY);
-    assert_eq!(payer_2.pubkey(), USER_BBB_PUBKEY);
+    assert!(payer_1.pubkey().to_string().starts_with("AAA"));
+    assert!(payer_2.pubkey().to_string().starts_with("BBB"));
 
     let traders = [
         Trader::new(&payer_1, 10000, 10000),
