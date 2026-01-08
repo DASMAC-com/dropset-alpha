@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-struct TopOfBookOrder {
+struct OrderSnapshot {
     base_remaining: u64,
     quote_remaining: u64,
     encoded_price: u32,
@@ -37,7 +37,7 @@ struct TopOfBookOrder {
     order_sector: SectorIndex,
 }
 
-impl TopOfBookOrder {
+impl OrderSnapshot {
     #[inline(always)]
     const fn get_constrained_remaining<const BASE_DENOM: bool>(&self) -> u64 {
         if BASE_DENOM {
@@ -89,7 +89,7 @@ pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
     // That is, as long as the amount not filled yet exceeds the amount in the next posted order,
     // simply close the order and decrement the remaining amount by the amount used to fill the
     // order. This skips muldiv operations until the very last partial fill.
-    while let Some(top_order) = top_of_book_order_info::<IS_BUY>(ctx) {
+    while let Some(top_order) = top_of_book_snapshot::<IS_BUY>(ctx) {
         // If there's nothing left to fill, break from the loop. The last order filled cleanly with
         // no remainder so there's no partial order to fill.
         if hint::unlikely(constraint_asset_remaining == 0) {
@@ -154,9 +154,7 @@ pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
 }
 
 #[inline(always)]
-fn top_of_book_order_info<const IS_BUY: bool>(
-    ctx: &'_ MarketOrderContext,
-) -> Option<TopOfBookOrder> {
+fn top_of_book_snapshot<const IS_BUY: bool>(ctx: &'_ MarketOrderContext) -> Option<OrderSnapshot> {
     // Safety: Scoped borrow of the market account data to check the top of book.
     let market = unsafe { ctx.market_account.load_unchecked() };
 
@@ -171,7 +169,7 @@ fn top_of_book_order_info<const IS_BUY: bool>(
     } else {
         // Safety: The head index is a non-NIL sector index pointing to a valid order node.
         let order = unsafe { load_order_from_sector_index(market, head_index) };
-        Some(TopOfBookOrder {
+        Some(OrderSnapshot {
             base_remaining: order.base_remaining(),
             quote_remaining: order.quote_remaining(),
             encoded_price: order.encoded_price(),
@@ -198,7 +196,7 @@ unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     constraint_asset_remaining: &mut u64,
     counter_asset_filled: &mut u64,
-    top_order: &TopOfBookOrder,
+    top_order: &OrderSnapshot,
 ) -> DropsetResult {
     // 1. Close/remove the order from the orders collection.
     if IS_BUY {
@@ -216,7 +214,17 @@ unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     // 2. Update the filled maker seat's balance and remove the order from their price to order
     // sector map.
     // Safety: The safety contract is essentially a subset of the calling function.
-    unsafe { update_maker_seat_after_fill::<IS_BUY, false>(ctx, top_order) }?;
+    unsafe {
+        update_maker_seat_after_fill::<IS_BUY, false>(
+            ctx,
+            top_order.maker_seat_sector,
+            // The base/quote amount filled is simply the (now previously) top order's amounts
+            // remaining, since this was a full fill.
+            top_order.base_remaining,
+            top_order.quote_remaining,
+            top_order.encoded_price,
+        )
+    }?;
 
     // 3. Update the constrained amount not filled yet and the counter asset total filled.
     // Safety: The amount of constraint asset remaining must be >= the denominated constrained
@@ -236,7 +244,7 @@ fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     constraint_asset_remaining: &mut u64,
     counter_asset_filled: &mut u64,
-    top_order: &TopOfBookOrder,
+    top_order: &OrderSnapshot,
 ) -> DropsetResult {
     let remaining_constrained_asset_in_top_order =
         dropset_non_zero_u64(top_order.get_constrained_remaining::<BASE_DENOM>())?;
@@ -254,7 +262,7 @@ fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
         .checked_add(partial_counter_asset_fill_amount)
         .ok_or(DropsetError::ArithmeticOverflow)?;
 
-    {
+    let (base_filled, quote_filled) = {
         // Now update the order to reflect the new remaining amounts after the partial fill.
         // Safety: Scoped mutable borrow of the market account data.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
@@ -262,25 +270,24 @@ fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
         // Safety: The order sector index is non-NIL and pointing to a valid order node.
         let order = unsafe { load_mut_order_from_sector_index(market, top_order.order_sector) };
 
-        // Safety: The amount not filled yet for both sides is always <= the amount in the top
-        // order, otherwise this would not be a partial fill.
-        let (new_base_remaining, new_quote_remaining) = unsafe {
-            let new_base = top_order.base_remaining.unchecked_sub(if BASE_DENOM {
-                *constraint_asset_remaining
-            } else {
-                partial_counter_asset_fill_amount
-            });
-            let new_quote = top_order.quote_remaining.unchecked_sub(if BASE_DENOM {
-                partial_counter_asset_fill_amount
-            } else {
-                *constraint_asset_remaining
-            });
-            (new_base, new_quote)
+        #[rustfmt::skip]
+        let (base_filled, quote_filled) = if BASE_DENOM {
+            (*constraint_asset_remaining, partial_counter_asset_fill_amount)
+        } else {
+            (partial_counter_asset_fill_amount, *constraint_asset_remaining)
         };
 
-        order.set_base_remaining(new_base_remaining);
-        order.set_quote_remaining(new_quote_remaining);
-    }
+        // Safety: The amount not filled yet for both sides is always <= the amount in the top
+        // order, otherwise this would not be a partial fill.
+        unsafe {
+            let new_base = top_order.base_remaining.unchecked_sub(base_filled);
+            let new_quote = top_order.quote_remaining.unchecked_sub(quote_filled);
+            order.set_base_remaining(new_base);
+            order.set_quote_remaining(new_quote);
+        };
+
+        (base_filled, quote_filled)
+    };
 
     // Set the remaining amount not yet filled to zero.
     *constraint_asset_remaining = 0;
@@ -288,7 +295,15 @@ fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     // Update the maker's seat to reflect the partial fill.
     // Safety: The market account data is not currently borrowed and the maker's user seat inside
     // the top order still points to a valid user.
-    unsafe { update_maker_seat_after_fill::<IS_BUY, true>(ctx, top_order) }?;
+    unsafe {
+        update_maker_seat_after_fill::<IS_BUY, true>(
+            ctx,
+            top_order.maker_seat_sector,
+            base_filled,
+            quote_filled,
+            top_order.encoded_price,
+        )
+    }?;
 
     Ok(())
 }
@@ -305,39 +320,36 @@ fn dropset_non_zero_u64(value: u64) -> Result<NonZeroU64, DropsetError> {
 
 /// # Safety
 ///
-/// The market account data must not be currently borrowed and top order's maker seat sector index
-/// must still point to a valid seat in memory.
+/// The market account data must not be currently borrowed and the passed order's maker seat sector
+/// index must still point to a valid seat in memory.
 #[inline(always)]
 unsafe fn update_maker_seat_after_fill<const IS_BUY: bool, const PARTIAL_FILL: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
-    order: &TopOfBookOrder,
+    maker_seat_sector: SectorIndex,
+    base_filled: u64,
+    quote_filled: u64,
+    encoded_price: u32,
 ) -> DropsetResult {
     // Safety: Single, scoped mutable borrow of the market account data.
     let market = ctx.market_account.load_unchecked_mut();
     // Safety: The user seat sector index is in-bounds, as it came from the order.
-    let node = unsafe { Node::from_sector_index_mut(market.sectors, order.maker_seat_sector) };
+    let node = unsafe { Node::from_sector_index_mut(market.sectors, maker_seat_sector) };
     let maker_seat = node.load_payload_mut::<MarketSeat>();
     if IS_BUY {
         // Market buy means a maker's ask got filled, so they receive quote.
-        maker_seat.try_increment_quote_available(order.quote_remaining)?;
+        maker_seat.try_increment_quote_available(quote_filled)?;
 
         // If it's a complete/full fill, remove the order sector index from the price to index map.
         if !PARTIAL_FILL {
-            maker_seat
-                .user_order_sectors
-                .asks
-                .remove(order.encoded_price)?;
+            maker_seat.user_order_sectors.asks.remove(encoded_price)?;
         }
     } else {
         // Market sell means a maker's bid got filled, so they receive base.
-        maker_seat.try_increment_base_available(order.base_remaining)?;
+        maker_seat.try_increment_base_available(base_filled)?;
 
         // If it's a complete/full fill, remove the order sector index from the price to index map.
         if !PARTIAL_FILL {
-            maker_seat
-                .user_order_sectors
-                .bids
-                .remove(order.encoded_price)?;
+            maker_seat.user_order_sectors.bids.remove(encoded_price)?;
         }
     }
 
@@ -351,7 +363,7 @@ unsafe fn update_maker_seat_after_fill<const IS_BUY: bool, const PARTIAL_FILL: b
 #[cfg(debug_assertions)]
 unsafe fn ensure_order_has_been_removed<const IS_BUY: bool>(
     ctx: &'_ MarketOrderContext,
-    top_order: &TopOfBookOrder,
+    top_order: &OrderSnapshot,
 ) {
     use price::LeEncodedPrice;
 
