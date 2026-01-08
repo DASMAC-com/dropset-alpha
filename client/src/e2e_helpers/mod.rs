@@ -78,22 +78,13 @@ impl E2e {
             .send_single_signer(&rpc, &default_payer)
             .await?;
 
-        // Fund and create the trader accounts and their base/quote associated token accounts.
-        // Then mint and deposit the specified base/quote amounts to each trader if the amount != 0.
+        // Fund and create the trader accounts if they don't exist, create their base/quote
+        // associated token accounts, and mint + deposit the specified base/quote amounts to each
+        // trader if the amount != 0.
         for trader in traders.as_ref().iter() {
-            // Fail if any of the traders already exist, as this can cause unexpected behavior.
-            if account_exists(&rpc.client, &trader.pubkey()).await? {
-                return Err(anyhow::anyhow!(
-                    concat!(
-                        "Trader account {} already exists. ",
-                        "E2e setup requires fresh accounts to avoid unexpected existing state. ",
-                        "Please use a different keypair.",
-                    ),
-                    trader.pubkey()
-                ));
+            if !account_exists(&rpc.client, &trader.pubkey()).await? {
+                rpc.fund_account(&trader.pubkey()).await?;
             }
-
-            rpc.fund_account(&trader.pubkey()).await?;
 
             market.base.create_ata_for(&rpc, trader.keypair).await?;
             market.quote.create_ata_for(&rpc, trader.keypair).await?;
