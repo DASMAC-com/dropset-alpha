@@ -268,3 +268,15 @@ async fn fetch_transaction_json(
     )
     .context("Should be able to fetch transaction with config")
 }
+
+/// Checks if an account at the given pubkey exists on-chain.
+pub async fn account_exists(
+    rpc: &solana_client::rpc_client::RpcClient,
+    pubkey: &Pubkey,
+) -> anyhow::Result<bool> {
+    Ok(rpc
+        .get_account_with_commitment(pubkey, CommitmentConfig::confirmed())
+        .context("Couldn't retrieve account data")?
+        .value
+        .is_some())
+}

@@ -12,6 +12,7 @@ use transaction_parser::views::{
 use crate::{
     context::market::MarketContext,
     transactions::{
+        account_exists,
         CustomRpcClient,
         ParsedTransactionWithEvents,
     },
@@ -73,19 +74,15 @@ impl E2e {
         // Then fund and create the trader accounts and their base/quote associated token accounts.
         // Mint and deposit the specified base/quote amounts to each trader.
         for trader in traders.as_ref().iter() {
-            rpc.fund_account(&trader.pubkey()).await?;
-
-            let account = rpc
-                .client
-                .get_account_with_commitment(&trader.pubkey(), CommitmentConfig::confirmed());
-            let account_exists = account.is_ok_and(|v| v.value.is_some());
-            if account_exists {
-                // Fail if any of the traders already exist, as this can cause unexpected behavior.
+            // Fail if any of the traders already exist, as this can cause unexpected behavior.
+            if account_exists(&rpc.client, &trader.pubkey()).await? {
                 return Err(anyhow::Error::msg(format!(
                     "Trader account {} already exists.",
                     trader.pubkey(),
                 )));
             }
+
+            rpc.fund_account(&trader.pubkey()).await?;
 
             market.base.create_ata_for(&rpc, trader.keypair).await?;
             market.quote.create_ata_for(&rpc, trader.keypair).await?;
