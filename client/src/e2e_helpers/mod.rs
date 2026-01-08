@@ -117,4 +117,20 @@ impl E2e {
     pub fn find_seat(&self, user: &Pubkey) -> anyhow::Result<Option<MarketSeatView>> {
         self.market.find_seat(&self.rpc, user)
     }
+
+    pub fn get_base_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+        self.market.base.get_balance_for(&self.rpc, user)
+    }
+
+    pub fn get_quote_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+        self.market.quote.get_balance_for(&self.rpc, user)
+    }
+
+    /// Asserts that an account's on-chain balances are the expected amounts.
+    pub fn check_balances(&self, expected_base: u64, expected_quote: u64, trader: &Pubkey) {
+        let actual_base = self.get_base_balance(trader).expect("Should get base");
+        let actual_quote = self.get_quote_balance(trader).expect("Should get quote");
+        assert_eq!(expected_base, actual_base);
+        assert_eq!(expected_quote, actual_quote);
+    }
 }
