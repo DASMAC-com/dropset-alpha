@@ -177,10 +177,7 @@ macro_rules! to_biased_exponent {
         const UNBIASED: i16 = $unbiased_exponent as i16;
         ::static_assertions::const_assert!(UNBIASED >= $crate::UNBIASED_MIN);
         ::static_assertions::const_assert!(UNBIASED <= $crate::UNBIASED_MAX);
-        match UNBIASED {
-            $crate::UNBIASED_MIN..=$crate::UNBIASED_MAX => (UNBIASED + $crate::BIAS as i16) as u8,
-            _ => panic!("Invalid unbiased exponent."),
-        }
+        (UNBIASED + $crate::BIAS as i16) as u8
     }};
 }
 
