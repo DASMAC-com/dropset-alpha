@@ -406,21 +406,21 @@ async fn main() -> anyhow::Result<()> {
         // Ensure that there's a single market order event in each transaction, both with the same
         // exact fill sizes.
         let get_market_order_event =
-            |txn: ParsedTransactionWithEvents| -> MarketOrderEventInstructionData {
-                let mut orders = txn
+            |txn: &ParsedTransactionWithEvents| -> MarketOrderEventInstructionData {
+                let mut orders: Vec<&MarketOrderEventInstructionData> = txn
                     .events
-                    .into_iter()
+                    .iter()
                     .filter_map(|ev| match ev {
                         DropsetEvent::MarketOrder(m) => Some(m),
                         _ => None,
                     })
                     .collect_vec();
                 assert_eq!(orders.len(), 1);
-                orders.pop().unwrap()
+                orders.pop().unwrap().clone()
             };
 
-        let event_1 = get_market_order_event(fill_1);
-        let event_2 = get_market_order_event(fill_2);
+        let event_1 = get_market_order_event(&fill_1);
+        let event_2 = get_market_order_event(&fill_2);
 
         // Check the inputs against the emitted config.
         assert_eq!(event_1.order_size, taker_base_size);
