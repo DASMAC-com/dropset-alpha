@@ -35,11 +35,9 @@ const MAX_BIASED_EXPONENT: u8 = (1 << (EXPONENT_BITS)) - 1;
 pub const BIAS: u8 = 16;
 
 /// The minimum unbiased exponent value.
-#[allow(dead_code)]
-const UNBIASED_MIN: i16 = 0 - BIAS as i16;
+pub const UNBIASED_MIN: i16 = 0 - BIAS as i16;
 /// The maximum unbiased exponent value.
-#[allow(dead_code)]
-const UNBIASED_MAX: i16 = MAX_BIASED_EXPONENT as i16 - BIAS as i16;
+pub const UNBIASED_MAX: i16 = MAX_BIASED_EXPONENT as i16 - BIAS as i16;
 
 // Ensure that adding the bias to the max biased exponent never overflows.
 static_assertions::const_assert!((MAX_BIASED_EXPONENT as u16) + (BIAS as u16) <= (u8::MAX as u16));
