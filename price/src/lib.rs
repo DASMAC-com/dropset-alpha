@@ -218,7 +218,7 @@ pub fn to_order_info(
     let base_atoms = pow10_u64!(base_scalar, base_exponent_biased)?;
 
     let price_mantissa_times_base_scalar = checked_mul!(
-        validated_mantissa.get() as u64,
+        validated_mantissa.as_u32() as u64,
         base_scalar,
         OrderInfoError::ArithmeticOverflow
     )?;
@@ -301,10 +301,11 @@ mod tests {
             .clone()
             .try_into()
             .expect("Should be a valid f64");
-        assert_eq!(decoded_mantissa.get(), mantissa);
+        assert_eq!(decoded_mantissa.as_u32(), mantissa);
         assert_eq!(decoded_f64, "0.12345678".parse().unwrap());
         assert_eq!(
-            (decoded_mantissa.get() as f64).mul(10f64.powi(*decoded_exponent as i32 - BIAS as i32)),
+            (decoded_mantissa.as_u32() as f64)
+                .mul(10f64.powi(*decoded_exponent as i32 - BIAS as i32)),
             decoded_f64
         );
     }
@@ -414,21 +415,21 @@ mod tests {
         let mantissa: u32 = 10_000_000;
         let base_scalar: u64 = 1;
 
-        let quote_exponent = 12;
+        const QUOTE_EXPONENT: i32 = 12;
         assert!((mantissa as u64).checked_mul(base_scalar).is_some());
 
         // No overflow with quote exponent using core rust operations.
         assert!((mantissa as u64)
             .checked_mul(base_scalar)
             .unwrap()
-            .checked_mul(10u64.checked_pow(quote_exponent as u32).unwrap())
+            .checked_mul(10u64.checked_pow(QUOTE_EXPONENT as u32).unwrap())
             .is_some());
 
         // Overflow with quote exponent + 1 using core rust operations.
         assert!((mantissa as u64)
             .checked_mul(base_scalar)
             .unwrap()
-            .checked_mul(10u64.checked_pow((quote_exponent + 1) as u32).unwrap())
+            .checked_mul(10u64.checked_pow((QUOTE_EXPONENT + 1) as u32).unwrap())
             .is_none());
 
         // No overflow with quote exponent in `to_order_info`.
@@ -436,7 +437,7 @@ mod tests {
             mantissa,
             base_scalar,
             to_biased_exponent!(0),
-            to_biased_exponent!(quote_exponent)
+            to_biased_exponent!(QUOTE_EXPONENT)
         )
         .is_ok());
 
@@ -446,7 +447,7 @@ mod tests {
                 mantissa,
                 base_scalar,
                 to_biased_exponent!(0),
-                to_biased_exponent!(quote_exponent + 1)
+                to_biased_exponent!(QUOTE_EXPONENT + 1)
             ),
             Err(OrderInfoError::ArithmeticOverflow)
         ));
