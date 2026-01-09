@@ -130,7 +130,8 @@ macro_rules! checked_sub {
         let lhs = $lhs;
         let rhs = $rhs;
         if lhs >= rhs {
-            Ok(lhs - rhs)
+            // SAFETY: Just checked it will not underflow.
+            unsafe { Ok(lhs.unchecked_sub(rhs)) }
         } else {
             ::pinocchio::hint::cold_path();
             Err($err)
