@@ -102,6 +102,7 @@ mod tests {
     use crate::{
         to_biased_exponent,
         EncodedPrice,
+        LeEncodedPrice,
         ValidatedPriceMantissa,
         BIAS,
         PRICE_MANTISSA_BITS,
@@ -124,10 +125,31 @@ mod tests {
     }
 
     #[test]
-    fn test_infinity() {
+    fn test_zero_and_infinity() {
         assert_eq!(EncodedPrice::infinity().0, u32::MAX);
         assert_eq!(EncodedPrice::zero().0, 0);
         assert!(EncodedPrice::infinity().is_infinity());
         assert!(EncodedPrice::zero().is_zero());
+    }
+
+    #[test]
+    fn round_trip_encoded_to_le_encoded() {
+        let zero = EncodedPrice::zero();
+        let infinity = EncodedPrice::infinity();
+        let one = EncodedPrice::new(
+            1,
+            12_345_678.try_into().expect("Should be a valid mantissa"),
+        );
+        let check_round_trip = |encoded: EncodedPrice| {
+            let le_encoded_price = LeEncodedPrice::from(encoded);
+            assert_eq!(le_encoded_price.as_slice(), &encoded.as_u32().to_le_bytes());
+            assert_eq!(
+                u32::from_le_bytes(*le_encoded_price.as_slice()),
+                encoded.as_u32()
+            );
+        };
+        check_round_trip(zero);
+        check_round_trip(infinity);
+        check_round_trip(one);
     }
 }
