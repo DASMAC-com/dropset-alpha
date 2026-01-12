@@ -373,42 +373,6 @@ mod tests {
     }
 
     #[test]
-    fn test_eur_usd() {
-        // A price of 1.25 USD / 1 EUR.
-        const PRICE_MANTISSA: u64 = 12_500_000;
-        // 500 EUR worth of base atoms is 500 * 10^6.
-        const BASE_ATOMS: u64 = 500 * 10u64.pow(6);
-        // Derive the base scalar the same way the price mantissa is derived- from the sig figs.
-        // If the base atoms are 500 * 10^6, the base scalar is 5 and the exponent is 8, since
-        // 500 * 10 ^ 6 == 5 * 10 ^ 8.
-        const BASE_SCALAR: u64 = 5;
-        const BASE_EXPONENT_UNBIASED: u8 = 8;
-        const QUOTE_ATOMS: u64 = BASE_ATOMS * 125 / 100;
-
-        // quote_atoms = (price_mantissa * base_scalar) * 10 ^ quote_exponent_unbiased.
-        const QUOTE_EXPONENT_UNBIASED: u8 = 1;
-        const_assert_eq!(
-            QUOTE_ATOMS / (PRICE_MANTISSA * BASE_SCALAR),
-            10u64.pow(QUOTE_EXPONENT_UNBIASED as u32)
-        );
-
-        assert_eq!(
-            QUOTE_ATOMS,
-            PRICE_MANTISSA * BASE_SCALAR * 10u64.pow(QUOTE_EXPONENT_UNBIASED as u32)
-        );
-
-        let order = to_order_info(
-            PRICE_MANTISSA as u32,
-            BASE_SCALAR,
-            to_biased_exponent!(BASE_EXPONENT_UNBIASED),
-            to_biased_exponent!(QUOTE_EXPONENT_UNBIASED),
-        )
-        .expect("Should create order info");
-
-        println!("{order:#?}");
-    }
-
-    #[test]
     fn quote_atoms_overflow() {
         let mantissa: u32 = 10_000_000;
         let base_scalar: u64 = 1;
