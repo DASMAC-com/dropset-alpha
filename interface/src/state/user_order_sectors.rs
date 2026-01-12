@@ -65,7 +65,7 @@ impl OrderSectors {
         )
     }
 
-    /// Fallibly add a `PriceAndSectorIndex` to a user's orders.
+    /// Fallibly add a [`PriceToIndex`] to a user's orders.
     ///
     /// Fails if the user already has [`MAX_ORDERS`] or the price already has an existing order.
     ///
