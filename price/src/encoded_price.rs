@@ -95,6 +95,7 @@ impl From<EncodedPrice> for LeEncodedPrice {
 }
 
 const_assert_eq!(size_of::<EncodedPrice>(), U32_SIZE);
+const_assert_eq!(size_of::<LeEncodedPrice>(), U32_SIZE);
 
 #[cfg(test)]
 mod tests {
