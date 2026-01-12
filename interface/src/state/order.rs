@@ -153,3 +153,66 @@ unsafe impl NodePayload for Order {}
 
 // Safety: All bit patterns are valid.
 unsafe impl AllBitPatternsValid for Order {}
+
+#[cfg(test)]
+mod tests {
+    use price::{
+        to_order_info,
+        EncodedPrice,
+    };
+
+    use super::*;
+
+    #[test]
+    fn new_order_happy_path() {
+        let order_info = to_order_info(10_000_000, 5, 8, 0).expect("Should create order info");
+        let base_in_order = order_info.base_atoms;
+        let quote_in_order = order_info.quote_atoms;
+        let encoded_price_in_order = order_info.encoded_price;
+        let user_seat = 17;
+        let order = Order::new(order_info, user_seat);
+        assert_eq!(base_in_order, order.base_remaining());
+        assert_eq!(quote_in_order, order.quote_remaining());
+        assert_eq!(encoded_price_in_order.as_u32(), order.encoded_price());
+        assert_eq!(user_seat, order.user_seat());
+    }
+
+    #[test]
+    fn order_mutators() {
+        let order_info = to_order_info(10_000_000, 5, 8, 0).expect("Should create order info");
+        let user_seat = 17;
+        let mut order = Order::new(order_info, user_seat);
+        let new_base = 27364;
+        let new_quote = 123876;
+        assert_ne!(order.base_remaining(), new_base);
+        assert_ne!(order.quote_remaining(), new_base);
+        order.set_base_remaining(new_base);
+        order.set_quote_remaining(new_quote);
+        assert_eq!(order.base_remaining(), new_base);
+        assert_eq!(order.quote_remaining(), new_base);
+    }
+
+    #[test]
+    fn test_as_bytes() {
+        const BASE_ATOMS: u64 = 1234;
+        const QUOTE_ATOMS: u64 = 4321;
+        let order_info = OrderInfo {
+            encoded_price: EncodedPrice::zero(),
+            base_atoms: BASE_ATOMS,
+            quote_atoms: QUOTE_ATOMS,
+        };
+        const USER_SEAT: SectorIndex = 9191;
+        let order = Order::new(order_info, USER_SEAT);
+        assert_eq!(
+            [
+                &0u32.to_le_bytes(), // Encoded price.
+                &USER_SEAT.to_le_bytes(), // User seat.
+                BASE_ATOMS.to_le_bytes().as_ref(), // Base remaining.
+                QUOTE_ATOMS.to_le_bytes().as_ref(), // Quote remaining.
+                [0u8; ORDER_PADDING].as_ref(), // Padding.
+            ]
+            .concat(),
+            order.as_bytes()
+        );
+    }
+}
