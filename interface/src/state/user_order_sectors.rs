@@ -96,11 +96,11 @@ impl OrderSectors {
     ///
     /// Fails if the user does not have an order corresponding to the passed encoded price.
     #[inline(always)]
-    pub fn remove(&mut self, new_price: &LeEncodedPrice) -> DropsetResult {
+    pub fn remove(&mut self, price_to_remove: &LeEncodedPrice) -> DropsetResult {
         let node = self
             .0
             .iter_mut()
-            .find(|node| node.encoded_price.as_slice() == new_price.as_slice())
+            .find(|node| node.encoded_price.as_slice() == price_to_remove.as_slice())
             .ok_or(DropsetError::OrderNotFound)?;
 
         node.encoded_price = LeEncodedPrice::zero();
