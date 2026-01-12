@@ -138,9 +138,9 @@ pub struct OrderInfo {
 /// //  1 234 567
 /// // 12_500_000
 /// //
-/// // Thus the price_exponent = -7
+/// // Thus the price_exponent = -7, so:
+/// // price_exponent = quote_exponent_unbiased - base_exponent_unbiased
 /// // -7 = quote_exponent_unbiased - 8
-/// //    =
 /// // quote_exponent_unbiased = 1
 /// const QUOTE_EXPONENT_UNBIASED: u8 = 1;
 /// const_assert_eq!(QUOTE_ATOMS, PRICE_MANTISSA * BASE_SCALAR * 10u64.pow(QUOTE_EXPONENT_UNBIASED as u32));
