@@ -555,6 +555,7 @@ dependencies = [
  "spl-associated-token-account-interface",
  "spl-token-2022-interface",
  "spl-token-interface",
+ "static_assertions",
  "strum",
  "strum_macros",
  "tokio",
