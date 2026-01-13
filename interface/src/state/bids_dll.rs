@@ -66,7 +66,8 @@ impl OrdersCollection for BidOrders {
         let bid_price = order.encoded_price();
         let first_ask_node = market.iter_asks().next();
         match first_ask_node {
-            // Check that the bid price is less than the first ask (the lowest ask).
+            // Check that the bid wouldn't immediately take (and is thus post only) by ensuring its
+            // price is less than the first/lowest ask.
             Some((_idx, ask_node)) => {
                 let lowest_ask = ask_node.load_payload::<Order>();
                 if bid_price < lowest_ask.encoded_price() {

@@ -66,7 +66,8 @@ impl OrdersCollection for AskOrders {
         let ask_price = order.encoded_price();
         let first_bid_node = market.iter_bids().next();
         match first_bid_node {
-            // Check that the ask price is greater than the first bid (the highest bid).
+            // Check that the ask wouldn't immediately take (and is thus post only) by ensuring its
+            // price is greater than the first/highest bid.
             Some((_idx, bid_node)) => {
                 let highest_bid = bid_node.load_payload::<Order>();
                 if ask_price > highest_bid.encoded_price() {
