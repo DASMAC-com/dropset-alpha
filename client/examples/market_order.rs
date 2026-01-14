@@ -24,8 +24,8 @@ use price::{
     to_order_info,
     OrderInfo,
 };
+use solana_address::Address;
 use solana_sdk::{
-    pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
 };
@@ -77,7 +77,7 @@ impl BalanceDelta {
 }
 
 impl Balances {
-    pub fn get(e2e: &E2e, user: &Pubkey) -> anyhow::Result<Self> {
+    pub fn get(e2e: &E2e, user: &Address) -> anyhow::Result<Self> {
         Ok(Self {
             base: e2e.get_base_balance(user)?,
             quote: e2e.get_quote_balance(user)?,

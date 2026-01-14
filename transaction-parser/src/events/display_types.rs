@@ -1,5 +1,4 @@
-//! Defines the Display-able types for event instruction data. Primarily for things like converting
-//! `[u8; 32]` fields to `Pubkey` so that they're displayed as strings instead of arrays.
+//! Defines the Display-able types for some event instruction data.
 
 use dropset_interface::events::{
     HeaderEventInstructionData,

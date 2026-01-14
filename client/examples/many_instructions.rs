@@ -16,11 +16,9 @@ use client::{
 };
 use dropset_interface::state::sector::SectorIndex;
 use itertools::Itertools;
+use solana_address::Address;
 use solana_instruction::Instruction;
-use solana_sdk::{
-    pubkey::Pubkey,
-    signer::Signer,
-};
+use solana_sdk::signer::Signer;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -67,8 +65,8 @@ async fn main() -> anyhow::Result<()> {
         })
         .collect();
 
-    // HashMap<Pubkey, (deposit_amount, withdraw_amount)>
-    let base_amounts: HashMap<Pubkey, (u64, u64)> = HashMap::from([
+    // HashMap<Address, (deposit_amount, withdraw_amount)>
+    let base_amounts: HashMap<Address, (u64, u64)> = HashMap::from([
         (test_accounts::acc_1111().pubkey(), (100, 10)),
         (test_accounts::acc_2222().pubkey(), (100, 20)),
         (test_accounts::acc_3333().pubkey(), (100, 30)),
