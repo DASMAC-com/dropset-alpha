@@ -117,12 +117,12 @@ mod tests {
         },
         transmutable::Transmutable,
     };
-    use pinocchio_pubkey::pubkey;
     use price::{
         to_biased_exponent,
         to_order_info,
         UNBIASED_MAX,
     };
+    use solana_address::Address;
 
     use crate::shared::{
         market_operations::initialize_market_account_data,
@@ -144,8 +144,8 @@ mod tests {
     fn create_simple_market(bytes: &mut [u8; MARKET_LEN]) -> MarketRefMut<'_> {
         initialize_market_account_data(
             bytes,
-            &pubkey!("11111111111111111111111111111111111111111111"),
-            &pubkey!("22222222222222222222222222222222222222222222"),
+            &Address::from_str_const("11111111111111111111111111111111111111111111"),
+            &Address::from_str_const("22222222222222222222222222222222222222222222"),
             254,
         )
         .expect("Should initialize market data")

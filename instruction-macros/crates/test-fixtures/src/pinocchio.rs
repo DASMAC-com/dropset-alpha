@@ -1,15 +1,16 @@
 #[cfg(feature = "pinocchio")]
 pub mod test {
     use instruction_macros::ProgramInstruction;
+    use solana_address::Address;
 
     pub mod program {
-        use pinocchio::pubkey::Pubkey;
-        use pinocchio_pubkey::pubkey;
+        use solana_address::Address;
 
-        pub const ID: Pubkey = pubkey!("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
+        pub const ID: Address =
+            Address::from_str_const("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
     }
 
-    const PROGRAM_ID: [u8; 32] = program::ID;
+    const PROGRAM_ID: Address = program::ID;
 
     #[repr(u8)]
     #[derive(ProgramInstruction)]

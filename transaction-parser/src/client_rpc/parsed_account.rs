@@ -6,26 +6,26 @@ use derive_more::{
     Index,
     IntoIterator,
 };
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 use solana_transaction_status_client_types::ParsedAccount as SdkParsedAccount;
 
 #[derive(Copy, Clone, Debug)]
 pub struct ParsedAccount {
-    pub pubkey: Pubkey,
+    pub address: Address,
     pub writable: bool,
     pub signer: bool,
 }
 
-impl From<&ParsedAccount> for Pubkey {
+impl From<&ParsedAccount> for Address {
     fn from(account: &ParsedAccount) -> Self {
-        account.pubkey
+        account.address
     }
 }
 
 impl From<SdkParsedAccount> for ParsedAccount {
     fn from(account: SdkParsedAccount) -> Self {
         Self {
-            pubkey: Pubkey::from_str_const(&account.pubkey),
+            address: Address::from_str_const(&account.pubkey),
             writable: account.writable,
             signer: account.signer,
         }
@@ -36,8 +36,8 @@ impl From<SdkParsedAccount> for ParsedAccount {
 pub struct ParsedAccounts(Vec<ParsedAccount>);
 
 impl ParsedAccounts {
-    pub fn pubkeys(&self) -> Vec<Pubkey> {
-        self.iter().map(|p| p.pubkey).collect()
+    pub fn addresses(&self) -> Vec<Address> {
+        self.iter().map(|p| p.address).collect()
     }
 }
 

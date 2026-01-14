@@ -29,9 +29,9 @@ impl ToTokens for Feature {
 }
 
 impl Feature {
-    pub fn account_info_lifetime(&self) -> TokenStream {
+    pub fn account_view_lifetime(&self) -> TokenStream {
         match self {
-            Feature::SolanaProgram => quote! { 'a, 'info },
+            Feature::SolanaProgram => quote! { 'a },
             Feature::Pinocchio => quote! { 'a },
             Feature::Client => quote! {},
         }
@@ -45,12 +45,12 @@ impl Feature {
         }
     }
 
-    /// The specific account info type path, without the lifetimed ref prefixed to it.
-    pub fn account_info_type_path(&self) -> TokenStream {
+    /// The specific account view type path, without the lifetimed ref prefixed to it.
+    pub fn account_view_type_path(&self) -> TokenStream {
         match self {
-            Feature::SolanaProgram => quote! { ::solana_sdk::account_info::AccountInfo<'info> },
-            Feature::Pinocchio => quote! { ::pinocchio::account_info::AccountInfo },
-            Feature::Client => quote! { ::solana_sdk::pubkey::Pubkey },
+            Feature::SolanaProgram => quote! { ::solana_account_view::AccountView },
+            Feature::Pinocchio => quote! { ::solana_account_view::AccountView },
+            Feature::Client => quote! { ::solana_address::Address },
         }
     }
 

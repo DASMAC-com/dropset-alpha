@@ -15,4 +15,5 @@ mod validation;
 #[cfg(not(feature = "no-entrypoint"))]
 mod entrypoint;
 
-pinocchio_pubkey::declare_id!("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
+pub const ID: solana_address::Address =
+    solana_address::Address::from_str_const("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");

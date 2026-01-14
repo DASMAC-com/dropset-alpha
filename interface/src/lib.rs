@@ -15,5 +15,7 @@ pub mod syscalls;
 pub mod utils;
 
 pub mod program {
-    pinocchio_pubkey::declare_id!("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
+    use solana_address::Address;
+
+    pub const ID: Address = Address::from_str_const("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
 }

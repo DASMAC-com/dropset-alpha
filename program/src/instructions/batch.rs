@@ -1,7 +1,7 @@
 //! See [`process_batch`].
 
 use pinocchio::{
-    account_info::AccountInfo,
+    account::AccountView,
     ProgramResult,
 };
 
@@ -13,6 +13,6 @@ use pinocchio::{
 /// safety contract is simply ensuring that **no Solana account data is currently borrowed** prior
 /// to calling this instruction.
 #[inline(never)]
-pub fn process_batch(_accounts: &[AccountInfo], _instruction_data: &[u8]) -> ProgramResult {
+pub fn process_batch(_accounts: &[AccountView], _instruction_data: &[u8]) -> ProgramResult {
     Ok(())
 }

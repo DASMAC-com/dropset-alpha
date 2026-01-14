@@ -12,7 +12,6 @@ use grpc_stream::parse_update::{
     InstructionEventsWithIndices,
     ParsedUpdate,
 };
-use solana_sdk::pubkey::Pubkey;
 use tokio::time::{
     sleep,
     Duration,
@@ -42,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
                 "owned market account PDA data".to_string(),
                 SubscribeRequestFilterAccounts {
                     account: vec![],
-                    owner: vec![Pubkey::new_from_array(dropset_interface::program::ID).to_string()],
+                    owner: vec![dropset_interface::program::ID.to_string()],
                     filters: vec![SubscribeRequestFilterAccountsFilter {
                         filter: Some(Filter::Memcmp(SubscribeRequestFilterAccountsFilterMemcmp {
                             offset: 0,
@@ -63,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
                     vote: None,
                     account_exclude: vec![],
                     account_include: vec![],
-                    account_required: vec![Pubkey::new_from_array(event_authority::ID).to_string()],
+                    account_required: vec![event_authority::ID.to_string()],
                 },
             )]),
             transactions_status: HashMap::new(),

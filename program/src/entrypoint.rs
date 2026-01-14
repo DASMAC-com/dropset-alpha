@@ -8,11 +8,11 @@ use dropset_interface::{
     instructions::DropsetInstruction,
 };
 use pinocchio::{
-    account_info::AccountInfo,
+    account::AccountView,
     no_allocator,
     nostd_panic_handler,
     program_entrypoint,
-    pubkey::Pubkey,
+    Address,
     ProgramResult,
 };
 
@@ -30,8 +30,8 @@ nostd_panic_handler!();
 // the 4096 stack frame size very quickly.
 #[inline(never)]
 pub fn process_instruction(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
+    _program_id: &Address,
+    accounts: &[AccountView],
     instruction_data_with_tag: &[u8],
 ) -> ProgramResult {
     let [tag, instruction_data @ ..] = instruction_data_with_tag else {

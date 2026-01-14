@@ -10,10 +10,8 @@ use std::{
 };
 
 use colored::Colorize;
-use solana_sdk::{
-    pubkey::Pubkey,
-    signature::Signature,
-};
+use solana_address::Address;
+use solana_sdk::signature::Signature;
 use transaction_parser::client_rpc::ParsedTransaction;
 
 use crate::{
@@ -26,13 +24,13 @@ pub struct PrettyTransaction<'a> {
     /// The transaction signature.
     pub signature: Signature,
     /// The sender of the transaction.
-    pub sender: Pubkey,
+    pub sender: Address,
     /// The amount of spaces preceding each line in the output.
     pub indent_size: usize,
     /// The parsed transaction.
     pub transaction: &'a ParsedTransaction,
     /// Instruction program ID filter; i.e., only prints instructions with these IDs.
-    pub instruction_filter: &'a HashSet<Pubkey>,
+    pub instruction_filter: &'a HashSet<Address>,
 }
 
 impl Display for PrettyTransaction<'_> {

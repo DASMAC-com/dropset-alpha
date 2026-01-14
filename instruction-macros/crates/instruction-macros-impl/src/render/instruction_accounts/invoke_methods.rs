@@ -32,27 +32,27 @@ pub fn render_invoke_methods(
     };
     let accounts = &instruction_variant.accounts;
     let program_id_path = &parsed_enum.program_id_path;
-    let (metas, names) = accounts
+    let (accounts, names) = accounts
         .iter()
         .map(|acc| {
             (
-                acc.render_account_meta(feature),
+                acc.render_instruction_account_view(feature),
                 format_ident!("{}", acc.name),
             )
         })
         .collect::<(Vec<_>, Vec<_>)>();
 
     match feature {
-        Feature::Pinocchio => pinocchio_invoke(program_id_path, data_ident, metas, names),
-        Feature::SolanaProgram => solana_program_invoke(program_id_path, data_ident, metas, names),
-        Feature::Client => client_create_instruction(program_id_path, data_ident, metas),
+        Feature::Pinocchio => invoke_functions(program_id_path, data_ident, accounts, names),
+        Feature::SolanaProgram => invoke_functions(program_id_path, data_ident, accounts, names),
+        Feature::Client => client_create_instruction(program_id_path, data_ident, accounts),
     }
 }
 
-fn pinocchio_invoke(
+fn invoke_functions(
     program_id_path: &Path,
     instruction_data_type: TokenStream,
-    account_metas: Vec<TokenStream>,
+    account_views: Vec<TokenStream>,
     account_names: Vec<Ident>,
 ) -> TokenStream {
     quote! {
@@ -62,14 +62,14 @@ fn pinocchio_invoke(
         }
 
         #[inline(always)]
-        pub fn invoke_signed(self, signers_seeds: &[::pinocchio::instruction::Signer], data: #instruction_data_type) -> ::pinocchio::ProgramResult {
-            let accounts = &[ #(#account_metas),* ];
+        pub fn invoke_signed(self, signers_seeds: &[::solana_instruction_view::cpi::Signer], data: #instruction_data_type) -> ::pinocchio::ProgramResult {
+            let accounts = &[ #(#account_views),* ];
             let Self {
                 #(#account_names),*
             } = self;
 
-            ::pinocchio::cpi::invoke_signed(
-                &::pinocchio::instruction::Instruction {
+            ::solana_instruction_view::cpi::invoke_signed(
+                &::solana_instruction_view::InstructionView {
                     program_id: &#program_id_path.into(),
                     accounts,
                     data: &data.pack(),
@@ -83,51 +83,15 @@ fn pinocchio_invoke(
     }
 }
 
-fn solana_program_invoke(
-    program_id_path: &Path,
-    instruction_data_ident: TokenStream,
-    account_metas: Vec<TokenStream>,
-    account_names: Vec<Ident>,
-) -> TokenStream {
-    let res = quote! {
-        #[inline(always)]
-        pub fn invoke(self, data: #instruction_data_ident) -> ::solana_sdk::entrypoint::ProgramResult {
-            self.invoke_signed(&[], data)
-        }
-
-        #[inline(always)]
-        pub fn invoke_signed(self, signers_seeds: &[&[&[u8]]], data: #instruction_data_ident) -> ::solana_sdk::entrypoint::ProgramResult {
-            let accounts = [ #(#account_metas),* ].to_vec();
-            let Self {
-                #(#account_names),*
-            } = self;
-
-            ::solana_cpi::invoke_signed(
-                &::solana_instruction::Instruction {
-                    program_id: #program_id_path.into(),
-                    accounts,
-                    data: data.pack().to_vec(),
-                },
-                &[
-                    #(#account_names.clone()),*
-                ],
-                signers_seeds,
-            )
-        }
-    };
-
-    res
-}
-
 fn client_create_instruction(
     program_id_path: &Path,
     instruction_data_ident: TokenStream,
-    account_metas: Vec<TokenStream>,
+    account_views: Vec<TokenStream>,
 ) -> TokenStream {
     quote! {
         #[inline(always)]
         pub fn create_instruction(&self, data: #instruction_data_ident) -> ::solana_instruction::Instruction {
-            let accounts = [ #(#account_metas),* ].to_vec();
+            let accounts = [ #(#account_views),* ].to_vec();
 
             ::solana_instruction::Instruction {
                 program_id: #program_id_path.into(),

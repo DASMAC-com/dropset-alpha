@@ -2,14 +2,14 @@
 
 use dropset_interface::instructions::generated_pinocchio::Deposit;
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::validation::{
-    market_account_info::MarketAccountInfo,
-    mint_info::MintInfo,
-    token_account_info::TokenAccountInfo,
+    market_account_view::MarketAccountView,
+    mint_account_view::MintAccountView,
+    token_account_view::TokenAccountView,
 };
 
 /// The account context for the [`Deposit`] and
@@ -18,12 +18,12 @@ use crate::validation::{
 #[derive(Clone)]
 pub struct DepositWithdrawContext<'a> {
     // The event authority is validated by the inevitable `FlushEvents` self-CPI.
-    pub event_authority: &'a AccountInfo,
-    pub user: &'a AccountInfo,
-    pub market_account: MarketAccountInfo<'a>,
-    pub user_ata: TokenAccountInfo<'a>,
-    pub market_ata: TokenAccountInfo<'a>,
-    pub mint: MintInfo<'a>,
+    pub event_authority: &'a AccountView,
+    pub user: &'a AccountView,
+    pub market_account: MarketAccountView<'a>,
+    pub user_ata: TokenAccountView<'a>,
+    pub market_ata: TokenAccountView<'a>,
+    pub mint: MintAccountView<'a>,
 }
 
 impl<'a> DepositWithdrawContext<'a> {
@@ -38,12 +38,12 @@ impl<'a> DepositWithdrawContext<'a> {
     ///   1. `[READ]` User token account
     ///   2. `[READ]` Market token account
     pub unsafe fn load(
-        accounts: &'a [AccountInfo],
+        accounts: &'a [AccountView],
     ) -> Result<DepositWithdrawContext<'a>, ProgramError> {
         // Ensure no drift between deposit/withdraw struct fields since this method is used to load
         // accounts for both `Deposit` and `Withdraw` instructions.
         // Ideally, this would be a unit test, but it's not possible to construct the `pinocchio`
-        // `AccountInfo` without spinning up an entire e2e test with a local validator.
+        // `AccountView` without spinning up an entire e2e test with a local validator.
         #[cfg(debug_assertions)]
         debug_assert_deposit_withdraw(accounts);
 
@@ -62,17 +62,20 @@ impl<'a> DepositWithdrawContext<'a> {
 
         // Safety: Scoped borrow of market account data.
         let (market_account, mint) = unsafe {
-            let market_account = MarketAccountInfo::new(market_account)?;
+            let market_account = MarketAccountView::new(market_account)?;
             let market = market_account.load_unchecked();
-            let mint = MintInfo::new(mint, market)?;
+            let mint = MintAccountView::new(mint, market)?;
             (market_account, mint)
         };
 
         // Safety: Scoped borrows of the user token account and market token account.
         let (user_ata, market_ata) = unsafe {
-            let user_ata = TokenAccountInfo::new(user_ata, mint.info.key(), user.key())?;
-            let market_ata =
-                TokenAccountInfo::new(market_ata, mint.info.key(), market_account.info().key())?;
+            let user_ata = TokenAccountView::new(user_ata, mint.account.address(), user.address())?;
+            let market_ata = TokenAccountView::new(
+                market_ata,
+                mint.account.address(),
+                market_account.account().address(),
+            )?;
             (user_ata, market_ata)
         };
 
@@ -88,7 +91,7 @@ impl<'a> DepositWithdrawContext<'a> {
 }
 
 #[cfg(debug_assertions)]
-fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
+fn debug_assert_deposit_withdraw(accounts: &[AccountView]) {
     use dropset_interface::instructions::generated_pinocchio::{
         Deposit,
         Withdraw,
@@ -118,13 +121,13 @@ fn debug_assert_deposit_withdraw(accounts: &[AccountInfo]) {
 
     let d = d.unwrap();
 
-    // And to ensure the same ordering, check the pubkeys field by field.
-    debug_assert_eq!(d.event_authority.key(), event_authority.key());
-    debug_assert_eq!(d.user.key(), user.key());
-    debug_assert_eq!(d.market_account.key(), market_account.key());
-    debug_assert_eq!(d.user_ata.key(), user_ata.key());
-    debug_assert_eq!(d.market_ata.key(), market_ata.key());
-    debug_assert_eq!(d.mint.key(), mint.key());
-    debug_assert_eq!(d.token_program.key(), token_program.key());
-    debug_assert_eq!(d.dropset_program.key(), dropset_program.key());
+    // And to ensure the same ordering, check the addresses field by field.
+    debug_assert_eq!(d.event_authority.address(), event_authority.address());
+    debug_assert_eq!(d.user.address(), user.address());
+    debug_assert_eq!(d.market_account.address(), market_account.address());
+    debug_assert_eq!(d.user_ata.address(), user_ata.address());
+    debug_assert_eq!(d.market_ata.address(), market_ata.address());
+    debug_assert_eq!(d.mint.address(), mint.address());
+    debug_assert_eq!(d.token_program.address(), token_program.address());
+    debug_assert_eq!(d.dropset_program.address(), dropset_program.address());
 }

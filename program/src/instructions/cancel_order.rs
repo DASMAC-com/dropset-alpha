@@ -11,8 +11,8 @@ use dropset_interface::{
     },
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::{
@@ -35,7 +35,7 @@ use crate::{
 /// [`dropset_interface::instructions::generated_pinocchio::CancelOrder`].
 #[inline(never)]
 pub unsafe fn process_cancel_order<'a>(
-    accounts: &'a [AccountInfo],
+    accounts: &'a [AccountView],
     instruction_data: &[u8],
     _event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
@@ -53,7 +53,7 @@ pub unsafe fn process_cancel_order<'a>(
         Node::check_in_bounds(market.sectors, user_sector_index_hint)?;
         // Safety: The user sector index hint was just verified in-bounds.
         let user_seat =
-            unsafe { find_mut_seat_with_hint(market, user_sector_index_hint, ctx.user.key()) }?;
+            unsafe { find_mut_seat_with_hint(market, user_sector_index_hint, ctx.user.address()) }?;
         if is_bid {
             SectorIndex::from_le_bytes(user_seat.user_order_sectors.bids.remove(encoded_price)?)
         } else {

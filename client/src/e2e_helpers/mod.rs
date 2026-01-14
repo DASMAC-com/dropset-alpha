@@ -1,5 +1,5 @@
+use solana_address::Address;
 use solana_sdk::{
-    pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
 };
@@ -52,7 +52,7 @@ impl<'a> Trader<'a> {
         }
     }
 
-    pub fn pubkey(&self) -> Pubkey {
+    pub fn address(&self) -> Address {
         self.keypair.pubkey()
     }
 }
@@ -82,8 +82,8 @@ impl E2e {
         // associated token accounts, and mint + deposit the specified base/quote amounts to each
         // trader if the amount != 0.
         for trader in traders.as_ref().iter() {
-            if !account_exists(&rpc.client, &trader.pubkey()).await? {
-                rpc.fund_account(&trader.pubkey()).await?;
+            if !account_exists(&rpc.client, &trader.address()).await? {
+                rpc.fund_account(&trader.address()).await?;
             }
 
             market.base.create_ata_for(&rpc, trader.keypair).await?;
@@ -114,15 +114,15 @@ impl E2e {
         self.market.view_market(&self.rpc)
     }
 
-    pub fn find_seat(&self, user: &Pubkey) -> anyhow::Result<Option<MarketSeatView>> {
+    pub fn find_seat(&self, user: &Address) -> anyhow::Result<Option<MarketSeatView>> {
         self.market.find_seat(&self.rpc, user)
     }
 
-    pub fn get_base_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+    pub fn get_base_balance(&self, user: &Address) -> anyhow::Result<u64> {
         self.market.base.get_balance_for(&self.rpc, user)
     }
 
-    pub fn get_quote_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+    pub fn get_quote_balance(&self, user: &Address) -> anyhow::Result<u64> {
         self.market.quote.get_balance_for(&self.rpc, user)
     }
 }

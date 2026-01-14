@@ -11,8 +11,8 @@ use dropset_interface::{
 };
 use mul_div_checked::mul_div_checked;
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::{
@@ -39,7 +39,7 @@ use crate::{
 /// [`dropset_interface::instructions::generated_pinocchio::MarketOrder`].
 #[inline(never)]
 pub unsafe fn process_market_order<'a>(
-    accounts: &'a [AccountInfo],
+    accounts: &'a [AccountView],
     instruction_data: &[u8],
     _event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {

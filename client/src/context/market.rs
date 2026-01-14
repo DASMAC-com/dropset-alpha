@@ -18,7 +18,7 @@ use dropset_interface::{
         SYSTEM_PROGRAM_ID,
     },
 };
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 use transaction_parser::views::{
     try_market_view_all_from_owner_and_data,
     MarketSeatView,
@@ -36,11 +36,11 @@ use crate::{
 ///
 /// Implements helper methods for all program instructions using those values.
 pub struct MarketContext {
-    pub market: Pubkey,
+    pub market: Address,
     pub base: TokenContext,
     pub quote: TokenContext,
-    pub base_market_ata: Pubkey,
-    pub quote_market_ata: Pubkey,
+    pub base_market_ata: Address,
+    pub quote_market_ata: Address,
 }
 
 #[derive(Clone, Copy)]
@@ -78,11 +78,11 @@ impl MarketContext {
         })
     }
 
-    pub fn get_base_ata(&self, owner: &Pubkey) -> Pubkey {
+    pub fn get_base_ata(&self, owner: &Address) -> Address {
         self.base.get_ata_for(owner)
     }
 
-    pub fn get_quote_ata(&self, owner: &Pubkey) -> Pubkey {
+    pub fn get_quote_ata(&self, owner: &Address) -> Address {
         self.quote.get_ata_for(owner)
     }
 
@@ -90,13 +90,13 @@ impl MarketContext {
     ///
     /// This is because the amount cannot be zero:
     /// [`dropset_interface::error::DropsetError::AmountCannotBeZero`]
-    pub fn create_seat(&self, user: Pubkey) -> SingleSignerInstruction {
+    pub fn create_seat(&self, user: Address) -> SingleSignerInstruction {
         self.deposit_base(user, 1, NIL)
     }
 
-    pub fn register_market(&self, payer: Pubkey, num_sectors: u16) -> SingleSignerInstruction {
+    pub fn register_market(&self, payer: Address, num_sectors: u16) -> SingleSignerInstruction {
         RegisterMarket {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user: payer,
             market_account: self.market,
             base_market_ata: self.base_market_ata,
@@ -106,8 +106,8 @@ impl MarketContext {
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
             ata_program: spl_associated_token_account_interface::program::ID,
-            system_program: SYSTEM_PROGRAM_ID.into(),
-            dropset_program: dropset::ID.into(),
+            system_program: SYSTEM_PROGRAM_ID,
+            dropset_program: dropset::ID,
         }
         .create_instruction(RegisterMarketInstructionData::new(num_sectors))
         .try_into()
@@ -122,15 +122,15 @@ impl MarketContext {
     pub fn find_seat(
         &self,
         rpc: &CustomRpcClient,
-        user: &Pubkey,
+        user: &Address,
     ) -> anyhow::Result<Option<MarketSeatView>> {
         let market_seats = self.view_market(rpc)?.seats;
         Ok(market_seats.into_iter().find(|seat| &seat.user == user))
     }
 
-    pub fn close_seat(&self, user: Pubkey, sector_index_hint: u32) -> SingleSignerInstruction {
+    pub fn close_seat(&self, user: Address, sector_index_hint: u32) -> SingleSignerInstruction {
         CloseSeat {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
             base_user_ata: self.get_base_ata(&user),
@@ -141,7 +141,7 @@ impl MarketContext {
             quote_mint: self.quote.mint,
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(CloseSeatInstructionData::new(sector_index_hint))
         .try_into()
@@ -150,7 +150,7 @@ impl MarketContext {
 
     pub fn deposit_base(
         &self,
-        user: Pubkey,
+        user: Address,
         amount: u64,
         sector_index_hint: u32,
     ) -> SingleSignerInstruction {
@@ -160,7 +160,7 @@ impl MarketContext {
 
     pub fn deposit_quote(
         &self,
-        user: Pubkey,
+        user: Address,
         amount: u64,
         sector_index_hint: u32,
     ) -> SingleSignerInstruction {
@@ -170,7 +170,7 @@ impl MarketContext {
 
     pub fn withdraw_base(
         &self,
-        user: Pubkey,
+        user: Address,
         amount: u64,
         sector_index_hint: u32,
     ) -> SingleSignerInstruction {
@@ -180,7 +180,7 @@ impl MarketContext {
 
     pub fn withdraw_quote(
         &self,
-        user: Pubkey,
+        user: Address,
         amount: u64,
         sector_index_hint: u32,
     ) -> SingleSignerInstruction {
@@ -190,14 +190,14 @@ impl MarketContext {
 
     pub fn post_order(
         &self,
-        user: Pubkey,
+        user: Address,
         data: PostOrderInstructionData,
     ) -> SingleSignerInstruction {
         PostOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -206,14 +206,14 @@ impl MarketContext {
 
     pub fn cancel_order(
         &self,
-        user: Pubkey,
+        user: Address,
         data: CancelOrderInstructionData,
     ) -> SingleSignerInstruction {
         CancelOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -222,11 +222,11 @@ impl MarketContext {
 
     pub fn market_order(
         &self,
-        user: Pubkey,
+        user: Address,
         data: MarketOrderInstructionData,
     ) -> SingleSignerInstruction {
         MarketOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
             base_user_ata: self.get_base_ata(&user),
@@ -237,7 +237,7 @@ impl MarketContext {
             quote_mint: self.quote.mint,
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -246,30 +246,30 @@ impl MarketContext {
 
     fn deposit(
         &self,
-        user: Pubkey,
+        user: Address,
         data: DepositInstructionData,
         is_base: bool,
     ) -> SingleSignerInstruction {
         match is_base {
             true => Deposit {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
                 market_ata: self.base_market_ata,
                 mint: self.base.mint,
                 token_program: self.base.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
             false => Deposit {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint,
                 token_program: self.quote.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
         }
         .create_instruction(data)
@@ -279,30 +279,30 @@ impl MarketContext {
 
     fn withdraw(
         &self,
-        user: Pubkey,
+        user: Address,
         data: WithdrawInstructionData,
         is_base: bool,
     ) -> SingleSignerInstruction {
         match is_base {
             true => Withdraw {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
                 market_ata: self.base_market_ata,
                 mint: self.base.mint,
                 token_program: self.base.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
             false => Withdraw {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint,
                 token_program: self.quote.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
         }
         .create_instruction(data)

@@ -1,6 +1,6 @@
 //! See [`parse_update`].
 
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 use transaction_parser::{
     events::dropset_event::DropsetEvent,
     views::{
@@ -22,7 +22,7 @@ use yellowstone_grpc_proto::{
 
 pub struct ParsedInnerInstruction {
     pub parent_index: u32,
-    pub program_id: Pubkey,
+    pub program_id: Address,
     pub inner_instruction: InnerInstruction,
 }
 
@@ -37,7 +37,7 @@ impl ParseDropsetEvents for ParsedInnerInstruction {
 }
 
 impl ParsedInnerInstruction {
-    fn from_inner_instructions(accounts: &[Pubkey], inner_ixns: InnerInstructions) -> Vec<Self> {
+    fn from_inner_instructions(accounts: &[Address], inner_ixns: InnerInstructions) -> Vec<Self> {
         inner_ixns
             .instructions
             .into_iter()
@@ -75,10 +75,10 @@ pub fn parse_update(update: UpdateOneof) -> Option<ParsedUpdate> {
     match update {
         UpdateOneof::Account(acc) => {
             if let Some(account_info) = acc.account {
-                let owner: Pubkey = account_info
+                let owner: Address = account_info
                     .owner
                     .try_into()
-                    .expect("Should be a valid pubkey");
+                    .expect("Should be a valid address");
                 let market_view = try_market_view_all_from_owner_and_data(
                     owner,
                     &account_info.data,
@@ -133,7 +133,7 @@ pub fn parse_update(update: UpdateOneof) -> Option<ParsedUpdate> {
     None
 }
 
-fn get_flattened_accounts_in_txn_update(txn: &SubscribeUpdateTransactionInfo) -> Vec<Pubkey> {
+fn get_flattened_accounts_in_txn_update(txn: &SubscribeUpdateTransactionInfo) -> Vec<Address> {
     [
         txn.meta.as_ref().map_or(vec![], |meta| {
             [
@@ -149,6 +149,6 @@ fn get_flattened_accounts_in_txn_update(txn: &SubscribeUpdateTransactionInfo) ->
     ]
     .concat()
     .into_iter()
-    .filter_map(|vec| Pubkey::try_from(vec).ok())
-    .collect::<Vec<Pubkey>>()
+    .filter_map(|vec| Address::try_from(vec).ok())
+    .collect::<Vec<Address>>()
 }

@@ -10,8 +10,8 @@ use dropset_interface::{
     },
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::{
@@ -48,7 +48,7 @@ use crate::{
 /// [`dropset_interface::instructions::generated_pinocchio::Deposit`].
 #[inline(never)]
 pub unsafe fn process_deposit<'a>(
-    accounts: &'a [AccountInfo],
+    accounts: &'a [AccountView],
     instruction_data: &[u8],
     event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
@@ -69,7 +69,8 @@ pub unsafe fn process_deposit<'a>(
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
         Node::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
-        let seat = unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.key()) }?;
+        let seat =
+            unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.address()) }?;
 
         if ctx.mint.is_base_mint {
             seat.set_base_available(
@@ -103,9 +104,9 @@ pub unsafe fn process_deposit<'a>(
         let mut market = unsafe { ctx.market_account.load_unchecked_mut() };
 
         let seat = if ctx.mint.is_base_mint {
-            MarketSeat::new(*ctx.user.key(), amount_deposited, 0)
+            MarketSeat::new(*ctx.user.address(), amount_deposited, 0)
         } else {
-            MarketSeat::new(*ctx.user.key(), 0, amount_deposited)
+            MarketSeat::new(*ctx.user.address(), 0, amount_deposited)
         };
 
         // Attempts to insert the user into the linked list. If the user already exists, this fails.

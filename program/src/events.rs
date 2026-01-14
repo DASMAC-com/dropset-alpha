@@ -13,19 +13,19 @@ use dropset_interface::{
     syscalls,
 };
 use pinocchio::{
-    account_info::AccountInfo,
+    account::AccountView,
     cpi::invoke_signed,
     hint::unlikely,
-    instruction::{
-        AccountMeta,
-        Instruction,
-    },
     ProgramResult,
+};
+use solana_instruction_view::{
+    InstructionAccount,
+    InstructionView,
 };
 
 use crate::{
     event_authority_signer,
-    validation::market_account_info::MarketAccountInfo,
+    validation::market_account_view::MarketAccountView,
 };
 
 /// The stack-allocated event buffer length.
@@ -109,15 +109,15 @@ impl EventBuffer {
     /// Caller guarantees `market_account` is not currently borrowed in any capacity.
     pub unsafe fn flush_events<'a>(
         &mut self,
-        event_authority: &'a AccountInfo,
-        mut market_account: MarketAccountInfo<'a>,
+        event_authority: &'a AccountView,
+        mut market_account: MarketAccountView<'a>,
     ) -> ProgramResult {
         let emitted_count = self.emitted_count as u64;
         if unlikely(emitted_count == 0) {
             return Ok(());
         }
 
-        let market_pubkey = *market_account.info().key();
+        let market_address = *market_account.account().address();
         // Safety: `market_account` is not currently borrowed in any capacity.
         let market_ref_mut = unsafe { market_account.load_unchecked_mut() };
         market_ref_mut.header.increment_num_events_by(emitted_count);
@@ -131,7 +131,7 @@ impl EventBuffer {
                 self.instruction_tag as u8,
                 self.emitted_count,
                 market_ref_mut.header.num_events(),
-                market_pubkey,
+                market_address,
             )
             .pack_into_slice(&mut self.data, HEADER_DATA_OFFSET);
         }
@@ -141,10 +141,10 @@ impl EventBuffer {
             unsafe { core::slice::from_raw_parts(self.data.as_ptr() as *const u8, self.len) };
 
         invoke_signed(
-            &Instruction {
+            &InstructionView {
                 program_id: &program::ID,
                 data,
-                accounts: &[AccountMeta::readonly_signer(&event_authority::ID)],
+                accounts: &[InstructionAccount::readonly_signer(&event_authority::ID)],
             },
             &[event_authority],
             &[event_authority_signer!()],
@@ -162,8 +162,8 @@ impl EventBuffer {
     pub fn add_to_buffer<'a, T: PackIntoSlice>(
         &mut self,
         packable_event: T,
-        event_authority: &'a AccountInfo,
-        market_account: MarketAccountInfo<'a>,
+        event_authority: &'a AccountView,
+        market_account: MarketAccountView<'a>,
     ) -> ProgramResult {
         let len = self.len;
         if len + T::LEN_WITH_TAG > EVENT_BUFFER_LEN {

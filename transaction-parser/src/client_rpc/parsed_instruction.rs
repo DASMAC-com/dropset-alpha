@@ -1,10 +1,10 @@
 //! Typed representations of outer and inner instructions, including decoded program IDs, accounts,
 //! and data.
 
+use solana_address::Address;
 use solana_sdk::{
     bs58,
     message::compiled_instruction::CompiledInstruction,
-    pubkey::Pubkey,
 };
 use solana_transaction_status::{
     UiInstruction,
@@ -21,7 +21,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct ParsedInstruction {
-    pub program_id: Pubkey,
+    pub program_id: Address,
     pub accounts: ParsedAccounts,
     pub data: Vec<u8>,
     pub compute_info: Option<ParsedLogs>,
@@ -45,7 +45,7 @@ impl ParsedInstruction {
         parsed_accounts: &ParsedAccounts,
     ) -> Self {
         Self {
-            program_id: *instruction.program_id(&parsed_accounts.pubkeys()),
+            program_id: *instruction.program_id(&parsed_accounts.addresses()),
             accounts: instruction
                 .accounts
                 .iter()
@@ -62,7 +62,7 @@ impl ParsedInstruction {
     ) -> Self {
         match instruction {
             UiInstruction::Compiled(compiled) => Self {
-                program_id: parsed_accounts[compiled.program_id_index as usize].pubkey,
+                program_id: parsed_accounts[compiled.program_id_index as usize].address,
                 accounts: compiled
                     .accounts
                     .iter()
@@ -74,7 +74,7 @@ impl ParsedInstruction {
                 compute_info: None,
             },
             UiInstruction::Parsed(UiParsedInstruction::PartiallyDecoded(decoded)) => Self {
-                program_id: Pubkey::from_str_const(&decoded.program_id),
+                program_id: Address::from_str_const(&decoded.program_id),
                 accounts: decoded
                     .accounts
                     .iter()
@@ -82,7 +82,7 @@ impl ParsedInstruction {
                         *parsed_accounts
                             .iter()
                             .find(|p| &p.signer.to_string() == s)
-                            .expect("Should find pubkey")
+                            .expect("Should find address")
                     })
                     .collect(),
                 data: bs58::decode(&decoded.data)

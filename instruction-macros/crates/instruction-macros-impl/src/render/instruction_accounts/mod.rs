@@ -59,7 +59,7 @@ fn render_variant(
     let enum_ident = &parsed_enum.enum_ident;
     let instruction_variant_name = &instruction_variant.variant_name;
     let struct_ident = format_ident!("{instruction_variant_name}");
-    let type_suffix = feature.account_info_type_path();
+    let type_suffix = feature.account_view_type_path();
     let lifetimed_ref = feature.lifetimed_ref();
     let (struct_level_field_comments, struct_fields) = instruction_variant
         .accounts
@@ -76,7 +76,7 @@ fn render_variant(
         " The invocation struct for a `{enum_ident}::{instruction_variant_name}` instruction."
     );
 
-    let lifetime = feature.account_info_lifetime();
+    let lifetime = feature.account_view_lifetime();
 
     let invoke_methods = render_invoke_methods(feature, parsed_enum, instruction_variant);
     let account_load_method = render_account_loader(feature, instruction_variant);

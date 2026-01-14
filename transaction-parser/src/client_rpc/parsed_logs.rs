@@ -6,7 +6,7 @@ use anyhow::ensure;
 use dropset_interface::state::SYSTEM_PROGRAM_ID;
 use itertools::Itertools;
 use lazy_regex::*;
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 
 use crate::{
     client_rpc::ParsedOuterInstruction,
@@ -20,7 +20,7 @@ pub struct ParsedLogs {
     /// The instruction invocation index- i.e., the order in which the instruction was executed.
     pub invocation_index: usize,
     /// The program's ID.
-    pub program_id: Pubkey,
+    pub program_id: Address,
     /// The height of the invocation/call stack.
     pub stack_height: usize,
     /// The compute units consumed.
@@ -83,9 +83,9 @@ pub fn parse_logs_for_compute(log_messages: &[String]) -> ParseResult<Vec<Groupe
     stack.build_compute_infos()
 }
 
-fn parse_compute(log: &str) -> Option<(Pubkey, u64, u64)> {
+fn parse_compute(log: &str) -> Option<(Address, u64, u64)> {
     COMPUTE_LOG_PATTERN.captures(log).map(|cap| {
-        let program = Pubkey::from_str(&cap[1]).expect("Should be a pubkey");
+        let program = Address::from_str(&cap[1]).expect("Should be an address");
         let used: u64 = cap[2]
             .parse()
             .expect("Should parse compute used as a number");
@@ -97,9 +97,9 @@ fn parse_compute(log: &str) -> Option<(Pubkey, u64, u64)> {
 }
 
 #[inline]
-fn parse_invoke(log: &str) -> Option<(Pubkey, usize)> {
+fn parse_invoke(log: &str) -> Option<(Address, usize)> {
     INVOKE_WITH_HEIGHT_PATTERN.captures(log).map(|cap| {
-        let program = Pubkey::from_str(&cap[1]).expect("Should be a pubkey");
+        let program = Address::from_str(&cap[1]).expect("Should be an address");
         let stack_height: usize = cap[2].parse().expect("Should parse number");
 
         (program, stack_height)
@@ -107,10 +107,10 @@ fn parse_invoke(log: &str) -> Option<(Pubkey, usize)> {
 }
 
 #[inline]
-fn parse_success(log: &str) -> Option<Pubkey> {
+fn parse_success(log: &str) -> Option<Address> {
     INVOKE_SUCCESS_PATTERN
         .captures(log)
-        .map(|cap| Pubkey::from_str(&cap[1]).expect("Should be a pubkey"))
+        .map(|cap| Address::from_str(&cap[1]).expect("Should be an address"))
 }
 
 #[inline]
@@ -138,7 +138,7 @@ impl ComputeBuilder {
         self.stack.len() + 1
     }
 
-    fn push_new(&mut self, program_id: Pubkey) {
+    fn push_new(&mut self, program_id: Address) {
         let is_parent = self.stack.is_empty();
         let parent_index = (!is_parent).then(|| self.parents.len() - 1);
 
@@ -164,7 +164,7 @@ impl ComputeBuilder {
 
     fn push_compute_info(
         &mut self,
-        program_id: &Pubkey,
+        program_id: &Address,
         units_consumed: u64,
         consumption_allowance: u64,
     ) -> ParseResult<()> {
@@ -193,7 +193,7 @@ impl ComputeBuilder {
         Ok(())
     }
 
-    fn push_success(&mut self, program_id: &Pubkey) -> ParseResult<()> {
+    fn push_success(&mut self, program_id: &Address) -> ParseResult<()> {
         self.scope_index += 1;
 
         let info = self
@@ -202,10 +202,7 @@ impl ComputeBuilder {
             .ok_or(anyhow::Error::msg("Stack shouldn't be empty on success"))?;
 
         ensure!(program_id == &info.program_id, "Stack depth mismatch");
-        let no_cu_expected = matches!(
-            info.program_id.as_array(),
-            &SYSTEM_PROGRAM_ID | &COMPUTE_BUDGET_ID
-        );
+        let no_cu_expected = matches!(info.program_id, SYSTEM_PROGRAM_ID | COMPUTE_BUDGET_ID);
         let valid_consumed = no_cu_expected || info.units_consumed.is_some();
         let valid_allowance = no_cu_expected || info.consumption_allowance.is_some();
         ensure!(valid_consumed, "Missing units consumed");

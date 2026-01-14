@@ -6,9 +6,9 @@ use std::{
     collections::HashMap,
 };
 
+use solana_address::Address;
 use solana_sdk::{
     program_pack::Pack,
-    pubkey::Pubkey,
     signature::{
         Keypair,
         Signature,
@@ -29,17 +29,17 @@ use crate::transactions::CustomRpcClient;
 
 pub struct TokenContext {
     pub mint_authority: Keypair,
-    pub mint: Pubkey,
-    pub token_program: Pubkey,
+    pub mint: Address,
+    pub token_program: Address,
     pub mint_decimals: u8,
-    pub memoized_atas: RefCell<HashMap<Pubkey, Pubkey>>,
+    pub memoized_atas: RefCell<HashMap<Address, Address>>,
 }
 
 impl TokenContext {
     /// Creates an account, airdrops it SOL, and then uses it to create the new token mint.
     pub async fn new_token(
         rpc: &CustomRpcClient,
-        token_program: Option<Pubkey>,
+        token_program: Option<Address>,
     ) -> anyhow::Result<Self> {
         let authority = rpc.fund_new_account().await?;
         let token_program = token_program.unwrap_or(spl_token_interface::ID);
@@ -51,7 +51,7 @@ impl TokenContext {
         mint_authority: Keypair,
         mint: Keypair,
         decimals: u8,
-        token_program: Pubkey,
+        token_program: Address,
     ) -> anyhow::Result<Self> {
         let mint_rent = rpc
             .client
@@ -92,7 +92,7 @@ impl TokenContext {
         &self,
         rpc: &CustomRpcClient,
         owner: &Keypair,
-    ) -> anyhow::Result<Pubkey> {
+    ) -> anyhow::Result<Address> {
         let owner_pk = &owner.pubkey();
         let create_ata_instruction = create_associated_token_account_idempotent(
             owner_pk,
@@ -106,7 +106,7 @@ impl TokenContext {
         Ok(self.get_ata_for(&owner.pubkey()))
     }
 
-    pub fn get_ata_for(&self, owner: &Pubkey) -> Pubkey {
+    pub fn get_ata_for(&self, owner: &Address) -> Address {
         if let Some(ata) = self.memoized_atas.borrow().get(owner) {
             return *ata;
         };
@@ -138,7 +138,7 @@ impl TokenContext {
             .map(|txn| txn.parsed_transaction.signature)
     }
 
-    pub fn get_balance_for(&self, rpc: &CustomRpcClient, owner: &Pubkey) -> anyhow::Result<u64> {
+    pub fn get_balance_for(&self, rpc: &CustomRpcClient, owner: &Address) -> anyhow::Result<u64> {
         let ata = self.get_ata_for(owner);
         let account_data = rpc.client.get_account_data(&ata)?;
         let account_data = Account::unpack(&account_data)?;

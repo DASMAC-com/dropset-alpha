@@ -1,6 +1,6 @@
 //! See [`MarketSeat`].
 
-use pinocchio::pubkey::Pubkey;
+use solana_address::Address;
 use static_assertions::const_assert_eq;
 
 use crate::{
@@ -25,7 +25,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MarketSeat {
     /// The user's public key.
-    pub user: Pubkey,
+    pub user: Address,
     /// The u64 amount of base the maker can withdraw as LE bytes.
     base_available: [u8; U64_SIZE],
     /// The u64 amount of quote the maker can withdraw as LE bytes.
@@ -36,7 +36,7 @@ pub struct MarketSeat {
 }
 
 impl MarketSeat {
-    pub fn new(user: Pubkey, base: u64, quote: u64) -> Self {
+    pub fn new(user: Address, base: u64, quote: u64) -> Self {
         MarketSeat {
             user,
             base_available: base.to_le_bytes(),
