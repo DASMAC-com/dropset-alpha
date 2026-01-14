@@ -96,7 +96,7 @@ impl MarketContext {
 
     pub fn register_market(&self, payer: Pubkey, num_sectors: u16) -> SingleSignerInstruction {
         RegisterMarket {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user: payer,
             market_account: self.market,
             base_market_ata: self.base_market_ata,
@@ -106,8 +106,8 @@ impl MarketContext {
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
             ata_program: spl_associated_token_account_interface::program::ID,
-            system_program: SYSTEM_PROGRAM_ID.into(),
-            dropset_program: dropset::ID.into(),
+            system_program: SYSTEM_PROGRAM_ID,
+            dropset_program: dropset::ID,
         }
         .create_instruction(RegisterMarketInstructionData::new(num_sectors))
         .try_into()
@@ -130,7 +130,7 @@ impl MarketContext {
 
     pub fn close_seat(&self, user: Pubkey, sector_index_hint: u32) -> SingleSignerInstruction {
         CloseSeat {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
             base_user_ata: self.get_base_ata(&user),
@@ -141,7 +141,7 @@ impl MarketContext {
             quote_mint: self.quote.mint,
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(CloseSeatInstructionData::new(sector_index_hint))
         .try_into()
@@ -194,10 +194,10 @@ impl MarketContext {
         data: PostOrderInstructionData,
     ) -> SingleSignerInstruction {
         PostOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -210,10 +210,10 @@ impl MarketContext {
         data: CancelOrderInstructionData,
     ) -> SingleSignerInstruction {
         CancelOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -226,7 +226,7 @@ impl MarketContext {
         data: MarketOrderInstructionData,
     ) -> SingleSignerInstruction {
         MarketOrder {
-            event_authority: event_authority::ID.into(),
+            event_authority: event_authority::ID,
             user,
             market_account: self.market,
             base_user_ata: self.get_base_ata(&user),
@@ -237,7 +237,7 @@ impl MarketContext {
             quote_mint: self.quote.mint,
             base_token_program: self.base.token_program,
             quote_token_program: self.quote.token_program,
-            dropset_program: dropset::ID.into(),
+            dropset_program: dropset::ID,
         }
         .create_instruction(data)
         .try_into()
@@ -252,24 +252,24 @@ impl MarketContext {
     ) -> SingleSignerInstruction {
         match is_base {
             true => Deposit {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
                 market_ata: self.base_market_ata,
                 mint: self.base.mint,
                 token_program: self.base.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
             false => Deposit {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint,
                 token_program: self.quote.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
         }
         .create_instruction(data)
@@ -285,24 +285,24 @@ impl MarketContext {
     ) -> SingleSignerInstruction {
         match is_base {
             true => Withdraw {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_base_ata(&user),
                 market_ata: self.base_market_ata,
                 mint: self.base.mint,
                 token_program: self.base.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
             false => Withdraw {
-                event_authority: event_authority::ID.into(),
+                event_authority: event_authority::ID,
                 user,
                 market_account: self.market,
                 user_ata: self.get_quote_ata(&user),
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint,
                 token_program: self.quote.token_program,
-                dropset_program: dropset::ID.into(),
+                dropset_program: dropset::ID,
             },
         }
         .create_instruction(data)

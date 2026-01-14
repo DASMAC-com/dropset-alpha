@@ -17,7 +17,7 @@ use crate::{
 
 /// Render the account loader function.
 ///
-/// The account loader function fallibly attempts to structure a slice of `AccountInfo`s into the
+/// The account loader function fallibly attempts to structure a slice of `AccountView`s into the
 /// corresponding struct of ordered accounts.
 pub fn render_account_loader(
     feature: Feature,
@@ -30,7 +30,7 @@ pub fn render_account_loader(
     }
 
     let lifetimed_ref = feature.lifetimed_ref();
-    let account_field_type = feature.account_info_type_path();
+    let account_field_type = feature.account_view_type_path();
     let accounts = instruction_variant
         .accounts
         .iter()

@@ -1,4 +1,4 @@
-//! See [`MarketAccountInfo`].
+//! See [`MarketAccountView`].
 
 use dropset_interface::{
     error::DropsetError,
@@ -16,25 +16,25 @@ use dropset_interface::{
     utils::owned_by,
 };
 use pinocchio::{
-    account_info::AccountInfo,
+    account::AccountView,
     ProgramResult,
 };
 
 use crate::shared::account_resize::fund_then_resize_unchecked;
 
-/// A validated wrapper around a raw market [`AccountInfo`], providing safe access
+/// A validated wrapper around a raw market [`AccountView`], providing safe access
 /// to the market header and sector data after verifying ownership and layout.
 #[derive(Clone)]
-pub struct MarketAccountInfo<'a> {
-    /// The account info as a private field. This disallows manual construction, guaranteeing an
+pub struct MarketAccountView<'a> {
+    /// The account view as a private field. This disallows manual construction, guaranteeing an
     /// extra level of safety and simplifying the safety contracts for the unsafe internal methods.
-    info: &'a AccountInfo,
+    account: &'a AccountView,
 }
 
-impl<'a> MarketAccountInfo<'a> {
+impl<'a> MarketAccountView<'a> {
     #[inline(always)]
-    pub fn info(&self) -> &'a AccountInfo {
-        self.info
+    pub fn account(&self) -> &'a AccountView {
+        self.account
     }
 
     /// Checks that the account is owned by this program and is a properly initialized `Market`.
@@ -54,12 +54,12 @@ impl<'a> MarketAccountInfo<'a> {
     /// ### Accounts
     ///   0. `[READ]` Market account
     #[inline(always)]
-    pub unsafe fn new(info: &'a AccountInfo) -> Result<MarketAccountInfo<'a>, DropsetError> {
-        if !owned_by(info, &program::ID) {
+    pub unsafe fn new(account: &'a AccountView) -> Result<MarketAccountView<'a>, DropsetError> {
+        if !owned_by(account, &program::ID) {
             return Err(DropsetError::InvalidMarketAccountOwner);
         }
 
-        let data = unsafe { info.borrow_data_unchecked() };
+        let data = unsafe { account.borrow_unchecked() };
         if data.len() < MarketHeader::LEN {
             return Err(DropsetError::AccountNotInitialized);
         }
@@ -68,14 +68,14 @@ impl<'a> MarketAccountInfo<'a> {
             return Err(DropsetError::AccountNotInitialized);
         }
 
-        Ok(Self { info })
+        Ok(Self { account })
     }
 
     /// Safety:
     ///
-    /// Caller guarantees that `info` is a valid, initialized market account.
-    pub unsafe fn new_unchecked(info: &'a AccountInfo) -> MarketAccountInfo<'a> {
-        Self { info }
+    /// Caller guarantees that `account` is a valid, initialized market account.
+    pub unsafe fn new_unchecked(account: &'a AccountView) -> MarketAccountView<'a> {
+        Self { account }
     }
 
     /// Helper function to load market data given the owner-validated and initialized account.
@@ -90,8 +90,8 @@ impl<'a> MarketAccountInfo<'a> {
     ///   0. `[READ]` Market account
     #[inline(always)]
     pub unsafe fn load_unchecked(&self) -> MarketRef<'_> {
-        let data = unsafe { self.info.borrow_data_unchecked() };
-        // Safety: `Self::new` guarantees the account info is program-owned and initialized.
+        let data = unsafe { self.account.borrow_unchecked() };
+        // Safety: `Self::new` guarantees the account is program-owned and initialized.
         unsafe { Market::from_bytes(data) }
     }
 
@@ -107,8 +107,8 @@ impl<'a> MarketAccountInfo<'a> {
     ///   0. `[WRITE]` Market account
     #[inline(always)]
     pub unsafe fn load_unchecked_mut(&mut self) -> MarketRefMut<'_> {
-        let data = unsafe { self.info.borrow_mut_data_unchecked() };
-        // Safety: `Self::new` guarantees the account info is program-owned and initialized.
+        let data = unsafe { self.account.borrow_unchecked_mut() };
+        // Safety: `Self::new` guarantees the account is program-owned and initialized.
         unsafe { Market::from_bytes_mut(data) }
     }
 
@@ -125,17 +125,17 @@ impl<'a> MarketAccountInfo<'a> {
     ///   0. `[WRITE]` Payer
     ///   1. `[WRITE]` Market account
     #[inline(always)]
-    pub unsafe fn resize(&mut self, payer: &AccountInfo, num_sectors: u16) -> ProgramResult {
+    pub unsafe fn resize(&mut self, payer: &AccountView, num_sectors: u16) -> ProgramResult {
         if num_sectors == 0 {
             return Err(DropsetError::InvalidNonZeroInteger.into());
         }
 
-        let curr_n_sectors = (self.info.data_len() - MarketHeader::LEN) / SECTOR_SIZE;
+        let curr_n_sectors = (self.account.data_len() - MarketHeader::LEN) / SECTOR_SIZE;
         let new_n_sectors = curr_n_sectors + (num_sectors as usize);
         let additional_space = (num_sectors as usize) * SECTOR_SIZE;
 
         // Safety: Scoped writes to payer and market account to resize the market account.
-        unsafe { fund_then_resize_unchecked(payer, self.info, additional_space) }?;
+        unsafe { fund_then_resize_unchecked(payer, self.account, additional_space) }?;
 
         // Safety: Mutably borrows market account data for the rest of this function.
         let mut market = unsafe { self.load_unchecked_mut() };

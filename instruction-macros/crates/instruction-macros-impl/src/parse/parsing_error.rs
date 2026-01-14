@@ -26,8 +26,6 @@ pub enum ParsingError {
     ExpectedNameValueLiteral(String),
     ExpectedReprU8,
     InstructionEventHasAccounts,
-    ExpectedPubkeyType,
-    InvalidPubkeyType(String, String),
 }
 
 impl From<ParsingError> for String {
@@ -36,7 +34,7 @@ impl From<ParsingError> for String {
         match value {
             ParsingError::NotAnEnum => "Derive macro only works on enums".into(),
             ParsingError::ProgramIdMissing =>
-                "Program ID not found. Specify the `[u8; 32]` program ID path like so: `#[program_id(program::ID)]`".into(),
+                "Program ID not found. Specify the program ID path like so: `#[program_id(program::ID)]`".into(),
             ParsingError::InvalidProgramIdPath =>
                 "Program ID path must start with `crate::`, `::`, or be a single local identifier like `PROGRAM_ID`".into(),
             ParsingError::EnumVariantShouldBeFieldless => "Enum variants should be fieldless".into(),
@@ -62,9 +60,6 @@ impl From<ParsingError> for String {
                 format!("Expected name = \"value\" literal, got: {value}"),
             ParsingError::ExpectedReprU8 => "Enum does not have the attribute `#[repr(u8)]`".into(),
             ParsingError::InstructionEventHasAccounts => "Instruction event should not have any accounts".into(),
-            ParsingError::ExpectedPubkeyType => "Expected a pubkey bytes array: `[u8; 32]`".into(),
-            ParsingError::InvalidPubkeyType(ty, len) =>
-                format!("The pubkey argument type can only be: `[u8; 32]`, got: [{ty}; {len}]"),
         }
     }
 }

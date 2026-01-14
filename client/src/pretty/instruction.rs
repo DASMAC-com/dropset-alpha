@@ -96,7 +96,7 @@ enum KnownProgram {
 
 impl KnownProgram {
     pub const fn from_program_id(program_id: &Pubkey) -> Option<Self> {
-        match program_id.to_bytes() {
+        match *program_id {
             dropset::ID => Some(Self::Dropset),
             SPL_TOKEN_ID => Some(Self::SplToken),
             SPL_TOKEN_2022_ID => Some(Self::SplToken2022),

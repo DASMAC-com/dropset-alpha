@@ -7,8 +7,8 @@ use dropset_interface::{
     state::node::Node,
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::{
@@ -31,7 +31,7 @@ use crate::{
 /// [`dropset_interface::instructions::generated_pinocchio::Withdraw`].
 #[inline(never)]
 pub unsafe fn process_withdraw<'a>(
-    accounts: &'a [AccountInfo],
+    accounts: &'a [AccountView],
     instruction_data: &[u8],
     event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
@@ -58,7 +58,7 @@ pub unsafe fn process_withdraw<'a>(
     // Find the seat with the index hint or fail and return early.
     Node::check_in_bounds(market.sectors, sector_index_hint)?;
     // Safety: The hint was just verified as in-bounds.
-    let seat = unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.key()) }?;
+    let seat = unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.address()) }?;
 
     // Update the market seat available/deposited, checking for underflow, as that means the user
     // tried to withdraw more than they have available.

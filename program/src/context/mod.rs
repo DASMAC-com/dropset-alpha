@@ -13,6 +13,6 @@ pub mod register_market_context;
 
 /// The account infos necessary to emit events with the event buffer.
 pub struct EventBufferContext<'a> {
-    pub event_authority: &'a pinocchio::account_info::AccountInfo,
-    pub market_account: crate::validation::market_account_info::MarketAccountInfo<'a>,
+    pub event_authority: &'a pinocchio::account::AccountView,
+    pub market_account: crate::validation::market_account_view::MarketAccountView<'a>,
 }

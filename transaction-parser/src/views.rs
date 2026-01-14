@@ -66,7 +66,7 @@ pub fn try_market_view_all_from_owner_and_data(
     account_owner: Pubkey,
     account_data: &[u8],
 ) -> Result<MarketViewAll, anyhow::Error> {
-    if account_owner != dropset::ID.into() {
+    if account_owner != dropset::ID {
         return Err(anyhow::Error::msg("Account isn't owned by dropset program"));
     }
 
@@ -110,7 +110,7 @@ impl From<(SectorIndex, &Node)> for MarketSeatView {
             prev_index: node.prev(),
             index: sector_index,
             next_index: node.next(),
-            user: seat.user.into(),
+            user: seat.user,
             base_available: seat.base_available(),
             quote_available: seat.quote_available(),
             user_order_sectors: seat.user_order_sectors.clone(),
@@ -149,8 +149,8 @@ impl From<&MarketHeader> for MarketHeaderView {
             bids_dll_tail: header.bids_dll_tail(),
             asks_dll_head: header.asks_dll_head(),
             asks_dll_tail: header.asks_dll_tail(),
-            base_mint: header.base_mint.into(),
-            quote_mint: header.quote_mint.into(),
+            base_mint: header.base_mint,
+            quote_mint: header.quote_mint,
             market_bump: header.market_bump,
             nonce: header.num_events(),
             _padding: [0; 3],

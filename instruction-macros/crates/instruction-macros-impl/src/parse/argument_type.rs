@@ -8,10 +8,9 @@ use quote::ToTokens;
 use strum::IntoEnumIterator;
 use syn::{
     parse::Parse,
-    spanned::Spanned,
-    token::Bracket,
+    Ident,
+    Token,
     Type,
-    TypeArray,
 };
 
 use crate::parse::{
@@ -22,33 +21,29 @@ use crate::parse::{
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
     PrimitiveArg(PrimitiveArg),
-    PubkeyBytes,
+    Address,
 }
 
 impl ArgumentType {
     pub fn all_valid_types() -> String {
-        format!("{}, {}", PrimitiveArg::iter().join(", "), PUBKEY_TYPE_STR)
+        format!("{}, {}", PrimitiveArg::iter().join(", "), ADDRESS_TYPE_STR)
     }
 }
 
 impl Parse for ArgumentType {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek(Bracket) {
-            let ty: TypeArray = input
-                .parse()
-                .map_err(|_| ParsingError::ExpectedPubkeyType.new_err(input.span()))?;
-            let is_u8 = ty.elem.as_ref() == &PrimitiveArg::U8.into();
-            let is_len_32 = ty.len == syn::parse_str("32").expect("Should be a valid path");
+        let is_address = input.peek(Ident)
+            && input
+                .fork()
+                .parse::<Ident>()
+                .ok()
+                .is_some_and(|id| id == "Address")
+            && !input.peek2(Token![::]);
 
-            if !is_u8 || !is_len_32 {
-                return Err(ParsingError::InvalidPubkeyType(
-                    ty.elem.to_token_stream().to_string(),
-                    ty.len.to_token_stream().to_string(),
-                )
-                .new_err(ty.span()));
-            }
-
-            Ok(Self::PubkeyBytes)
+        if is_address {
+            // Parse and consume the `Address` type.
+            let _addr: syn::Ident = input.parse()?;
+            Ok(Self::Address)
         } else {
             let ty: Type = input
                 .parse()
@@ -65,20 +60,20 @@ pub trait ParsedPackableType {
     fn as_parsed_type(&self) -> Type;
 }
 
-const PUBKEY_BYTES: usize = 32;
-const PUBKEY_TYPE_STR: &str = "[u8; 32]";
+const ADDRESS_BYTES: usize = 32;
+pub const ADDRESS_TYPE_STR: &str = "::solana_address::Address";
 
 impl ParsedPackableType for ArgumentType {
     fn size(&self) -> usize {
         match self {
-            Self::PubkeyBytes => PUBKEY_BYTES,
+            Self::Address => ADDRESS_BYTES,
             Self::PrimitiveArg(arg) => arg.size(),
         }
     }
 
     fn as_parsed_type(&self) -> Type {
         match self {
-            Self::PubkeyBytes => syn::parse_str(PUBKEY_TYPE_STR).expect("Should be a valid type"),
+            Self::Address => syn::parse_str(ADDRESS_TYPE_STR).expect("Should be a valid type"),
             Self::PrimitiveArg(arg) => arg.as_parsed_type(),
         }
     }
@@ -86,6 +81,11 @@ impl ParsedPackableType for ArgumentType {
 
 impl Display for ArgumentType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_parsed_type().to_token_stream())
+        match self {
+            // Print the string type for the address because `TokenStream`'s `Display` adds spaces.
+            ArgumentType::Address => write!(f, "{}", ADDRESS_TYPE_STR),
+            // Otherwise just use the `TokenStream` `Display` implementation.
+            _ => write!(f, "{}", self.as_parsed_type().to_token_stream()),
+        }
     }
 }

@@ -1,6 +1,6 @@
 //! See [`MarketHeader`].
 
-use pinocchio::pubkey::Pubkey;
+use solana_address::Address;
 use static_assertions::const_assert_eq;
 
 use crate::{
@@ -65,9 +65,9 @@ pub struct MarketHeader {
     /// The u32 sector index of the last node in the doubly linked list of ask nodes as LE bytes.
     asks_dll_tail: LeSectorIndex,
     /// The market's base mint public key.
-    pub base_mint: Pubkey,
+    pub base_mint: Address,
     /// The market's quote mint public key.
-    pub quote_mint: Pubkey,
+    pub quote_mint: Address,
     /// The bump for the market PDA.
     pub market_bump: u8,
     /// The u64 number of events as LE bytes.
@@ -96,8 +96,8 @@ unsafe impl Transmutable for MarketHeader {
     /* bids_dll_tail */    + size_of::<LeSectorIndex>()
     /* asks_dll_head */    + size_of::<LeSectorIndex>()
     /* asks_dll_tail */    + size_of::<LeSectorIndex>()
-    /* base_mint */        + size_of::<Pubkey>()
-    /* quote_mint */       + size_of::<Pubkey>()
+    /* base_mint */        + size_of::<Address>()
+    /* quote_mint */       + size_of::<Address>()
     /* market_bump */      + size_of::<u8>()
     /* num_events */       + size_of::<LeU64>()
     /* _padding */         + size_of::<[u8; 3]>();
@@ -123,8 +123,8 @@ impl MarketHeader {
     pub unsafe fn init(
         header_dst_ptr: *mut MarketHeader,
         market_bump: u8,
-        base_mint: &Pubkey,
-        quote_mint: &Pubkey,
+        base_mint: &Address,
+        quote_mint: &Address,
     ) {
         let header = MarketHeader {
             discriminant: MARKET_ACCOUNT_DISCRIMINANT.to_le_bytes(),

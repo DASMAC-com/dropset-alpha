@@ -2,7 +2,7 @@
 //! when reallocating market or seat accounts.
 
 use pinocchio::{
-    account_info::AccountInfo,
+    account::AccountView,
     sysvars::{
         rent::Rent,
         Sysvar,
@@ -29,14 +29,14 @@ use pinocchio::{
 ///   0. `[WRITE]` Payer
 ///   1. `[WRITE]` Account to be resized
 pub unsafe fn fund_then_resize_unchecked(
-    payer: &AccountInfo,
-    account: &AccountInfo,
+    payer: &AccountView,
+    account: &AccountView,
     additional_space: usize,
 ) -> ProgramResult {
     let current_size = account.data_len();
     let current_lamports = account.lamports();
     let new_size = current_size + additional_space;
-    let new_lamports_required = Rent::get()?.minimum_balance(new_size);
+    let new_lamports_required = Rent::get()?.try_minimum_balance(new_size)?;
     let lamports_diff = new_lamports_required.saturating_sub(current_lamports);
 
     if lamports_diff == 0 {

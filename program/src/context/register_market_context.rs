@@ -2,31 +2,31 @@
 
 use dropset_interface::instructions::generated_pinocchio::RegisterMarket;
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
-use crate::validation::uninitialized_account_info::UninitializedAccountInfo;
+use crate::validation::uninitialized_account_view::UninitializedAccountView;
 
 /// The account context for the [`RegisterMarket`] instruction, validating ownership,
 /// initialization, and PDA derivations for market creation.
 #[derive(Clone)]
 pub struct RegisterMarketContext<'a> {
     // The event authority is validated by the inevitable `FlushEvents` self-CPI.
-    pub event_authority: &'a AccountInfo,
-    pub user: &'a AccountInfo,
-    pub market_account: UninitializedAccountInfo<'a>,
-    pub base_market_ata: &'a AccountInfo,
-    pub quote_market_ata: &'a AccountInfo,
-    pub base_mint: &'a AccountInfo,
-    pub quote_mint: &'a AccountInfo,
-    pub base_token_program: &'a AccountInfo,
-    pub quote_token_program: &'a AccountInfo,
-    pub system_program: &'a AccountInfo,
+    pub event_authority: &'a AccountView,
+    pub user: &'a AccountView,
+    pub market_account: UninitializedAccountView<'a>,
+    pub base_market_ata: &'a AccountView,
+    pub quote_market_ata: &'a AccountView,
+    pub base_mint: &'a AccountView,
+    pub quote_mint: &'a AccountView,
+    pub base_token_program: &'a AccountView,
+    pub quote_token_program: &'a AccountView,
+    pub system_program: &'a AccountView,
 }
 
 impl<'a> RegisterMarketContext<'a> {
-    pub fn load(accounts: &'a [AccountInfo]) -> Result<RegisterMarketContext<'a>, ProgramError> {
+    pub fn load(accounts: &'a [AccountView]) -> Result<RegisterMarketContext<'a>, ProgramError> {
         let RegisterMarket {
             event_authority,
             user,
@@ -49,7 +49,7 @@ impl<'a> RegisterMarketContext<'a> {
         // Thus there is no need to check ownership, address derivations, or account data here, only
         // that the `market_account` is uninitialized.
         // The token programs are also validated in the ATA `Create` instruction.
-        let market_account = UninitializedAccountInfo::new(market_account)?;
+        let market_account = UninitializedAccountView::new(market_account)?;
 
         Ok(Self {
             event_authority,

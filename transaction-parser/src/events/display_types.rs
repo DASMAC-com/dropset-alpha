@@ -21,7 +21,7 @@ impl From<HeaderEventInstructionData> for DisplayHeaderData {
             instruction_tag: value.instruction_tag,
             emitted_count: value.emitted_count,
             num_events: value.num_events,
-            market: value.market.into(),
+            market: value.market,
         }
     }
 }
@@ -34,7 +34,7 @@ pub struct DisplayRegisterMarketData {
 impl From<RegisterMarketEventInstructionData> for DisplayRegisterMarketData {
     fn from(value: RegisterMarketEventInstructionData) -> Self {
         Self {
-            market: value.market.into(),
+            market: value.market,
         }
     }
 }

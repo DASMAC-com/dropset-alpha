@@ -202,10 +202,7 @@ impl ComputeBuilder {
             .ok_or(anyhow::Error::msg("Stack shouldn't be empty on success"))?;
 
         ensure!(program_id == &info.program_id, "Stack depth mismatch");
-        let no_cu_expected = matches!(
-            info.program_id.as_array(),
-            &SYSTEM_PROGRAM_ID | &COMPUTE_BUDGET_ID
-        );
+        let no_cu_expected = matches!(info.program_id, SYSTEM_PROGRAM_ID | COMPUTE_BUDGET_ID);
         let valid_consumed = no_cu_expected || info.units_consumed.is_some();
         let valid_allowance = no_cu_expected || info.consumption_allowance.is_some();
         ensure!(valid_consumed, "Missing units consumed");

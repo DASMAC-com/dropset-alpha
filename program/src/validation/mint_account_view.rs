@@ -5,35 +5,38 @@ use dropset_interface::{
     state::market::MarketRef,
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
-    pubkey::pubkey_eq,
+    account::AccountView,
+    error::ProgramError,
 };
 use pinocchio_token_interface::state::{
     load_unchecked as pinocchio_load_unchecked,
     mint::Mint,
 };
+use solana_address::address_eq;
 
-/// A validated wrapper around a raw mint [`AccountInfo`], exposing verified metadata such as
+/// A validated wrapper around a raw mint [`AccountView`], exposing verified metadata such as
 /// supply, decimals, and authorities.
 #[derive(Clone)]
-pub struct MintInfo<'a> {
-    pub info: &'a AccountInfo,
-    /// Flag for which mint this is. Facilitates skipping several pubkey comparisons.
+pub struct MintAccountView<'a> {
+    pub account: &'a AccountView,
+    /// Flag for which mint this is. Facilitates skipping several address comparisons.
     pub is_base_mint: bool,
 }
 
-impl<'a> MintInfo<'a> {
+impl<'a> MintAccountView<'a> {
     #[inline(always)]
-    pub fn new(info: &'a AccountInfo, market: MarketRef) -> Result<MintInfo<'a>, ProgramError> {
-        if pubkey_eq(info.key(), &market.header.base_mint) {
+    pub fn new(
+        account: &'a AccountView,
+        market: MarketRef,
+    ) -> Result<MintAccountView<'a>, ProgramError> {
+        if address_eq(account.address(), &market.header.base_mint) {
             Ok(Self {
-                info,
+                account,
                 is_base_mint: true,
             })
-        } else if pubkey_eq(info.key(), &market.header.quote_mint) {
+        } else if address_eq(account.address(), &market.header.quote_mint) {
             Ok(Self {
-                info,
+                account,
                 is_base_mint: false,
             })
         } else {
@@ -41,30 +44,30 @@ impl<'a> MintInfo<'a> {
         }
     }
 
-    /// Verifies the `base` and `quote` account info passed in is valid according to the pubkeys
+    /// Verifies the `base` and `quote` accounts passed in are valid according to the addresses
     /// stored in the market header.
     #[inline(always)]
     pub fn new_base_and_quote(
-        base: &'a AccountInfo,
-        quote: &'a AccountInfo,
+        base: &'a AccountView,
+        quote: &'a AccountView,
         market: MarketRef,
-    ) -> Result<(MintInfo<'a>, MintInfo<'a>), DropsetError> {
+    ) -> Result<(MintAccountView<'a>, MintAccountView<'a>), DropsetError> {
         // The two mints in the header will never be invalid since they're checked prior to
         // initialization and never updated, so the only thing that's necessary to check is that the
-        // account info pubkeys match the ones in the header.
-        if !pubkey_eq(base.key(), &market.header.base_mint)
-            || !pubkey_eq(quote.key(), &market.header.quote_mint)
+        // account addresses match the ones in the header.
+        if !address_eq(base.address(), &market.header.base_mint)
+            || !address_eq(quote.address(), &market.header.quote_mint)
         {
             return Err(DropsetError::InvalidMintAccount);
         }
 
         Ok((
             Self {
-                info: base,
+                account: base,
                 is_base_mint: true,
             },
             Self {
-                info: quote,
+                account: quote,
                 is_base_mint: false,
             },
         ))
@@ -82,9 +85,11 @@ impl<'a> MintInfo<'a> {
     ///   0. `[READ]` Mint account
     #[inline(always)]
     pub unsafe fn get_mint_decimals(&self) -> Result<u8, ProgramError> {
-        let data = unsafe { self.info.borrow_data_unchecked() };
+        let data = unsafe { self.account.borrow_unchecked() };
         // Safety: `MintInfo` is verified in the market header and thus can only be constructed if a
         // mint account is initialized.
-        Ok(unsafe { pinocchio_load_unchecked::<Mint>(data) }?.decimals)
+        Ok(unsafe { pinocchio_load_unchecked::<Mint>(data) }
+            .map_err(|_| ProgramError::InvalidAccountData)?
+            .decimals)
     }
 }

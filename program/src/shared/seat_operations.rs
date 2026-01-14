@@ -16,9 +16,9 @@ use dropset_interface::{
         },
     },
 };
-use pinocchio::pubkey::{
-    pubkey_eq,
-    Pubkey,
+use solana_address::{
+    address_eq,
+    Address,
 };
 
 pub fn try_insert_market_seat(
@@ -33,7 +33,7 @@ pub fn try_insert_market_seat(
         // Safety: `prev_index` is non-NIL and was returned by an iterator, so it must be in-bounds.
         let prev_node = unsafe { Node::from_sector_index(list.sectors, prev_index) };
         let prev_seat = prev_node.load_payload::<MarketSeat>();
-        if pubkey_eq(&seat.user, &prev_seat.user) {
+        if address_eq(&seat.user, &prev_seat.user) {
             return Err(DropsetError::UserAlreadyExists);
         }
     }
@@ -61,7 +61,7 @@ pub fn try_insert_market_seat(
 #[inline(always)]
 fn find_new_seat_prev_and_next(
     list: &SeatsLinkedList,
-    user: &Pubkey,
+    user: &Address,
 ) -> (SectorIndex, SectorIndex) {
     for (index, node) in list.iter() {
         let seat = node.load_payload::<MarketSeat>();
@@ -82,12 +82,12 @@ fn find_new_seat_prev_and_next(
 pub unsafe fn find_seat_with_hint<'a>(
     market: MarketRef<'a>,
     hint: SectorIndex,
-    user: &Pubkey,
+    user: &Address,
 ) -> Result<&'a MarketSeat, DropsetError> {
     // Safety: Caller guarantees `hint` is in-bounds.
     let node = unsafe { Node::from_sector_index(market.sectors, hint) };
     let seat = node.load_payload::<MarketSeat>();
-    if pubkey_eq(user, &seat.user) {
+    if address_eq(user, &seat.user) {
         Ok(seat)
     } else {
         Err(DropsetError::InvalidIndexHint)
@@ -102,12 +102,12 @@ pub unsafe fn find_seat_with_hint<'a>(
 pub unsafe fn find_mut_seat_with_hint<'a>(
     market: MarketRefMut<'a>,
     hint: SectorIndex,
-    user: &Pubkey,
+    user: &Address,
 ) -> Result<&'a mut MarketSeat, DropsetError> {
     // Safety: Caller guarantees `hint` is in-bounds.
     let node = unsafe { Node::from_sector_index_mut(market.sectors, hint) };
     let seat = node.load_payload_mut::<MarketSeat>();
-    if pubkey_eq(user, &seat.user) {
+    if address_eq(user, &seat.user) {
         Ok(seat)
     } else {
         Err(DropsetError::InvalidIndexHint)

@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
             debug_logs: Some(true),
-            program_id_filter: HashSet::from([dropset_interface::program::ID.into()]),
+            program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
     // Create the collection of traders out of order so that the order must change when they're

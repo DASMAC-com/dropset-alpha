@@ -12,7 +12,7 @@ use dropset_interface::{
         transmutable::Transmutable,
     },
 };
-use pinocchio::pubkey::Pubkey;
+use solana_address::Address;
 
 /// Initializes a freshly created market account. This function skips checks based on the assumption
 /// that the market has just been created on-chain.
@@ -21,8 +21,8 @@ use pinocchio::pubkey::Pubkey;
 /// is created or in tests.
 pub fn initialize_market_account_data<'a>(
     zeroed_market_account_data: &'a mut [u8],
-    base_mint: &Pubkey,
-    quote_mint: &Pubkey,
+    base_mint: &Address,
+    quote_mint: &Address,
     market_bump: u8,
 ) -> Result<MarketRefMut<'a>, DropsetError> {
     let account_data_len = zeroed_market_account_data.len();
@@ -72,7 +72,7 @@ pub mod tests {
         },
         transmutable::Transmutable,
     };
-    use pinocchio_pubkey::pubkey;
+    use solana_address::Address;
 
     use super::initialize_market_account_data;
     use crate::shared::seat_operations::try_insert_market_seat;
@@ -91,8 +91,8 @@ pub mod tests {
         let mut bytes = [0u8; MarketHeader::LEN + SECTOR_SIZE * N_SECTORS];
         let mut market = initialize_market_account_data(
             bytes.as_mut(),
-            &pubkey!("11111111111111111111111111111111111111111111"),
-            &pubkey!("22222222222222222222222222222222222222222222"),
+            &Address::from_str_const("11111111111111111111111111111111111111111111"),
+            &Address::from_str_const("22222222222222222222222222222222222222222222"),
             254,
         )
         .expect("Should initialize market data");

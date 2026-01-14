@@ -6,17 +6,17 @@ use dropset_interface::{
     utils::is_owned_by_spl_token,
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
     ProgramResult,
 };
 
 use crate::{
     market_signer,
     validation::{
-        market_account_info::MarketAccountInfo,
-        mint_info::MintInfo,
-        token_account_info::TokenAccountInfo,
+        market_account_view::MarketAccountView,
+        mint_account_view::MintAccountView,
+        token_account_view::TokenAccountView,
     },
 };
 
@@ -37,17 +37,17 @@ use crate::{
 ///   2. `[READ]` User account (authority)
 ///   3. `[READ]` Mint account
 pub unsafe fn deposit_non_zero_to_market<'a, 't>(
-    user_ata: &'t TokenAccountInfo<'a>,
-    market_ata: &'t TokenAccountInfo<'a>,
-    user: &'a AccountInfo,
-    mint: &'t MintInfo<'a>,
+    user_ata: &'t TokenAccountView<'a>,
+    market_ata: &'t TokenAccountView<'a>,
+    user: &'a AccountView,
+    mint: &'t MintAccountView<'a>,
     amount: u64,
 ) -> Result<u64, ProgramError> {
-    let amount_deposited = if is_owned_by_spl_token(mint.info) {
+    let amount_deposited = if is_owned_by_spl_token(mint.account) {
         pinocchio_token::instructions::Transfer {
-            from: user_ata.info, // WRITE
-            to: market_ata.info, // WRITE
-            authority: user,     // READ
+            from: user_ata.account, // WRITE
+            to: market_ata.account, // WRITE
+            authority: user,        // READ
             amount,
         }
         .invoke()?;
@@ -62,10 +62,10 @@ pub unsafe fn deposit_non_zero_to_market<'a, 't>(
         let balance_before = unsafe { market_ata.get_balance() }?;
 
         pinocchio_token_2022::instructions::TransferChecked {
-            from: user_ata.info, // WRITE
-            to: market_ata.info, // WRITE
-            mint: mint.info,     // READ
-            authority: user,     // READ
+            from: user_ata.account, // WRITE
+            to: market_ata.account, // WRITE
+            mint: mint.account,     // READ
+            authority: user,        // READ
             decimals,
             amount,
             token_program: &pinocchio_token_2022::ID,
@@ -106,10 +106,10 @@ pub unsafe fn deposit_non_zero_to_market<'a, 't>(
 ///   2. `[READ]`  Market account (authority)
 ///   3. `[READ]`  Mint account
 pub unsafe fn withdraw_non_zero_from_market<'t, 'a>(
-    user_ata: &'t TokenAccountInfo<'a>,
-    market_ata: &'t TokenAccountInfo<'a>,
-    market_account: &'t MarketAccountInfo<'a>,
-    mint: &'t MintInfo<'a>,
+    user_ata: &'t TokenAccountView<'a>,
+    market_ata: &'t TokenAccountView<'a>,
+    market_account: &'t MarketAccountView<'a>,
+    mint: &'t MintAccountView<'a>,
     amount: u64,
 ) -> ProgramResult {
     if amount == 0 {
@@ -126,11 +126,11 @@ pub unsafe fn withdraw_non_zero_from_market<'t, 'a>(
         )
     };
 
-    if is_owned_by_spl_token(mint.info) {
+    if is_owned_by_spl_token(mint.account) {
         pinocchio_token::instructions::Transfer {
-            from: market_ata.info,            // WRITE
-            to: user_ata.info,                // WRITE
-            authority: market_account.info(), // READ
+            from: market_ata.account,            // WRITE
+            to: user_ata.account,                // WRITE
+            authority: market_account.account(), // READ
             amount,
         }
         .invoke_signed(&[market_signer!(base_mint, quote_mint, market_bump)])
@@ -139,10 +139,10 @@ pub unsafe fn withdraw_non_zero_from_market<'t, 'a>(
         let decimals = unsafe { mint.get_mint_decimals() }?;
 
         pinocchio_token_2022::instructions::TransferChecked {
-            from: market_ata.info,            // WRITE
-            to: user_ata.info,                // WRITE
-            mint: mint.info,                  // READ
-            authority: market_account.info(), // READ
+            from: market_ata.account,            // WRITE
+            to: user_ata.account,                // WRITE
+            mint: mint.account,                  // READ
+            authority: market_account.account(), // READ
             amount,
             decimals,
             token_program: &pinocchio_token_2022::ID,

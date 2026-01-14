@@ -32,7 +32,7 @@ impl ArgumentType {
                 }
                 _ => quote! { self.#arg_name.to_le_bytes() },
             },
-            Self::PubkeyBytes => quote! { self.#arg_name },
+            Self::Address => quote! { self.#arg_name.to_bytes() },
         };
 
         quote! {
@@ -64,7 +64,7 @@ impl ArgumentType {
         match self {
             Self::PrimitiveArg(arg) => match arg {
                 PrimitiveArg::Bool => quote! {
-                    let #arg_name = match (*(#ptr_with_offset as *const u8)) {
+                    let #arg_name = match *(#ptr_with_offset as *const u8) {
                         0 => false,
                         1 => true,
                         _ => return Err(#base::#variant),
@@ -74,8 +74,8 @@ impl ArgumentType {
                     let #arg_name = #parsed_type::from_le_bytes(*(#ptr_with_offset as *const [u8; #size_lit]));
                 },
             },
-            Self::PubkeyBytes => quote! {
-                let #arg_name = *(#ptr_with_offset as *const [u8; #size_lit]);
+            Self::Address => quote! {
+                let #arg_name = *(#ptr_with_offset as *const #parsed_type);
             },
         }
     }

@@ -7,16 +7,12 @@ pub mod market {
 
 /// PDA constants and helpers for the derived event authority address.
 pub mod event_authority {
-    use pinocchio::pubkey::Pubkey;
-    use pinocchio_pubkey::{
-        self,
-        pubkey,
-    };
+    use pinocchio::Address;
 
     pub const EVENT_AUTHORITY_SEED_STR: &[u8] = b"event_authority";
 
     /// Regenerate with `print_pda` helper below if the program ID changes.
-    pub const ID: Pubkey = pubkey!("GXuSQj95RW5HDLtYCAhFFwaqRWRXYfW3RHyfpeqSaY1i");
+    pub const ID: Address = Address::from_str_const("GXuSQj95RW5HDLtYCAhFFwaqRWRXYfW3RHyfpeqSaY1i");
 
     /// Regenerate with `print_pda` helper below if the program ID changes.
     pub const BUMP: u8 = 254;
@@ -33,7 +29,7 @@ pub mod event_authority {
         pub fn print_pda() {
             let (pda, bump) = solana_sdk::pubkey::Pubkey::find_program_address(
                 &[b"event_authority"],
-                &crate::program::ID.into(),
+                &crate::program::ID,
             );
             println!("pda: {pda}\nbump: {bump}");
         }
@@ -44,10 +40,9 @@ pub mod event_authority {
                 ID,
                 solana_sdk::pubkey::Pubkey::create_program_address(
                     &[EVENT_AUTHORITY_SEED_STR, &[BUMP]],
-                    &crate::program::ID.into()
+                    &crate::program::ID
                 )
                 .expect("Should be OK")
-                .to_bytes()
             );
         }
     }

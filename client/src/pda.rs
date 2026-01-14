@@ -9,6 +9,6 @@ pub fn find_market_address(base_mint: &Pubkey, quote_mint: &Pubkey) -> (Pubkey, 
             quote_mint.as_ref(),
             dropset_interface::seeds::market::MARKET_SEED_STR,
         ],
-        &dropset::ID.into(),
+        &dropset::ID,
     )
 }

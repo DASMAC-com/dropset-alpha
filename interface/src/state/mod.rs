@@ -26,5 +26,5 @@ pub type LeU32 = [u8; U32_SIZE];
 /// Alias type for a u64 stored as little-endian bytes.
 pub type LeU64 = [u8; U64_SIZE];
 
-pub const SYSTEM_PROGRAM_ID: pinocchio::pubkey::Pubkey =
-    pinocchio_pubkey::pubkey!("11111111111111111111111111111111");
+pub const SYSTEM_PROGRAM_ID: solana_address::Address =
+    solana_address::Address::from_str_const("11111111111111111111111111111111");

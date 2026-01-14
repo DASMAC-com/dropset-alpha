@@ -258,7 +258,7 @@ mod tests {
             GroupedParsedLogs {
                 parent: ParsedLogs {
                     invocation_index: TEST_IDX,
-                    program_id: dropset::ID.into(),
+                    program_id: dropset::ID,
                     stack_height: 1,
                     units_consumed: Some(55834),
                     consumption_allowance: Some(1399700),

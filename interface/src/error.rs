@@ -1,6 +1,6 @@
 //! Common error types and conversion helpers to represent them as error message strings.
 
-use pinocchio::program_error::ProgramError;
+use pinocchio::error::ProgramError;
 use price::OrderInfoError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,7 +26,7 @@ pub enum DropsetError {
     AmountCannotBeZero,
     InsufficientUserBalance,
     OwnerNotTokenProgram,
-    MintInfoMismatch,
+    MintAccountMismatch,
     IncorrectTokenAccountOwner,
     InvalidMintAccount,
     InvalidMarketAccountOwner,
@@ -89,7 +89,7 @@ impl From<DropsetError> for &'static str {
             DropsetError::AmountCannotBeZero => "Amount can't be zero",
             DropsetError::InsufficientUserBalance => "Insufficient user balance",
             DropsetError::OwnerNotTokenProgram => "Account owner must be a valid token program",
-            DropsetError::MintInfoMismatch => "Mint info does not match",
+            DropsetError::MintAccountMismatch => "Mint account does not match",
             DropsetError::IncorrectTokenAccountOwner => "Incorrect associated token account owner",
             DropsetError::InvalidMintAccount => "Invalid mint account",
             DropsetError::InvalidMarketAccountOwner => "Invalid market account owner",

@@ -8,6 +8,8 @@ use crate::events::dropset_event::{
     EventError,
 };
 
+const DROPSET_ID_BYTES: [u8; 32] = dropset::ID.to_bytes();
+
 /// A trait for parsing `dropset` events that provides a default implementation for parsing events
 /// using the program ID and instruction data accessors.
 pub trait ParseDropsetEvents {
@@ -26,7 +28,7 @@ pub trait ParseDropsetEvents {
             .and_then(|byte| DropsetInstruction::try_from(*byte).ok());
 
         match (self.program_id(), tag) {
-            (&dropset::ID, Some(DropsetInstruction::FlushEvents)) => {
+            (&DROPSET_ID_BYTES, Some(DropsetInstruction::FlushEvents)) => {
                 unpack_instruction_events(instruction_event_data)
             }
             _ => Ok(vec![]),

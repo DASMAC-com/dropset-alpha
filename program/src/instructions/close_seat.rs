@@ -7,8 +7,8 @@ use dropset_interface::{
     utils::is_owned_by_spl_token,
 };
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
+    account::AccountView,
+    error::ProgramError,
 };
 
 use crate::{
@@ -29,7 +29,7 @@ use crate::{
 /// [`dropset_interface::instructions::generated_pinocchio::CloseSeat`].
 #[inline(never)]
 pub fn process_close_seat<'a>(
-    accounts: &'a [AccountInfo],
+    accounts: &'a [AccountView],
     instruction_data: &[u8],
     event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
@@ -45,7 +45,7 @@ pub fn process_close_seat<'a>(
 
         Node::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
-        let seat = find_seat_with_hint(market, sector_index_hint, ctx.user.key())?;
+        let seat = find_seat_with_hint(market, sector_index_hint, ctx.user.address())?;
 
         // NOTE: The base/quote available and deposited do not need to be zeroed here because
         // they're zeroed out in the `push_free_node` call in the `remove_at` method below.
@@ -64,33 +64,33 @@ pub fn process_close_seat<'a>(
 
     // If the user had any `base_available`, transfer that amount from market account => user.
     if base_available > 0 {
-        if is_owned_by_spl_token(ctx.base_mint.info) {
+        if is_owned_by_spl_token(ctx.base_mint.account) {
             pinocchio_token::instructions::Transfer {
-                from: ctx.base_market_ata.info,       // WRITE
-                to: ctx.base_user_ata.info,           // WRITE
-                authority: ctx.market_account.info(), // READ
+                from: ctx.base_market_ata.account,       // WRITE
+                to: ctx.base_user_ata.account,           // WRITE
+                authority: ctx.market_account.account(), // READ
                 amount: base_available,
             }
             .invoke_signed(&[market_signer!(
-                ctx.base_mint.info.key(),
-                ctx.quote_mint.info.key(),
+                ctx.base_mint.account.address(),
+                ctx.quote_mint.account.address(),
                 market_bump
             )])?;
         } else {
             // Safety: Scoped immutable borrow of mint account data to get mint decimals.
             let decimals = unsafe { ctx.base_mint.get_mint_decimals() }?;
             pinocchio_token_2022::instructions::TransferChecked {
-                from: ctx.base_market_ata.info,       // WRITE
-                to: ctx.base_user_ata.info,           // WRITE
-                authority: ctx.market_account.info(), // READ
-                mint: ctx.base_mint.info,             // READ
+                from: ctx.base_market_ata.account,       // WRITE
+                to: ctx.base_user_ata.account,           // WRITE
+                authority: ctx.market_account.account(), // READ
+                mint: ctx.base_mint.account,             // READ
                 amount: base_available,
                 decimals,
                 token_program: &pinocchio_token_2022::ID,
             }
             .invoke_signed(&[market_signer!(
-                ctx.base_mint.info.key(),
-                ctx.quote_mint.info.key(),
+                ctx.base_mint.account.address(),
+                ctx.quote_mint.account.address(),
                 market_bump
             )])?;
         }
@@ -98,33 +98,33 @@ pub fn process_close_seat<'a>(
 
     // If the user had any `quote_available`, transfer that amount from market account => user.
     if quote_available > 0 {
-        if is_owned_by_spl_token(ctx.quote_mint.info) {
+        if is_owned_by_spl_token(ctx.quote_mint.account) {
             pinocchio_token::instructions::Transfer {
-                from: ctx.quote_market_ata.info,      // WRITE
-                to: ctx.quote_user_ata.info,          // WRITE
-                authority: ctx.market_account.info(), // READ
+                from: ctx.quote_market_ata.account,      // WRITE
+                to: ctx.quote_user_ata.account,          // WRITE
+                authority: ctx.market_account.account(), // READ
                 amount: quote_available,
             }
             .invoke_signed(&[market_signer!(
-                ctx.base_mint.info.key(),
-                ctx.quote_mint.info.key(),
+                ctx.base_mint.account.address(),
+                ctx.quote_mint.account.address(),
                 market_bump
             )])?;
         } else {
             // Safety: Scoped immutable borrow of mint account data to get mint decimals.
             let decimals = unsafe { ctx.quote_mint.get_mint_decimals() }?;
             pinocchio_token_2022::instructions::TransferChecked {
-                from: ctx.quote_market_ata.info,      // WRITE
-                to: ctx.quote_user_ata.info,          // WRITE
-                authority: ctx.market_account.info(), // READ
-                mint: ctx.quote_mint.info,            // READ
+                from: ctx.quote_market_ata.account,      // WRITE
+                to: ctx.quote_user_ata.account,          // WRITE
+                authority: ctx.market_account.account(), // READ
+                mint: ctx.quote_mint.account,            // READ
                 amount: quote_available,
                 decimals,
                 token_program: &pinocchio_token_2022::ID,
             }
             .invoke_signed(&[market_signer!(
-                ctx.base_mint.info.key(),
-                ctx.quote_mint.info.key(),
+                ctx.base_mint.account.address(),
+                ctx.quote_mint.account.address(),
                 market_bump
             )])?;
         }
