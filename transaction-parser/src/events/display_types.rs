@@ -5,14 +5,14 @@ use dropset_interface::events::{
     HeaderEventInstructionData,
     RegisterMarketEventInstructionData,
 };
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 
 #[derive(Debug)]
 pub struct DisplayHeaderData {
     pub instruction_tag: u8,
     pub emitted_count: u16,
     pub num_events: u64,
-    pub market: Pubkey,
+    pub market: Address,
 }
 
 impl From<HeaderEventInstructionData> for DisplayHeaderData {
@@ -28,7 +28,7 @@ impl From<HeaderEventInstructionData> for DisplayHeaderData {
 
 #[derive(Debug)]
 pub struct DisplayRegisterMarketData {
-    pub market: Pubkey,
+    pub market: Address,
 }
 
 impl From<RegisterMarketEventInstructionData> for DisplayRegisterMarketData {

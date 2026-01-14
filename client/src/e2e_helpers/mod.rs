@@ -52,7 +52,7 @@ impl<'a> Trader<'a> {
         }
     }
 
-    pub fn pubkey(&self) -> Pubkey {
+    pub fn address(&self) -> Pubkey {
         self.keypair.pubkey()
     }
 }
@@ -82,8 +82,8 @@ impl E2e {
         // associated token accounts, and mint + deposit the specified base/quote amounts to each
         // trader if the amount != 0.
         for trader in traders.as_ref().iter() {
-            if !account_exists(&rpc.client, &trader.pubkey()).await? {
-                rpc.fund_account(&trader.pubkey()).await?;
+            if !account_exists(&rpc.client, &trader.address()).await? {
+                rpc.fund_account(&trader.address()).await?;
             }
 
             market.base.create_ata_for(&rpc, trader.keypair).await?;

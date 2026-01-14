@@ -121,7 +121,7 @@ fn debug_assert_deposit_withdraw(accounts: &[AccountView]) {
 
     let d = d.unwrap();
 
-    // And to ensure the same ordering, check the pubkeys field by field.
+    // And to ensure the same ordering, check the addresses field by field.
     debug_assert_eq!(d.event_authority.address(), event_authority.address());
     debug_assert_eq!(d.user.address(), user.address());
     debug_assert_eq!(d.market_account.address(), market_account.address());

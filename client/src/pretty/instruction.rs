@@ -16,8 +16,8 @@ use dropset_interface::{
     instructions::DropsetInstruction,
     state::SYSTEM_PROGRAM_ID,
 };
+use solana_address::Address;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
-use solana_sdk::pubkey::Pubkey;
 use solana_system_interface::instruction::SystemInstruction;
 use spl_associated_token_account_interface::instruction::AssociatedTokenAccountInstruction;
 use spl_token_2022_interface::instruction::TokenInstruction as Token2022Instruction;
@@ -95,7 +95,7 @@ enum KnownProgram {
 }
 
 impl KnownProgram {
-    pub const fn from_program_id(program_id: &Pubkey) -> Option<Self> {
+    pub const fn from_program_id(program_id: &Address) -> Option<Self> {
         match *program_id {
             dropset::ID => Some(Self::Dropset),
             SPL_TOKEN_ID => Some(Self::SplToken),

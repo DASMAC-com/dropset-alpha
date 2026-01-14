@@ -49,7 +49,7 @@ pub unsafe fn process_register_market<'a>(
     let ctx = RegisterMarketContext::load(accounts)?;
 
     // It's not necessary to check the returned PDA here because `CreateAccount` will fail if the
-    // market account info's pubkey doesn't match.
+    // market account info's address doesn't match.
     let (_pda, market_bump) = Address::try_find_program_address(
         market_seeds!(ctx.base_mint.address(), ctx.quote_mint.address()),
         &crate::ID,

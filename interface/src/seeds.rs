@@ -27,7 +27,7 @@ pub mod event_authority {
         #[test]
         /// Helper function to print the PDA for easy copy/paste into the const values above.
         pub fn print_pda() {
-            let (pda, bump) = solana_sdk::pubkey::Pubkey::find_program_address(
+            let (pda, bump) = solana_address::Address::find_program_address(
                 &[b"event_authority"],
                 &crate::program::ID,
             );
@@ -38,7 +38,7 @@ pub mod event_authority {
         pub fn check_pda() {
             assert_eq!(
                 ID,
-                solana_sdk::pubkey::Pubkey::create_program_address(
+                solana_address::Address::create_program_address(
                     &[EVENT_AUTHORITY_SEED_STR, &[BUMP]],
                     &crate::program::ID
                 )

@@ -8,6 +8,7 @@ use anyhow::{
     Context,
 };
 use itertools::Itertools;
+use solana_address::Address;
 use solana_client::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
@@ -16,7 +17,6 @@ use solana_sdk::{
         Instruction,
         Message,
     },
-    pubkey::Pubkey,
     signature::{
         Keypair,
         Signature,
@@ -87,8 +87,8 @@ impl CustomRpcClient {
         }
     }
 
-    pub async fn fund_account(&self, account: &Pubkey) -> anyhow::Result<()> {
-        fund(&self.client, account).await
+    pub async fn fund_account(&self, address: &Address) -> anyhow::Result<()> {
+        fund(&self.client, address).await
     }
 
     pub async fn fund_new_account(&self) -> anyhow::Result<Keypair> {
@@ -125,9 +125,9 @@ const MAX_TRIES: u8 = 20;
 
 pub const DEFAULT_FUND_AMOUNT: u64 = 10_000_000_000;
 
-async fn fund(rpc: &RpcClient, account: &Pubkey) -> anyhow::Result<()> {
+async fn fund(rpc: &RpcClient, address: &Address) -> anyhow::Result<()> {
     let airdrop_signature: Signature = rpc
-        .request_airdrop(account, DEFAULT_FUND_AMOUNT)
+        .request_airdrop(address, DEFAULT_FUND_AMOUNT)
         .context("Failed to request airdrop")?;
 
     let mut i = 0;
@@ -152,7 +152,7 @@ async fn fund(rpc: &RpcClient, account: &Pubkey) -> anyhow::Result<()> {
 pub struct SendTransactionConfig {
     pub compute_budget: Option<u32>,
     pub debug_logs: Option<bool>,
-    pub program_id_filter: HashSet<Pubkey>,
+    pub program_id_filter: HashSet<Address>,
 }
 
 impl Default for SendTransactionConfig {
@@ -276,13 +276,13 @@ async fn fetch_transaction_json(
     .context("Should be able to fetch transaction with config")
 }
 
-/// Checks if an account at the given pubkey exists on-chain.
+/// Checks if an account at the given address exists on-chain.
 pub async fn account_exists(
     rpc: &solana_client::rpc_client::RpcClient,
-    pubkey: &Pubkey,
+    address: &Address,
 ) -> anyhow::Result<bool> {
     Ok(rpc
-        .get_account_with_commitment(pubkey, CommitmentConfig::confirmed())
+        .get_account_with_commitment(address, CommitmentConfig::confirmed())
         .context("Couldn't retrieve account data")?
         .value
         .is_some())

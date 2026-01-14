@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
     // Create the seats for each trader.
     let seat_creations: Vec<Instruction> = traders
         .iter()
-        .map(|pk| -> Instruction { e2e.market.create_seat(pk.pubkey()).into() })
+        .map(|pk| -> Instruction { e2e.market.create_seat(pk.address()).into() })
         .collect();
     e2e.rpc
         .send_and_confirm_txn(
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let seats: Vec<SectorIndex> = traders
         .iter()
         .map(|trader| {
-            e2e.find_seat(&trader.pubkey())
+            e2e.find_seat(&trader.address())
                 .ok()
                 .flatten()
                 .expect("Trader should have a seat")
@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
         .iter()
         .zip(seats)
         .flat_map(|(trader, seat)| {
-            let trader_addr = trader.pubkey();
+            let trader_addr = trader.address();
             let (deposit, withdraw) = base_amounts.get(&trader_addr).unwrap();
             [
                 e2e.market.deposit_base(trader_addr, *deposit, seat).into(),
@@ -105,14 +105,14 @@ async fn main() -> anyhow::Result<()> {
             let (pubkey, (deposit, withdraw)) = pk_and_amts;
             (pubkey, deposit, withdraw)
         })
-        // Sort by the pubkey.
+        // Sort by the address.
         .sorted_by_key(|v| v.0)
         .collect_vec();
 
     let market = e2e.view_market()?;
 
-    // Check that seats are ordered by pubkey (ascending) and compare the final state of each user's
-    // seat to the expected state.
+    // Check that seats are ordered by address (ascending) and compare the final state of each
+    // user's seat to the expected state.
     for (seat, expected_seat) in market.seats.iter().zip_eq(expected_base) {
         let (expected_pk, expected_base_dep, expected_base_wd) = expected_seat;
         assert_eq!(seat.user, expected_pk);

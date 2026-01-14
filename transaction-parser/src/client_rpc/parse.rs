@@ -1,9 +1,9 @@
 //! Core parsing helpers for converting encoded transactions, inner instructions, and messages into
 //! typed structures.
 
+use solana_address::Address;
 use solana_sdk::{
     message::MessageHeader,
-    pubkey::Pubkey,
     signature::Signature,
     transaction::VersionedTransaction,
 };
@@ -61,7 +61,7 @@ pub fn parse_inner_instructions(
 
 pub fn parse_versioned_transaction(
     versioned: VersionedTransaction,
-    addresses: &[Pubkey],
+    addresses: &[Address],
 ) -> (Vec<ParsedInstruction>, ParsedAccounts, Signature) {
     let keys = [versioned.message.static_account_keys(), addresses].concat();
     let parsed_accounts = parse_accounts_from_header(&keys, versioned.message.header());
@@ -93,7 +93,7 @@ pub fn parse_versioned_transaction(
 /// 0----------------------- a ---------------------- b -------------------- c --------------------n
 /// ```
 pub fn parse_accounts_from_header(
-    account_keys: &[Pubkey],
+    account_keys: &[Address],
     header: &MessageHeader,
 ) -> ParsedAccounts {
     // Total number of signed accounts.
@@ -111,7 +111,7 @@ pub fn parse_accounts_from_header(
     account_keys
         .iter()
         .enumerate()
-        .map(|(ref i, pubkey)| {
+        .map(|(ref i, address)| {
             let (writable, signer) = match i {
                 i if (0..a).contains(i) => (true, true),
                 i if (a..b).contains(i) => (false, true),
@@ -120,7 +120,7 @@ pub fn parse_accounts_from_header(
                 _ => unreachable!(),
             };
             ParsedAccount {
-                pubkey: *pubkey,
+                address: *address,
                 writable,
                 signer,
             }
@@ -130,7 +130,7 @@ pub fn parse_accounts_from_header(
 
 pub fn parse_ui_message(
     ui_message: UiMessage,
-    addresses: &[Pubkey],
+    addresses: &[Address],
 ) -> (Vec<ParsedInstruction>, ParsedAccounts) {
     let addresses_copied = addresses.iter().copied();
     match ui_message {
@@ -158,7 +158,7 @@ pub fn parse_ui_message(
         }) => {
             let keys = account_keys
                 .iter()
-                .map(|acc| Pubkey::from_str_const(acc))
+                .map(|acc| Address::from_str_const(acc))
                 .chain(addresses_copied)
                 .collect::<Vec<_>>();
 

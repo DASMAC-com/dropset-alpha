@@ -23,7 +23,7 @@ pub fn render_account_loader(
     feature: Feature,
     instruction_variant: &InstructionVariant,
 ) -> TokenStream {
-    // `accounts` arg needs to be a slice, and `client` uses owned pubkeys, so return an empty
+    // `accounts` arg needs to be a slice, and `client` uses owned addresses, so return an empty
     // token stream if this is for `client`.
     if feature == Feature::Client {
         return quote! {};

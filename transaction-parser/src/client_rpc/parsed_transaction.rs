@@ -3,9 +3,9 @@
 
 use std::str::FromStr;
 
+use solana_address::Address;
 use solana_sdk::{
     clock::UnixTimestamp,
-    pubkey::Pubkey,
     signature::Signature,
     transaction::TransactionVersion,
 };
@@ -71,7 +71,7 @@ impl ParsedTransaction {
             OptionSerializer::Some(addresses) => [addresses.writable, addresses.readonly]
                 .concat()
                 .iter()
-                .map(|s| Pubkey::from_str_const(s))
+                .map(|s| Address::from_str_const(s))
                 .collect::<Vec<_>>(),
             _ => vec![],
         };
@@ -164,7 +164,7 @@ mod tests {
         io::BufReader,
     };
 
-    use solana_sdk::pubkey::Pubkey;
+    use solana_address::Address;
 
     use crate::client_rpc::{
         parse_logs_for_compute,
@@ -198,7 +198,7 @@ mod tests {
     ) -> ParsedLogs {
         ParsedLogs {
             invocation_index,
-            program_id: Pubkey::from_str_const(program_id),
+            program_id: Address::from_str_const(program_id),
             stack_height,
             units_consumed: units,
             consumption_allowance: allowed,
@@ -228,7 +228,7 @@ mod tests {
             GroupedParsedLogs {
                 parent: ParsedLogs {
                     invocation_index: 0,
-                    program_id: Pubkey::from_str_const(
+                    program_id: Address::from_str_const(
                         "ComputeBudget111111111111111111111111111111",
                     ),
                     stack_height: 1,
@@ -243,7 +243,7 @@ mod tests {
             GroupedParsedLogs {
                 parent: ParsedLogs {
                     invocation_index: 1,
-                    program_id: Pubkey::from_str_const(
+                    program_id: Address::from_str_const(
                         "ComputeBudget111111111111111111111111111111",
                     ),
                     stack_height: 1,

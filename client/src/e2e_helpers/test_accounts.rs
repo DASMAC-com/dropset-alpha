@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn check_pubkeys() {
+    fn check_addresses() {
         assert_eq!(default_payer().pubkey().to_string(), "PAYRidU5w5wtJUxohMzVn9KH8p9p5PERU1SFsrUtKUV");
         assert_eq!(acc_1111().pubkey().to_string(), "11113MwGAy1Aq8qkfPuukq892Zn3tV6uGHWoRYLaUBS");
         assert_eq!(acc_2222().pubkey().to_string(), "2222VkwR14uJeobbCRfr67aEudhqv9gwjaZHpHqja9M5");

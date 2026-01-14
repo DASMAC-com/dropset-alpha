@@ -11,7 +11,7 @@ use dropset_interface::state::{
     transmutable::Transmutable,
     user_order_sectors::UserOrderSectors,
 };
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 
 #[derive(Clone, Debug)]
 pub struct MarketHeaderView {
@@ -27,8 +27,8 @@ pub struct MarketHeaderView {
     pub bids_dll_tail: SectorIndex,
     pub asks_dll_head: SectorIndex,
     pub asks_dll_tail: SectorIndex,
-    pub base_mint: Pubkey,
-    pub quote_mint: Pubkey,
+    pub base_mint: Address,
+    pub quote_mint: Address,
     pub market_bump: u8,
     pub nonce: u64,
     pub _padding: [u8; 3],
@@ -63,7 +63,7 @@ pub struct MarketViewAll {
 /// # Errors
 /// Returns an error if the account is not owned by the Dropset program or if the data is too short.
 pub fn try_market_view_all_from_owner_and_data(
-    account_owner: Pubkey,
+    account_owner: Address,
     account_data: &[u8],
 ) -> Result<MarketViewAll, anyhow::Error> {
     if account_owner != dropset::ID {
@@ -85,7 +85,7 @@ pub struct MarketSeatView {
     pub prev_index: SectorIndex,
     pub index: SectorIndex,
     pub next_index: SectorIndex,
-    pub user: Pubkey,
+    pub user: Address,
     pub base_available: u64,
     pub quote_available: u64,
     pub user_order_sectors: UserOrderSectors,

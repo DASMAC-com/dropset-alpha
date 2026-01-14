@@ -1,9 +1,9 @@
 //! PDA helpers for deriving `dropset` program addresses.
 
-use solana_sdk::pubkey::Pubkey;
+use solana_address::Address;
 
-pub fn find_market_address(base_mint: &Pubkey, quote_mint: &Pubkey) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
+pub fn find_market_address(base_mint: &Address, quote_mint: &Address) -> (Address, u8) {
+    Address::find_program_address(
         &[
             base_mint.as_ref(),
             quote_mint.as_ref(),

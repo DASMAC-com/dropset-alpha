@@ -141,7 +141,7 @@ pub mod tests {
             .into_iter()
             .zip(expected_order.into_iter().enumerate())
         {
-            // The `actual` user pubkeys should match the `expected` order.
+            // The `actual` user addresses should match the `expected` order.
             let (pk_e, pk_a) = (expected.1, &actual.1);
             assert_eq!(pk_e, pk_a);
         }
