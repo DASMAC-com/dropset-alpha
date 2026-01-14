@@ -7,6 +7,7 @@ use dropset_interface::events::{
     DepositEventInstructionData,
     DropsetEventTag,
     HeaderEventInstructionData,
+    MarketOrderEventInstructionData,
     PostOrderEventInstructionData,
     RegisterMarketEventInstructionData,
     WithdrawEventInstructionData,
@@ -23,6 +24,7 @@ pub enum DropsetEvent {
     CloseSeat(CloseSeatEventInstructionData),
     PostOrder(PostOrderEventInstructionData),
     CancelOrder(CancelOrderEventInstructionData),
+    MarketOrder(MarketOrderEventInstructionData),
 }
 
 impl DropsetEvent {
@@ -35,6 +37,7 @@ impl DropsetEvent {
             Self::CloseSeat(_) => CloseSeatEventInstructionData::LEN_WITH_TAG,
             Self::PostOrder(_) => PostOrderEventInstructionData::LEN_WITH_TAG,
             Self::CancelOrder(_) => CancelOrderEventInstructionData::LEN_WITH_TAG,
+            Self::MarketOrder(_) => MarketOrderEventInstructionData::LEN_WITH_TAG,
         }
     }
 }
@@ -114,6 +117,9 @@ impl DropsetEvent {
             )),
             DropsetEventTag::CancelOrderEvent => Ok(DropsetEvent::CancelOrder(
                 CancelOrderEventInstructionData::unpack_client(data).map_err(|_| err())?,
+            )),
+            DropsetEventTag::MarketOrderEvent => Ok(DropsetEvent::MarketOrder(
+                MarketOrderEventInstructionData::unpack_client(data).map_err(|_| err())?,
             )),
         }
     }

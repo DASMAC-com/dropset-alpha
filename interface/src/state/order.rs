@@ -9,7 +9,7 @@ use crate::{
     state::{
         linked_list::{
             LinkedList,
-            LinkedListOperations,
+            LinkedListHeaderOperations,
         },
         market::Market,
         market_header::MarketHeader,
@@ -39,7 +39,7 @@ pub trait OrdersCollection {
     /// `prev => new => next`
     ///
     /// where this function returns the `next` node's sector index.
-    fn find_new_order_next_index<T: OrdersCollection + LinkedListOperations>(
+    fn find_new_order_next_index<T: OrdersCollection + LinkedListHeaderOperations>(
         list: &LinkedList<'_, T>,
         new_order: &Order,
     ) -> SectorIndex;

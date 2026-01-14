@@ -8,7 +8,7 @@ use crate::{
     state::{
         linked_list::{
             LinkedList,
-            LinkedListOperations,
+            LinkedListHeaderOperations,
         },
         market::Market,
         market_header::MarketHeader,
@@ -35,7 +35,7 @@ impl OrdersCollection for BidOrders {
     ///
     /// If the bid is the lowest price on the book, it's inserted at the end.
     #[inline(always)]
-    fn find_new_order_next_index<T: OrdersCollection + LinkedListOperations>(
+    fn find_new_order_next_index<T: OrdersCollection + LinkedListHeaderOperations>(
         list: &LinkedList<'_, T>,
         new_order: &Order,
     ) -> SectorIndex {
@@ -86,7 +86,7 @@ pub type BidOrdersLinkedList<'a> = LinkedList<'a, BidOrders>;
 
 /// Operations for the sorted, doubly linked list of nodes containing bid
 /// [`crate::state::order::Order`] payloads.
-impl LinkedListOperations for BidOrders {
+impl LinkedListHeaderOperations for BidOrders {
     fn head(header: &MarketHeader) -> SectorIndex {
         header.bids_dll_head()
     }

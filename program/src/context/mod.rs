@@ -7,6 +7,7 @@ pub mod cancel_order_context;
 pub mod close_seat_context;
 pub mod deposit_withdraw_context;
 pub mod flush_events_context;
+pub mod market_order_context;
 pub mod post_order_context;
 pub mod register_market_context;
 

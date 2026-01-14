@@ -4,7 +4,7 @@
 use crate::state::{
     linked_list::{
         LinkedList,
-        LinkedListOperations,
+        LinkedListHeaderOperations,
     },
     market_header::MarketHeader,
     sector::SectorIndex,
@@ -16,7 +16,7 @@ pub type SeatsLinkedList<'a> = LinkedList<'a, Seats>;
 
 /// Operations for the sorted, doubly linked list of nodes containing
 /// [`crate::state::market_seat::MarketSeat`] payloads.
-impl LinkedListOperations for Seats {
+impl LinkedListHeaderOperations for Seats {
     #[inline(always)]
     fn head(header: &MarketHeader) -> SectorIndex {
         header.seats_dll_head()

@@ -117,4 +117,12 @@ impl E2e {
     pub fn find_seat(&self, user: &Pubkey) -> anyhow::Result<Option<MarketSeatView>> {
         self.market.find_seat(&self.rpc, user)
     }
+
+    pub fn get_base_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+        self.market.base.get_balance_for(&self.rpc, user)
+    }
+
+    pub fn get_quote_balance(&self, user: &Pubkey) -> anyhow::Result<u64> {
+        self.market.quote.get_balance_for(&self.rpc, user)
+    }
 }

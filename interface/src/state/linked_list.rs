@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-pub trait LinkedListOperations {
+pub trait LinkedListHeaderOperations {
     fn head(header: &MarketHeader) -> SectorIndex;
 
     fn set_head(header: &mut MarketHeader, new_index: SectorIndex);
@@ -34,13 +34,13 @@ pub trait LinkedListOperations {
 /// [`crate::state::node::NODE_PAYLOAD_SIZE`].
 ///
 /// Each node exists as a union of the traversable payload type and a free node.
-pub struct LinkedList<'a, T: LinkedListOperations> {
+pub struct LinkedList<'a, T: LinkedListHeaderOperations> {
     pub header: &'a mut MarketHeader,
     pub sectors: &'a mut [u8],
     _list_type: PhantomData<T>,
 }
 
-impl<'a, T: LinkedListOperations> LinkedList<'a, T> {
+impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
     pub fn new_from_parts(header: &'a mut MarketHeader, sectors: &'a mut [u8]) -> Self {
         Self {
             header,

@@ -5,9 +5,12 @@ use dropset_interface::{
     state::{
         linked_list::{
             LinkedList,
-            LinkedListOperations,
+            LinkedListHeaderOperations,
         },
-        market::MarketRef,
+        market::{
+            MarketRef,
+            MarketRefMut,
+        },
         node::Node,
         order::{
             Order,
@@ -24,7 +27,7 @@ use dropset_interface::{
 ///
 /// NOTE: this function solely inserts the order into the orders collection. It doesn't update the
 /// user's seat nor does it check for duplicate prices posted by the same user.
-pub fn insert_order<T: OrdersCollection + LinkedListOperations>(
+pub fn insert_order<T: OrdersCollection + LinkedListHeaderOperations>(
     list: &mut LinkedList<'_, T>,
     order: Order,
 ) -> Result<SectorIndex, DropsetError> {
@@ -62,6 +65,23 @@ pub unsafe fn load_order_from_sector_index(
     node.load_payload::<Order>()
 }
 
+/// Converts a sector index to a mutable order given a sector index.
+///
+/// Caller should ensure that `validated_sector_index` is indeed a sector index pointing to a valid
+/// order.
+///
+/// # Safety
+///
+/// Caller guarantees `validated_sector_index` is in-bounds of `market.sectors` bytes.
+pub unsafe fn load_mut_order_from_sector_index(
+    market: MarketRefMut<'_>,
+    validated_sector_index: SectorIndex,
+) -> &'_ mut Order {
+    // Safety: Caller guarantees 'validated_sector_index' is in-bounds.
+    let node = unsafe { Node::from_sector_index_mut(market.sectors, validated_sector_index) };
+    node.load_payload_mut::<Order>()
+}
+
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -82,7 +102,7 @@ mod tests {
         },
         linked_list::{
             LinkedList,
-            LinkedListOperations,
+            LinkedListHeaderOperations,
         },
         market::MarketRefMut,
         market_header::MarketHeader,
@@ -113,7 +133,7 @@ mod tests {
     const MARKET_LEN: usize = MarketHeader::LEN + SECTOR_SIZE * N_SECTORS;
 
     /// Test utility function to insert an order and expect (unwrap) the result.
-    pub fn insert_helper<T: OrdersCollection + LinkedListOperations>(
+    pub fn insert_helper<T: OrdersCollection + LinkedListHeaderOperations>(
         list: &mut LinkedList<'_, T>,
         order: &Order,
     ) -> SectorIndex {
@@ -153,7 +173,7 @@ mod tests {
     }
 
     /// Test utility function to convert asks or bids into a vec of (encoded_price, seat) pairs.
-    fn to_prices_and_seats<T: OrdersCollection + LinkedListOperations>(
+    fn to_prices_and_seats<T: OrdersCollection + LinkedListHeaderOperations>(
         list: &LinkedList<'_, T>,
     ) -> Vec<(u32, u32)> {
         list.iter()
@@ -165,7 +185,9 @@ mod tests {
     }
 
     /// Test utility function to convert asks or bids into a vec of encoded prices.
-    fn to_prices<T: OrdersCollection + LinkedListOperations>(list: &LinkedList<'_, T>) -> Vec<u32> {
+    fn to_prices<T: OrdersCollection + LinkedListHeaderOperations>(
+        list: &LinkedList<'_, T>,
+    ) -> Vec<u32> {
         list.iter()
             .map(|(_, node)| node.load_payload::<Order>().encoded_price())
             .collect()

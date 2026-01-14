@@ -7,6 +7,7 @@ use dropset_interface::{
         CancelOrderInstructionData,
         CloseSeatInstructionData,
         DepositInstructionData,
+        MarketOrderInstructionData,
         PostOrderInstructionData,
         RegisterMarketInstructionData,
         WithdrawInstructionData,
@@ -40,6 +41,24 @@ pub struct MarketContext {
     pub quote: TokenContext,
     pub base_market_ata: Pubkey,
     pub quote_market_ata: Pubkey,
+}
+
+#[derive(Clone, Copy)]
+pub enum BookSide {
+    Ask,
+    Bid,
+}
+
+#[derive(Clone, Copy)]
+pub enum Denomination {
+    Base,
+    Quote,
+}
+
+impl Denomination {
+    pub fn is_base(&self) -> bool {
+        matches!(&self, Denomination::Base)
+    }
 }
 
 impl MarketContext {
@@ -194,6 +213,30 @@ impl MarketContext {
             event_authority: event_authority::ID.into(),
             user,
             market_account: self.market,
+            dropset_program: dropset::ID.into(),
+        }
+        .create_instruction(data)
+        .try_into()
+        .expect("Should be a single signer instruction")
+    }
+
+    pub fn market_order(
+        &self,
+        user: Pubkey,
+        data: MarketOrderInstructionData,
+    ) -> SingleSignerInstruction {
+        MarketOrder {
+            event_authority: event_authority::ID.into(),
+            user,
+            market_account: self.market,
+            base_user_ata: self.get_base_ata(&user),
+            quote_user_ata: self.get_quote_ata(&user),
+            base_market_ata: self.base_market_ata,
+            quote_market_ata: self.quote_market_ata,
+            base_mint: self.base.mint,
+            quote_mint: self.quote.mint,
+            base_token_program: self.base.token_program,
+            quote_token_program: self.quote.token_program,
             dropset_program: dropset::ID.into(),
         }
         .create_instruction(data)
