@@ -16,9 +16,6 @@ fn simple_transfer() {
         (bob_address, bob_account),
     ]);
 
-    // Transfer half of alice's lamports to bob.
-    let send_to_bob = transfer(&alice_address, &bob_address, LAMPORTS / 2);
-
     let get_account = |address: &Address| mollusk.account_store.borrow().get(address).cloned();
 
     let alice_before = get_account(&alice_address);
@@ -28,7 +25,8 @@ fn simple_transfer() {
     assert_eq!(alice_before.unwrap().lamports, LAMPORTS);
     assert_eq!(bob_before.unwrap().lamports, LAMPORTS);
 
-    // Process the transfer instruction.
+    // Transfer half of alice's lamports to bob.
+    let send_to_bob = transfer(&alice_address, &bob_address, LAMPORTS / 2);
     assert!(mollusk
         .process_instruction(&send_to_bob)
         .program_result
