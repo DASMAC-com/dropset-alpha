@@ -2810,6 +2810,7 @@ dependencies = [
  "itertools 0.14.0",
  "price",
  "reqwest 0.13.1",
+ "rust_decimal",
  "serde",
  "serde_json",
  "solana-address 2.0.0",
@@ -4043,6 +4044,7 @@ dependencies = [
  "rand 0.8.5",
  "rkyv",
  "rust_decimal_macros",
+ "ryu",
  "serde",
  "serde_json",
 ]
