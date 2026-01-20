@@ -1,11 +1,17 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    str::FromStr,
+};
 
 use chrono::{
     DateTime,
     Utc,
 };
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Deserializer,
+};
 use strum_macros::{
     AsRefStr,
     Display,
@@ -111,7 +117,7 @@ pub enum CandlestickGranularity {
     M,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrencyPair {
     pub base: Currency,
     pub quote: Currency,
@@ -124,10 +130,35 @@ impl Display for CurrencyPair {
     }
 }
 
+impl FromStr for CurrencyPair {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (base, quote) = s
+            .split_once('_')
+            .ok_or_else(|| anyhow::anyhow!("Invalid currency pair format: {s}"))?;
+
+        Ok(CurrencyPair {
+            base: base.parse()?,
+            quote: quote.parse()?,
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for CurrencyPair {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 /// See: <https://developer.oanda.com/rest-live-v20/instrument-df/#CandlestickResponse>
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct OandaCandlestickResponse {
-    pub instrument: String,
+    pub instrument: CurrencyPair,
     pub granularity: CandlestickGranularity,
     pub candles: Vec<OandaCandlestick>,
 }
@@ -179,6 +210,8 @@ mod tests {
 
     use crate::oanda::{
         CandlestickGranularity,
+        Currency,
+        CurrencyPair,
         OandaCandlestick,
         OandaCandlestickData,
         OandaCandlestickResponse,
@@ -198,7 +231,10 @@ mod tests {
         };
 
         let expected = OandaCandlestickResponse {
-            instrument: "EUR_USD".into(),
+            instrument: CurrencyPair {
+                base: Currency::EUR,
+                quote: Currency::USD,
+            },
             granularity: CandlestickGranularity::M15,
             candles: vec![
                 OandaCandlestick {

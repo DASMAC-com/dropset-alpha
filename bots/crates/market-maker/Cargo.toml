@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+clap.workspace = true
 client = { path = "../../../client" }
 chrono.workspace = true
 dropset-interface = { path = "../../../interface" }
@@ -14,6 +15,7 @@ reqwest.workspace = true
 rust_decimal = { workspace = true, features = ["macros", "serde-with-arbitrary-precision"] }
 solana-address.workspace = true
 solana-client.workspace = true
+solana-keypair.workspace = true
 solana-sdk.workspace = true
 serde.workspace = true
 serde_json.workspace = true

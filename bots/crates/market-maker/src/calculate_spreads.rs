@@ -19,15 +19,10 @@ const FILL_DECAY: Decimal = dec!(1.5);
 /// The reservation price is the price at which a maker is indifferent to buying or selling a single
 /// unit of the base asset.
 ///
-/// Put simply, it is a function of the pair's mid price and the maker's current base inventory (how
-/// long or short they are).
+/// Put simply, it is a function of the pair's mid price and `q`, a value that  represents how long
+/// or short the maker is.
 ///
-/// Thus the function arguments are:
-///
-/// - the market's `mid_price_in_atoms`
-/// - the maker's `base_atoms_inventory` (`q` in the A-S model)
-///
-/// Also depends on various tuning parameters. The A-S model defines them as:
+/// This calculation also depends on various tuning parameters. The A-S model defines them as:
 /// - the maker's risk aversion `γ`
 /// - a volatility estimate for the market `σ`
 /// - Time remaining, aka the effective time horizon `T - t`
@@ -35,11 +30,10 @@ const FILL_DECAY: Decimal = dec!(1.5);
 /// Equation (3.17):
 ///
 /// ```text
-/// r = mid_price_in_atoms - (base_atoms_inventory · risk_aversion · volatility_estimate² · (T - t))
+/// r = mid_price - (q · risk_aversion · volatility_estimate² · (T - t))
 /// ```
-pub fn reservation_price(mid_price_in_atoms: Decimal, base_atoms_inventory: Decimal) -> Decimal {
-    mid_price_in_atoms
-        - (base_atoms_inventory * RISK_AVERSION * volatility_estimate_squared() * TIME_HORIZON)
+pub fn reservation_price(mid_price: Decimal, q: Decimal) -> Decimal {
+    mid_price - (q * RISK_AVERSION * volatility_estimate_squared() * TIME_HORIZON)
 }
 
 fn ln_decimal_f64(d: Decimal) -> Option<Decimal> {

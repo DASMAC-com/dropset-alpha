@@ -74,7 +74,7 @@ impl E2e {
         }
 
         // Create and register the market derived from the base/quote token pair.
-        let market = MarketContext::new_market(&rpc).await?;
+        let market = MarketContext::create_market(&rpc).await?;
         let register_market_txn = market
             .register_market(default_payer.pubkey(), 10)
             .send_single_signer(&rpc, &default_payer)
