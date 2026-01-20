@@ -1,4 +1,7 @@
+use rust_decimal::Decimal;
+
 use crate::{
+    client_helpers::decimal_pow10_i16,
     EncodedPrice,
     OrderInfoError,
     ValidatedPriceMantissa,
@@ -59,19 +62,19 @@ impl TryFrom<EncodedPrice> for DecodedPrice {
     }
 }
 
-impl TryFrom<DecodedPrice> for f64 {
+impl TryFrom<DecodedPrice> for Decimal {
     type Error = OrderInfoError;
 
     fn try_from(decoded: DecodedPrice) -> Result<Self, Self::Error> {
         match decoded {
-            DecodedPrice::Zero => Ok(0f64),
+            DecodedPrice::Zero => Ok(Decimal::ZERO),
             DecodedPrice::Infinity => Err(OrderInfoError::InfinityIsNotAFloat),
             DecodedPrice::ExponentAndMantissa {
                 price_exponent_biased,
                 price_mantissa,
             } => {
-                let res = (price_mantissa.as_u32() as f64)
-                    * 10f64.powi(price_exponent_biased as i32 - BIAS as i32);
+                let mantissa = Decimal::from(price_mantissa.as_u32());
+                let res = decimal_pow10_i16(mantissa, price_exponent_biased as i16 - BIAS as i16);
                 Ok(res)
             }
         }

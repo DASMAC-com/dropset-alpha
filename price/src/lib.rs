@@ -222,11 +222,14 @@ pub fn to_order_info(
 mod tests {
     extern crate std;
 
-    use std::ops::Mul;
-
+    use rust_decimal::{
+        dec,
+        Decimal,
+    };
     use static_assertions::*;
 
     use super::*;
+    use crate::client_helpers::decimal_pow10_i16;
 
     #[test]
     fn happy_path_simple_price() {
@@ -237,11 +240,11 @@ mod tests {
         assert_eq!(order.base_atoms, 1);
         assert_eq!(order.quote_atoms, 1234);
 
-        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
+        let decoded_price: Decimal = DecodedPrice::try_from(order.encoded_price)
             .expect("Should decode")
             .try_into()
-            .expect("Should be a valid f64");
-        assert_eq!(decoded_price, "1234".parse().unwrap());
+            .expect("Should be a valid Decimal");
+        assert_eq!(decoded_price, dec!(1234));
     }
 
     #[test]
@@ -251,11 +254,11 @@ mod tests {
         assert_eq!(order.base_atoms, 1);
         assert_eq!(order.quote_atoms, 12345678);
 
-        let decoded_price: f64 = DecodedPrice::try_from(order.encoded_price)
+        let decoded_price: Decimal = DecodedPrice::try_from(order.encoded_price)
             .expect("Should decode")
             .try_into()
-            .expect("Should be a valid f64");
-        assert_eq!(decoded_price, "12345678".parse().unwrap());
+            .expect("Should be a valid Decimal");
+        assert_eq!(decoded_price, dec!(12345678));
     }
 
     #[test]
@@ -268,19 +271,21 @@ mod tests {
 
         let decoded_price = DecodedPrice::try_from(order.encoded_price).expect("Should decode");
 
+        std::println!("{decoded_price:#?}");
+
         let (decoded_exponent, decoded_mantissa) = decoded_price
             .as_exponent_and_mantissa()
             .expect("Should be exponent + mantissa");
-        let decoded_f64: f64 = decoded_price
+        let decoded: Decimal = decoded_price
             .clone()
             .try_into()
-            .expect("Should be a valid f64");
+            .expect("Should be a valid Decimal");
         assert_eq!(decoded_mantissa.as_u32(), mantissa);
-        assert_eq!(decoded_f64, "0.12345678".parse().unwrap());
+        assert_eq!(decoded, dec!(0.12345678));
+        let unbiased_exponent = *decoded_exponent as i16 - BIAS as i16;
         assert_eq!(
-            (decoded_mantissa.as_u32() as f64)
-                .mul(10f64.powi(*decoded_exponent as i32 - BIAS as i32)),
-            decoded_f64
+            decimal_pow10_i16(Decimal::from(decoded_mantissa.as_u32()), unbiased_exponent),
+            decoded
         );
     }
 

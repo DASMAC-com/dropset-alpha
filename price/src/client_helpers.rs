@@ -3,7 +3,10 @@
 
 use core::num::NonZeroU64;
 
-use rust_decimal::Decimal;
+use rust_decimal::{
+    dec,
+    Decimal,
+};
 
 use crate::{
     OrderInfoError,
@@ -36,7 +39,7 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
 
 /// A helper function to convert a price ratio and order size (in base atoms) to order info args.
 ///
-/// NOTE: The price must represent the atom price ratio since `price: f64` represents the quote
+/// NOTE: The price must represent the atom price ratio since `price` represents the quote
 /// atoms to base atoms price ratio.
 pub fn to_order_info_args(
     price: Decimal,
@@ -61,6 +64,23 @@ pub fn to_order_info_args(
         base_exponent_biased,
         quote_exponent_biased,
     ))
+}
+
+pub fn decimal_pow10_i16(value: Decimal, pow: i16) -> Decimal {
+    const TEN: Decimal = dec!(10);
+    let is_negative = pow.is_negative();
+    (0..pow.abs())
+        .fold(
+            value,
+            |acc, _| {
+                if is_negative {
+                    acc / TEN
+                } else {
+                    acc * TEN
+                }
+            },
+        )
+        .normalize()
 }
 
 #[cfg(test)]
@@ -122,5 +142,15 @@ mod tests {
         );
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), expected);
+    }
+
+    #[test]
+    fn test_pow10_i16() {
+        assert_eq!(decimal_pow10_i16(dec!(1.23), 2), dec!(123));
+        assert_eq!(decimal_pow10_i16(dec!(1.6923), 3), dec!(1692.3));
+        assert_eq!(decimal_pow10_i16(dec!(1.000333), 4), dec!(10003.33));
+        assert_eq!(decimal_pow10_i16(dec!(1.23), -1), dec!(0.123));
+        assert_eq!(decimal_pow10_i16(dec!(1.23), -2), dec!(0.0123));
+        assert_eq!(decimal_pow10_i16(dec!(0.05123), -9), dec!(0.00000000005123));
     }
 }

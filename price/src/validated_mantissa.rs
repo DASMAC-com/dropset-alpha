@@ -25,8 +25,6 @@ impl TryFrom<u32> for ValidatedPriceMantissa {
     }
 }
 
-const MAX_NORMALIZE_ITERATIONS: i16 = 100;
-
 impl ValidatedPriceMantissa {
     /// Returns the validated price mantissa as a u32.
     #[inline(always)]
@@ -48,6 +46,8 @@ impl ValidatedPriceMantissa {
     pub fn try_into_with_scale(
         price: Decimal,
     ) -> Result<(ValidatedPriceMantissa, i16), OrderInfoError> {
+        const MAX_NORMALIZE_ITERATIONS: i16 = 100;
+
         if price.is_zero() || price.is_sign_negative() {
             return Err(OrderInfoError::InvalidPriceMantissa);
         }
@@ -113,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_f64s() {
+    fn test_normalize_values() {
         use rust_decimal::dec;
 
         let check = |value: Decimal, expected: (u32, i16)| {
@@ -130,8 +130,7 @@ mod tests {
 
         assert!(ValidatedPriceMantissa::try_into_with_scale(dec!(0.000000)).is_err());
         assert!(ValidatedPriceMantissa::try_into_with_scale(dec!(0.0)).is_err());
-        let zero_f64_decimal = Decimal::try_from(0 as f64).expect("Should convert");
-        assert!(ValidatedPriceMantissa::try_into_with_scale(zero_f64_decimal).is_err());
+        assert!(ValidatedPriceMantissa::try_into_with_scale(Decimal::ZERO).is_err());
         assert!(ValidatedPriceMantissa::try_into_with_scale(dec!(-1.0)).is_err());
         assert!(ValidatedPriceMantissa::try_into_with_scale(dec!(-0.0000000000001)).is_err());
 
