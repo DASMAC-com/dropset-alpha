@@ -162,6 +162,7 @@ mod tests {
         collections::HashMap,
         fs::File,
         io::BufReader,
+        path::PathBuf,
     };
 
     use solana_address::Address;
@@ -172,11 +173,16 @@ mod tests {
         ParsedLogs,
     };
 
+    fn get_json_reader() -> BufReader<File> {
+        let path = PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("client/test_accounts.json");
+        let file = File::open(path).expect("File should exist");
+
+        BufReader::new(file)
+    }
+
     #[test]
     fn parse_goldens_happy_path() {
-        let file = File::open("test_logs.json").expect("File should exist");
-        let reader = BufReader::new(file);
-
+        let reader = get_json_reader();
         let map: HashMap<String, Vec<String>> =
             serde_json::from_reader(reader).unwrap_or_else(|_| HashMap::new());
 
@@ -210,8 +216,7 @@ mod tests {
     #[test]
     fn parse_complex() {
         let complex_txn_sig = "5oQeU4AnZstnyuv77WMsgaDMRhgGnCrgEWC72pKGB2k3P3dqUHSDBGZWALbNDugCJEMBgy8pQnY8C87rP8oHFrZv";
-        let file = File::open("test_logs.json").expect("File should exist");
-        let reader = BufReader::new(file);
+        let reader = get_json_reader();
 
         let map: HashMap<String, Vec<String>> =
             serde_json::from_reader(reader).unwrap_or_else(|_| HashMap::new());
