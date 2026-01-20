@@ -3,15 +3,16 @@
 
 use std::sync::LazyLock;
 
-const RISK_AVERSION: f64 = 1.0;
-const VOLATILITY_ESTIMATE: f64 = 1.0;
-const TIME_HORIZON: f64 = 300.0;
-const FILL_DECAY: f64 = 1.5;
+use rust_decimal::{
+    dec,
+    prelude::ToPrimitive,
+    Decimal,
+};
 
-pub fn volatility_estimate_squared() -> &'static f64 {
-    static VE: LazyLock<f64> = LazyLock::new(|| VOLATILITY_ESTIMATE.powf(2f64));
-    LazyLock::force(&VE)
-}
+const RISK_AVERSION: Decimal = dec!(1.0);
+const VOLATILITY_ESTIMATE: Decimal = dec!(1.0);
+const TIME_HORIZON: Decimal = dec!(300.0);
+const FILL_DECAY: Decimal = dec!(1.5);
 
 /// Calculates the reservation price, also known as the indifference price and the central price.
 ///
@@ -36,23 +37,17 @@ pub fn volatility_estimate_squared() -> &'static f64 {
 /// ```text
 /// r = mid_price_in_atoms - (base_atoms_inventory · risk_aversion · volatility_estimate² · (T - t))
 /// ```
-
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-// These units need to be properly normalized/scaled to atoms (or not).
-pub fn reservation_price(mid_price_in_atoms: f64, base_atoms_inventory: i128) -> f64 {
+pub fn reservation_price(mid_price_in_atoms: Decimal, base_atoms_inventory: Decimal) -> Decimal {
     mid_price_in_atoms
-        - (base_atoms_inventory as f64
-            * RISK_AVERSION
-            * volatility_estimate_squared()
-            * TIME_HORIZON)
+        - (base_atoms_inventory * RISK_AVERSION * volatility_estimate_squared() * TIME_HORIZON)
+}
+
+fn ln_decimal_f64(d: Decimal) -> Option<Decimal> {
+    if d <= Decimal::ZERO {
+        return None;
+    }
+
+    d.to_f64().and_then(|v| Decimal::from_f64_retain(v.ln()))
 }
 
 /// Calculates half of the total spread.
@@ -63,13 +58,21 @@ pub fn reservation_price(mid_price_in_atoms: f64, base_atoms_inventory: i128) ->
 ///                + (2 / risk_aversion) · ln(1 + (risk_aversion / fill_decay))
 ///a
 /// Thus half that value is half the spread.
-pub fn half_spread() -> f64 {
-    static HALF_SPREAD: LazyLock<f64> = LazyLock::new(|| {
+pub fn half_spread() -> Decimal {
+    static HALF_SPREAD: LazyLock<Decimal> = LazyLock::new(|| {
         let spread = (RISK_AVERSION * volatility_estimate_squared() * TIME_HORIZON)
-            + (2.0 / RISK_AVERSION) * (1.0 + (RISK_AVERSION / FILL_DECAY)).ln();
+            + (dec!(2.0) / RISK_AVERSION)
+                * ln_decimal_f64(dec!(1.0) + (RISK_AVERSION / FILL_DECAY))
+                    .expect("Should calculate natural log");
 
-        spread / 2.0
+        spread / dec!(2.0)
     });
 
     *LazyLock::force(&HALF_SPREAD)
+}
+
+fn volatility_estimate_squared() -> Decimal {
+    static VOL_SQ: LazyLock<Decimal> = LazyLock::new(|| VOLATILITY_ESTIMATE * VOLATILITY_ESTIMATE);
+
+    *LazyLock::force(&VOL_SQ)
 }

@@ -13,7 +13,11 @@ use dropset_interface::{
     },
 };
 use itertools::Itertools;
-use price::to_order_info_args;
+use price::client_helpers::{
+    decimal_pow10_i16,
+    to_order_info_args,
+};
+use rust_decimal::Decimal;
 use solana_address::Address;
 use solana_sdk::{
     message::Instruction,
@@ -141,7 +145,7 @@ pub struct MakerContext<'a> {
     initial_state: MakerState,
     /// The maker's latest state.
     latest_state: MakerState,
-    /// The change in the market maker's base inventory value as a signed integer.
+    /// The change in the market maker's base inventory value as a signed integer, in atoms.
     ///
     /// In the A-S model `q` represents the base inventory as a reflection of the maker's net short
     /// (negative) or long (positive) position. The change in base inventory from initial to
@@ -158,33 +162,25 @@ pub struct MakerContext<'a> {
     /// - When q is positive, it pushes the spread downwards so that ask prices are closer to the
     ///   [`crate::calculate_spreads::reservation_price`] price and bid prices are further away.
     ///   This effectively increases the likelihood of getting asks filled and vice versa for bids.
-    pub base_inventory_delta: i128,
-    /// The change in quote inventory since the initial maker state was created.
+    pub base_inventory_delta: Decimal,
+    /// The change in quote inventory since the initial maker state was created, in atoms.
     /// This isn't used by the A-S model but is helpful for debugging purposes.
-    pub quote_inventory_delta: i128,
-    /// The reference mid price, expressed as quote per 1 base.
+    pub quote_inventory_delta: Decimal,
+    /// The reference mid price, expressed as quote atom per 1 base atom.
     ///
     /// In the A–S model this is an exogenous “fair price” process; in practice you can source it
     /// externally (e.g. FX feed) or derive it internally from the venue’s top-of-book.
     /// It anchors the reservation price and thus the bid/ask quotes via the spread model.
-    mid_price: f64,
-    /// The transaction version of the last successful cancel + order transaction.
-    last_successful_txn_version: Option<u64>,
+    ///
+    /// Note that the price as quote_atoms / base_atoms may differ from quote / base. Be sure to
+    /// express the price as a ratio of atoms.
+    mid_price: Decimal,
 }
 
 impl MakerContext<'_> {
     /// See [`MakerContext::mid_price`].
-    pub fn mid_price(&self) -> f64 {
+    pub fn mid_price(&self) -> Decimal {
         self.mid_price
-    }
-
-    /// Checks if the latest state is definitively stale by comparing the transaction version in the
-    /// latest state to the transaction version of the last submitted cancel + post transaction.
-    ///
-    /// NOTE: A value of `false` doesn't mean the latest state is definitively not stale, because
-    /// the maker's orders can get filled at any time.
-    pub fn is_latest_state_definitely_stale(&self) -> bool {
-        self.latest_state.transaction_version < self.last_successful_txn_version.unwrap_or(0)
     }
 
     pub fn maker_seat(&self) -> SectorIndex {
@@ -218,7 +214,7 @@ impl MakerContext<'_> {
             .collect_vec();
 
         let (bid_price, ask_price) = self.get_bid_and_ask_prices();
-        let to_post_ixn = |price: f64, size: u64, is_bid: bool, seat_index: SectorIndex| {
+        let to_post_ixn = |price: Decimal, size: u64, is_bid: bool, seat_index: SectorIndex| {
             to_order_info_args(price, size)
                 .map_err(|e| anyhow::anyhow! {"{e:#?}"})
                 .map(|args| {
@@ -267,10 +263,10 @@ impl MakerContext<'_> {
     ) -> anyhow::Result<()> {
         self.latest_state =
             MakerState::new_from_market(transaction_version, self.address, new_market_state)?;
-        self.base_inventory_delta =
-            self.latest_state.base_inventory as i128 - self.initial_state.base_inventory as i128;
-        self.quote_inventory_delta =
-            self.latest_state.quote_inventory as i128 - self.initial_state.quote_inventory as i128;
+        self.base_inventory_delta = Decimal::from(self.latest_state.base_inventory)
+            - Decimal::from(self.initial_state.base_inventory);
+        self.quote_inventory_delta = Decimal::from(self.latest_state.quote_inventory)
+            - Decimal::from(self.initial_state.quote_inventory);
 
         Ok(())
     }
@@ -304,38 +300,69 @@ impl MakerContext<'_> {
             None => anyhow::bail!("There are zero candlesticks in the candlestick response"),
         };
 
-        self.mid_price = latest_price;
+        // Normalize the price based on the token decimals.
+        let normalized_latest_price = normalize_non_atoms_price(
+            latest_price,
+            self.market_ctx.base.mint_decimals,
+            self.market_ctx.quote.mint_decimals,
+        );
+
+        self.mid_price = normalized_latest_price;
 
         Ok(())
     }
 
     /// Calculates the model's output bid and ask prices as a function of the current mid price and
     /// the maker's base inventory delta.
-
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    // These units need to be properly normalized/scaled to atoms (or not).
-    fn get_bid_and_ask_prices(&self, base_decimals: i32, quote_decimals: i32) -> (f64, f64) {
-        let normalization_factor = 10f64.powi(quote_decimals - base_decimals);
-        let normalize = |price: f64| price * normalization_factor;
-
-        let q_atoms = self.base_inventory_delta;
-        let scale = 10i128.pow(base_decimals as u32); // base_decimals <= 18-ish is safe
-        let q_base_units: f64 =
-            (q_atoms / scale) as f64 + (q_atoms % scale) as f64 / (scale as f64);
-
-        let reservation_price = reservation_price(self.mid_price(), q_base_units);
+    fn get_bid_and_ask_prices(&self) -> (Decimal, Decimal) {
+        let reservation_price = reservation_price(self.mid_price(), self.base_inventory_delta);
         let bid_price = reservation_price - half_spread();
         let ask_price = reservation_price + half_spread();
 
-        (normalize(bid_price), normalize(ask_price))
+        (bid_price, ask_price)
+    }
+}
+
+/// Converts a token price not denominated in atoms to a token price denominated in atoms using
+/// exponentiation based on the base and quote token's decimals.
+fn normalize_non_atoms_price(
+    non_atoms_price: Decimal,
+    base_decimals: u8,
+    quote_decimals: u8,
+) -> Decimal {
+    decimal_pow10_i16(
+        non_atoms_price,
+        quote_decimals as i16 - base_decimals as i16,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::dec;
+
+    use crate::maker_context::normalize_non_atoms_price;
+
+    #[test]
+    fn varying_decimal_pair() {
+        // Equal decimals => do nothing.
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 6), dec!(1.27));
+
+        // 10 ^ (quote - base) == 10 ^ 1 == multiply by 10
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 5, 6), dec!(12.7));
+
+        // 10 ^ (quote - base) == 10 ^ -1 == divide by 10
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 5), dec!(0.127));
+
+        // 10 ^ (quote - base) == 10 ^ (19 - 11) == multiply by 10 ^ 8
+        assert_eq!(
+            normalize_non_atoms_price(dec!(1.27), 11, 19),
+            dec!(127_000_000)
+        );
+
+        // 10 ^ (quote - base) == 10 ^ (11 - 19) = divide by 10 ^ 8
+        assert_eq!(
+            normalize_non_atoms_price(dec!(1.27), 19, 11),
+            dec!(0.0000000127)
+        );
     }
 }

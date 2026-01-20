@@ -9,8 +9,9 @@ client = { path = "../../../client" }
 chrono.workspace = true
 dropset-interface = { path = "../../../interface" }
 itertools.workspace = true
-price = { path = "../../../price" }
+price = { path = "../../../price", features = ["client" ] }
 reqwest.workspace = true
+rust_decimal = { workspace = true, features = ["macros", "serde-with-arbitrary-precision"] }
 solana-address.workspace = true
 solana-sdk.workspace = true
 serde.workspace = true
