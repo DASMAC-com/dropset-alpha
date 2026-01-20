@@ -13,8 +13,9 @@ pub async fn query_price_feed(
     num_candles: u64,
     client: reqwest::Client,
 ) -> anyhow::Result<OandaCandlestickResponse> {
-    let url =
-        format!("{OANDA_BASE_URL}/{pair}/candles?count={num_candles}&granularity={granularity}");
+    let url = format!(
+        "{OANDA_BASE_URL}/instruments/{pair}/candles?count={num_candles}&granularity={granularity}"
+    );
     let response = client.get(url).bearer_auth(auth_token).send().await?;
     let text = response.text().await?;
 
