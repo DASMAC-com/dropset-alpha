@@ -65,6 +65,7 @@ static_assertions = "1.1.0"
 strum = "0.27.2"
 strum_macros = "0.27.2"
 tokio = "1.49.0"
+tokio-stream = "0.1.17"
 yellowstone-grpc-client = "10.2.0"
 yellowstone-grpc-proto = "10.1.1"
 

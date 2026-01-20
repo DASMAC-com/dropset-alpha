@@ -2814,10 +2814,12 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-address 2.0.0",
+ "solana-client",
  "solana-sdk",
  "strum",
  "strum_macros",
  "tokio",
+ "tokio-stream",
  "transaction-parser",
 ]
 
