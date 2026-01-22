@@ -120,6 +120,7 @@ mod tests {
     use price::{
         to_biased_exponent,
         to_order_info,
+        OrderInfoArgs,
         UNBIASED_MAX,
     };
     use solana_address::Address;
@@ -154,12 +155,12 @@ mod tests {
     /// Test utility function to create orders where the output encoded price is equal to the input
     /// input price mantissa.
     fn create_test_order(price_mantissa: u32, user_seat: SectorIndex) -> Order {
-        let order_info = to_order_info(
+        let order_info = to_order_info(OrderInfoArgs::new(
             price_mantissa,
             1,
             to_biased_exponent!(UNBIASED_MAX),
             to_biased_exponent!(-1),
-        )
+        ))
         .expect("The unit test should pass a valid price mantissa");
 
         // The biased base and quote exponent consts passed in should ensure that the encoded price

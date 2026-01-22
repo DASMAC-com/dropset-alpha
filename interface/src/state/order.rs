@@ -160,13 +160,15 @@ mod tests {
         to_biased_exponent,
         to_order_info,
         EncodedPrice,
+        OrderInfoArgs,
     };
 
     use super::*;
 
     #[test]
     fn new_order_happy_path() {
-        let order_info = to_order_info(10_000_000, 5, 8, 0).expect("Should create order info");
+        let order_info =
+            to_order_info((10_000_000, 5, 8, 0).into()).expect("Should create order info");
         let base_in_order = order_info.base_atoms;
         let quote_in_order = order_info.quote_atoms;
         let encoded_price_in_order = order_info.encoded_price;
@@ -180,12 +182,12 @@ mod tests {
 
     #[test]
     fn order_mutators() {
-        let order_info = to_order_info(
+        let order_info = to_order_info(OrderInfoArgs::new(
             10_000_000,
             5,
             to_biased_exponent!(7),
             to_biased_exponent!(0),
-        )
+        ))
         .expect("Should create order info");
         let user_seat = 17;
         let mut order = Order::new(order_info.clone(), user_seat);

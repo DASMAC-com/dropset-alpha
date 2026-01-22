@@ -147,7 +147,7 @@ mod tests {
         // Test the example in the doctest for the main to order info function.
         let base_atoms = 500 * 10u64.pow(6);
         let res = to_order_info_args(rust_decimal::dec!(1.25), base_atoms);
-        let expected = (
+        let expected = OrderInfoArgs::new(
             12_500_000,
             5,
             to_biased_exponent!(8),

@@ -92,7 +92,7 @@ pub struct OrderInfo {
     pub quote_atoms: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderInfoArgs {
     pub price_mantissa: u32,
     pub base_scalar: u64,
