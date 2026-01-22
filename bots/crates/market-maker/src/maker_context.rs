@@ -314,7 +314,7 @@ impl From<OrderView> for OrderAsKey {
 ///     ((3, c), (4, d), (5, e))
 /// );
 ///
-/// res == vec![a, b]
+/// res == ([a, b], [d, e])
 fn split_symmetric_difference<'a, K: Eq + Hash, V1, V2>(
     a: &'a HashMap<K, V1>,
     b: &'a HashMap<K, V2>,
