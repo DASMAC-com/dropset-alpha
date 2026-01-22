@@ -1,11 +1,6 @@
 //! Token-level context for creating mints, ATAs, and performing common token operations in
 //! tests and examples.
 
-use std::{
-    collections::HashMap,
-    sync::RwLock,
-};
-
 use anyhow::Ok;
 use solana_address::Address;
 use solana_sdk::{
@@ -38,7 +33,6 @@ pub struct TokenContext {
     pub mint_address: Address,
     pub token_program: Address,
     pub mint_decimals: u8,
-    pub memoized_atas: RwLock<HashMap<Address, Address>>,
 }
 
 impl TokenContext {
@@ -67,7 +61,6 @@ impl TokenContext {
             mint_address: mint_token,
             token_program: mint_account.owner,
             mint_decimals: mint.decimals,
-            memoized_atas: Default::default(),
         })
     }
 
@@ -119,7 +112,6 @@ impl TokenContext {
             mint_address: mint.pubkey(),
             token_program,
             mint_decimals: decimals,
-            memoized_atas: RwLock::new(HashMap::new()),
         })
     }
 
@@ -150,22 +142,7 @@ impl TokenContext {
     }
 
     pub fn get_ata_for(&self, owner: &Address) -> Address {
-        if let Some(ata) = self
-            .memoized_atas
-            .read()
-            .expect("RWLock shouldn't be poisoned")
-            .get(owner)
-        {
-            return *ata;
-        };
-
-        let ata = get_associated_token_address(owner, &self.mint_address);
-        self.memoized_atas
-            .write()
-            .expect("RWLock shouldn't be poisoned")
-            .insert(*owner, ata);
-
-        ata
+        get_associated_token_address(owner, &self.mint_address)
     }
 
     /// If the mint authority was passed to the token context upon creation, this mints tokens
