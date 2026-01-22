@@ -79,7 +79,7 @@ fn ln_decimal_f64(d: Decimal) -> Option<Decimal> {
 ///
 /// total_spread = (risk_aversion · volatility_estimate² · time_horizon)
 ///                + (2 / risk_aversion) · ln(1 + (risk_aversion / fill_decay))
-///a
+///
 /// Thus half that value is half the spread.
 pub fn half_spread() -> Decimal {
     static HALF_SPREAD: LazyLock<Decimal> = LazyLock::new(|| {
