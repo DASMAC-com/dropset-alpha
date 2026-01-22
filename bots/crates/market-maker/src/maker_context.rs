@@ -127,12 +127,12 @@ impl MakerState {
         // Sum the maker's base inventory by adding the seat balance + the bid collateral amounts.
         let base_inventory = bids
             .iter()
-            .fold(seat.base_available, |acc, seat| acc + seat.base_remaining);
+            .fold(seat.base_available, |v, order| v + order.base_remaining);
 
         // Sum the maker's quote inventory by adding the seat balance + the ask collateral amounts.
         let quote_inventory = asks
             .iter()
-            .fold(seat.quote_available, |acc, seat| acc + seat.quote_remaining);
+            .fold(seat.quote_available, |v, order| v + order.quote_remaining);
 
         Ok(Self {
             address: maker_address,
