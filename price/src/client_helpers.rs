@@ -42,8 +42,9 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
 
 /// A helper function to convert a price ratio and order size (in base atoms) to order info args.
 ///
-/// NOTE: The price must represent the atom price ratio since `price` represents the quote
-/// atoms to base atoms price ratio.
+/// NOTE: The price ratio in atoms may not match the price ratio in human-readable units. That is,
+/// if the tokens don't use the same amount of decimals, `price` in token atoms is different than
+/// `price` in human-readable values. Make sure `price` here equals `quote_atoms / base_atoms`.
 pub fn to_order_info_args(
     price: Decimal,
     order_size_base_atoms: u64,
