@@ -46,6 +46,12 @@ impl ValidatedPriceMantissa {
     pub fn try_into_with_scale(
         price: Decimal,
     ) -> Result<(ValidatedPriceMantissa, i16), OrderInfoError> {
+        /// The max power of 10 with which the passed price is multiplied by to reach the valid
+        /// price mantissa range. Most prices should be within the range by a factor of a power of
+        /// ten much smaller than this (more like 30 or 40 at the most, otherwise the exponent would
+        /// be too large to fit in [`crate::EXPONENT_BITS`]) bits.
+        /// The exact max iterations is arbitrary depending on user input, so 100 is used to avoid
+        /// an infinite loop.
         const MAX_NORMALIZE_ITERATIONS: i16 = 100;
 
         if price.is_zero() || price.is_sign_negative() {
