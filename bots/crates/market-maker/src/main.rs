@@ -164,6 +164,10 @@ pub async fn program_subscribe(
     Ok(())
 }
 
+/// Oanda recommends limiting to twice per second (500ms interval).
+/// See: <https://developer.oanda.com/rest-live-v20/best-practices/>
+const POLL_INTERVAL_MS: u64 = 5000;
+
 /// The indefinite task loop for polling the price feed endpoint.
 ///
 /// On each loop iteration, it updates the maker context price info and notifies the
@@ -174,7 +178,6 @@ async fn poll_price_feed(
     client: reqwest::Client,
     oanda_args: OandaArgs,
 ) -> anyhow::Result<()> {
-    const POLL_INTERVAL_MS: u64 = 5000;
     let mut interval = tokio::time::interval(Duration::from_millis(POLL_INTERVAL_MS));
 
     loop {
