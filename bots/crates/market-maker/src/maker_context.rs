@@ -539,9 +539,30 @@ fn log_orders(
 
 #[cfg(test)]
 mod tests {
+    use dropset_interface::state::{
+        asks_dll::AskOrders,
+        bids_dll::BidOrders,
+    };
+    use itertools::Itertools;
     use rust_decimal::dec;
+    use transaction_parser::views::OrderView;
 
-    use crate::maker_context::normalize_non_atoms_price;
+    use crate::maker_context::{
+        find_order,
+        normalize_non_atoms_price,
+    };
+
+    fn create_order(price: u32, seat: u32) -> OrderView {
+        OrderView {
+            prev_index: 0,
+            index: 0,
+            next_index: 0,
+            encoded_price: price,
+            user_seat: seat,
+            base_remaining: 0,
+            quote_remaining: 0,
+        }
+    }
 
     #[test]
     fn varying_decimal_pair() {
@@ -565,5 +586,55 @@ mod tests {
             normalize_non_atoms_price(dec!(1.27), 19, 11),
             dec!(0.0000000127)
         );
+    }
+
+    #[test]
+    fn find_asks_with_duplicate_prices() {
+        // Note in the current order book implementation, only the price is always sorted. The seat
+        // indices could be random because it's based on time priority, not seat index.
+        // Asks are in ascending order because lower prices have a higher priority.
+        let prices: [u32; 8] = [0, 0, 0, 1, 1, 1, 2, 3];
+        let seats: [u32; 8] = [8, 9, 3, 1, 4, 7, 2, 6];
+
+        let pairs = prices.into_iter().zip(seats).collect_vec();
+
+        let asks = pairs
+            .iter()
+            .copied()
+            .map(|(price, seat)| create_order(price, seat))
+            .collect_vec();
+
+        for (price, seat) in pairs {
+            let order = find_order::<AskOrders>(price, &asks, seat).expect("Should find seat");
+            assert_eq!(order.encoded_price, price);
+            assert_eq!(order.user_seat, seat);
+            assert!(find_order::<AskOrders>(price, &asks, 10000).is_none());
+            assert!(find_order::<AskOrders>(10000, &asks, seat).is_none());
+        }
+    }
+
+    #[test]
+    fn find_bids_with_duplicate_prices() {
+        // Note in the current order book implementation, only the price is always sorted. The seat
+        // indices could be random because it's based on time priority, not seat index.
+        // Bids are in descending order because higher prices have a higher priority.
+        let prices: [u32; 8] = [3, 2, 1, 1, 1, 0, 0, 0];
+        let seats: [u32; 8] = [8, 9, 3, 1, 4, 7, 2, 6];
+
+        let pairs = prices.into_iter().zip(seats).collect_vec();
+
+        let bids = pairs
+            .iter()
+            .copied()
+            .map(|(price, seat)| create_order(price, seat))
+            .collect_vec();
+
+        for (price, seat) in pairs {
+            let order = find_order::<BidOrders>(price, &bids, seat).expect("Should find seat");
+            assert_eq!(order.encoded_price, price);
+            assert_eq!(order.user_seat, seat);
+            assert!(find_order::<BidOrders>(price, &bids, 10000).is_none());
+            assert!(find_order::<BidOrders>(10000, &bids, seat).is_none());
+        }
     }
 }
