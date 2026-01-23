@@ -6,7 +6,7 @@
 
 ### **`dropset-interface`**
 The program’s external interface: instruction schemas, account layouts, and
-shared state types.  
+shared state types.
 This crate is client-agnostic and can be imported by both on-chain and off-chain
 consumers.
 
@@ -15,7 +15,7 @@ A procedural macro crate that generates strongly-typed instruction builders,
 account context structs, and validation scaffolding.
 
 ### **`instruction-macros-impl`**
-The implementation crate for `instruction-macros`.  
+The implementation crate for `instruction-macros`.
 Handles all the parsing, validation, and token generation logic for the
 procedural macros.
 
@@ -24,9 +24,15 @@ The Solana on-chain program.
 
 ### **`dropset-client`**
 A lightweight Rust client for local testing, benchmarking, and integration with
-RPC services.  
+RPC services.
 Provides helpers for sending transactions and fetching parsed state via the JSON
 RPC API.
+
+### **`market-maker`** *(bot)*
+A prototype market-making bot implementing a naive version of the
+[Avellaneda-Stoikov model] for a `dropset` market.
+
+Intended for experimentation and testing, not production use.
 
 ## 📚 Documentation
 
@@ -60,3 +66,5 @@ chrome.exe "$DOCS_PATH"
 cargo doc --no-deps --document-private-items && \
   chrome.exe "$(wslpath -w target/doc/dropset_program/index.html)"
 ```
+
+[Avellaneda-Stoikov model]: https://people.orie.cornell.edu/sfs33/LimitOrderBook.pdf
