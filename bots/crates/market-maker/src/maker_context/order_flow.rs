@@ -32,10 +32,8 @@ use crate::maker_context::{
 pub fn get_non_redundant_order_flow(
     bids_to_cancel: Vec<OrderView>,
     asks_to_cancel: Vec<OrderView>,
-    // Vec of (price, size) tuples.
-    bids_to_post: Vec<(Decimal, u64)>,
-    // Vec of (price, size) tuples.
-    asks_to_post: Vec<(Decimal, u64)>,
+    bids_to_post: Vec<(Decimal, u64)>, // (price, size) tuples.
+    asks_to_post: Vec<(Decimal, u64)>, // (price, size) tuples.
     maker_seat_index: SectorIndex,
 ) -> anyhow::Result<(
     Vec<CancelOrderInstructionData>,
