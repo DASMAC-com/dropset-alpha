@@ -55,6 +55,10 @@ use crate::{
 
 const ORDER_SIZE: u64 = 1_000;
 
+/// Tracks the market maker's seat, bids, asks, and total base and quote inventory for a market.
+///
+/// To simplify this struct's interface, the market maker must have already been registered prior
+/// to instantiating this struct.
 #[derive(Debug)]
 pub struct MakerState {
     pub address: Address,
@@ -84,6 +88,8 @@ fn find_maker_seat(market: &MarketViewAll, maker: &Address) -> anyhow::Result<Ma
 }
 
 impl MakerState {
+    /// Creates the market maker's state based on the passed [`MarketViewAll`] state.
+    /// If the maker doesn't have a seat registered yet this will fail.
     pub fn new_from_market(maker_address: Address, market: &MarketViewAll) -> anyhow::Result<Self> {
         let seat = find_maker_seat(market, &maker_address)?;
 
