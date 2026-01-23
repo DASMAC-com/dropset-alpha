@@ -1,7 +1,6 @@
 //! Token-level context for creating mints, ATAs, and performing common token operations in
 //! tests and examples.
 
-use anyhow::Ok;
 use solana_address::Address;
 use solana_sdk::{
     program_pack::Pack,
