@@ -26,7 +26,12 @@ pub async fn query_price_feed(
     let url = format!(
         "{OANDA_BASE_URL}/instruments/{pair}/candles?count={num_candles}&granularity={granularity}"
     );
-    let response = client.get(url).bearer_auth(auth_token).send().await?;
+    let response = client
+        .get(url)
+        .bearer_auth(auth_token)
+        .send()
+        .await?
+        .error_for_status()?;
     let text = response.text().await?;
 
     serde_json::from_str(text.as_str()).map_err(|e| e.into())
