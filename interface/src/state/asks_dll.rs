@@ -13,7 +13,6 @@ use crate::{
         market::Market,
         market_header::MarketHeader,
         order::{
-            BookSide,
             Order,
             OrdersCollection,
         },
@@ -25,16 +24,6 @@ use crate::{
 };
 
 pub struct AskOrders;
-
-impl BookSide for AskOrders {
-    /// Asks are sorted by price in ascending order, so just return the natural ordering.
-    /// That is, a price of 10 has a higher priority than a price of 20, so it should come before
-    /// 20 when sorted.
-    #[inline(always)]
-    fn cmp_prices(a: u32, b: u32) -> core::cmp::Ordering {
-        a.cmp(&b)
-    }
-}
 
 impl OrdersCollection for AskOrders {
     /// Asks are inserted in ascending order. The top of the book (first price on the book) is thus

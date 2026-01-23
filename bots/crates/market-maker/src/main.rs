@@ -161,7 +161,7 @@ pub async fn program_subscribe(
         // Update the maker state in the maker context.
         maker_ctx
             .try_borrow_mut()?
-            .update_maker_state(&market_view)?;
+            .update_maker_state(market_view)?;
 
         // And notify the `watch::Receiver` of a new maker state update.
         sender.send(TaskUpdate::MakerState)?;

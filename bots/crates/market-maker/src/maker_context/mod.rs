@@ -79,7 +79,7 @@ impl MakerContext {
         let market_ctx =
             MarketContext::new_from_token_pair(rpc, base_mint, quote_mint, None, None)?;
         let market = market_ctx.view_market(rpc)?;
-        let latest_state = MakerState::new_from_market(maker.pubkey(), &market)?;
+        let latest_state = MakerState::new_from_market(maker.pubkey(), market)?;
         let mid_price = get_normalized_mid_price(initial_price_feed_response, &pair, &market_ctx)?;
         let maker_address = maker.pubkey();
 
@@ -146,7 +146,7 @@ impl MakerContext {
         Ok(ixns)
     }
 
-    pub fn update_maker_state(&mut self, new_market_state: &MarketViewAll) -> anyhow::Result<()> {
+    pub fn update_maker_state(&mut self, new_market_state: MarketViewAll) -> anyhow::Result<()> {
         self.latest_state = MakerState::new_from_market(self.maker_address, new_market_state)?;
 
         Ok(())

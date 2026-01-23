@@ -1,6 +1,8 @@
 //! Read-only view helpers for decoding `dropset` on-chain market accounts into ergonomic Rust
 //! structs.
 
+use std::collections::HashMap;
+
 use dropset_interface::state::{
     market::MarketRef,
     market_header::MarketHeader,
@@ -11,6 +13,7 @@ use dropset_interface::state::{
     transmutable::Transmutable,
     user_order_sectors::UserOrderSectors,
 };
+use itertools::Itertools;
 use solana_address::Address;
 
 #[derive(Clone, Debug)]
@@ -41,6 +44,14 @@ pub struct MarketView<T> {
     pub sectors: Vec<T>,
 }
 
+/// The various data associated with a single user for each market.
+#[derive(Clone, Debug)]
+pub struct MarketUserData {
+    pub seat: MarketSeatView,
+    pub bids: Vec<OrderView>,
+    pub asks: Vec<OrderView>,
+}
+
 /// A view on a market account's data showing all collections of all node types.
 #[derive(Clone, Debug)]
 pub struct MarketViewAll {
@@ -48,6 +59,7 @@ pub struct MarketViewAll {
     pub seats: Vec<MarketSeatView>,
     pub bids: Vec<OrderView>,
     pub asks: Vec<OrderView>,
+    pub users: HashMap<Address, MarketUserData>,
 }
 
 /// Attempts to parse a Dropset market account from raw Solana account fields and convert it into a
@@ -160,11 +172,57 @@ impl From<&MarketHeader> for MarketHeaderView {
 
 impl From<MarketRef<'_>> for MarketViewAll {
     fn from(market: MarketRef<'_>) -> Self {
+        let seats = market.iter_seats().map(MarketSeatView::from).collect_vec();
+        let bids = market.iter_bids().map(OrderView::from).collect_vec();
+        let asks = market.iter_asks().map(OrderView::from).collect_vec();
+
+        // Map seat indices to user addresses to O(1) get a user's address from an order.
+        let seat_index_to_user: HashMap<SectorIndex, &Address> =
+            seats.iter().map(|s| (s.index, &s.user)).collect();
+
+        // Instantiate all user data with their corresponding seat and empty bids/asks.
+        let mut users: HashMap<Address, MarketUserData> = seats
+            .iter()
+            .map(|s| {
+                let new_user_data = MarketUserData {
+                    seat: s.clone(),
+                    bids: vec![],
+                    asks: vec![],
+                };
+                (s.user, new_user_data)
+            })
+            .collect();
+
+        // Update each user entry's bids.
+        for bid in bids.iter() {
+            let user = seat_index_to_user
+                .get(&bid.user_seat)
+                .expect("Should find user in seat index map");
+            users
+                .get_mut(user)
+                .expect("Should find user in user map")
+                .bids
+                .push(bid.clone());
+        }
+
+        // Update each user entry's asks.
+        for ask in asks.iter() {
+            let user = seat_index_to_user
+                .get(&ask.user_seat)
+                .expect("Should find user in seat index map");
+            users
+                .get_mut(user)
+                .expect("Should find user in user map")
+                .asks
+                .push(ask.clone());
+        }
+
         Self {
             header: market.header.into(),
-            seats: market.iter_seats().map(MarketSeatView::from).collect(),
-            bids: market.iter_bids().map(OrderView::from).collect(),
-            asks: market.iter_asks().map(OrderView::from).collect(),
+            seats,
+            bids,
+            asks,
+            users,
         }
     }
 }

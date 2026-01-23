@@ -50,12 +50,6 @@ impl ParsedInnerInstruction {
     }
 }
 
-// struct ParsedUpdate {
-//     pub market_view: Vec<MarketView<MarketSeatView>>,
-//     pub logs: Vec<String>,
-//     pub events: Vec<DropsetEvent>,
-// }
-
 pub enum ParsedUpdate {
     Market(MarketViewAll),
     EmittedEvents {
