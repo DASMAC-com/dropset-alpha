@@ -13,7 +13,13 @@ use dropset_interface::{
         CancelOrderInstructionData,
         PostOrderInstructionData,
     },
-    state::user_order_sectors::OrderSectors,
+    state::{
+        asks_dll::AskOrders,
+        bids_dll::BidOrders,
+        order::BookSide,
+        sector::SectorIndex,
+        user_order_sectors::OrderSectors,
+    },
 };
 use itertools::Itertools;
 use price::{
@@ -84,6 +90,43 @@ fn find_maker_seat(market: &MarketViewAll, maker: &Address) -> anyhow::Result<Ma
     Ok(seat)
 }
 
+/// Find an order in a collection of orders given the price, the [`BookSide`], and the seat index.
+fn find_order<T: BookSide>(
+    price: u32,
+    orders: &[OrderView],
+    seat_index: SectorIndex,
+) -> Option<OrderView> {
+    let i = orders
+        .binary_search_by(|o| T::cmp_prices(o.encoded_price, price))
+        .ok()?;
+
+    // `core::slice`'s binary search can return any of multiple matches.
+    // Search forwards and backwards from the found index, stopping when the price changes.
+    // Return when the order seat matches the passed seat index.
+    //
+    // This can be achieved by chaining and then searching the three iterators for the seat index:
+    // 1. The first, found element: [i]
+    // 2. The elements before: [i - 1, i - 2, ..] while the same `price`
+    // 3. The elements after: [i + 1, i + 2, ..] while the same `price`
+
+    let first_found = &orders[i];
+
+    let before = orders[..i]
+        .iter()
+        .rev()
+        .take_while(|o| o.encoded_price == price);
+
+    let after = orders[i + 1..]
+        .iter()
+        .take_while(|o| o.encoded_price == price);
+
+    std::iter::once(first_found)
+        .chain(before)
+        .chain(after)
+        .find(|o| o.user_seat == seat_index)
+        .cloned()
+}
+
 impl MakerState {
     /// Creates the market maker's state based on the passed [`MarketViewAll`] state.
     /// If the maker doesn't have a seat registered yet this will fail.
@@ -102,30 +145,19 @@ impl MakerState {
         let bid_prices = to_prices(&seat.user_order_sectors.bids);
         let ask_prices = to_prices(&seat.user_order_sectors.asks);
 
-        // Given a price and a collection of orders, find the unique order associated with the price
-        // passed. This is just for the bids and asks in this local function so all passed prices
-        // should map to a valid order, hence the `.expect(...)` calls instead of returning Results.
-        let find_order_by_price = |price: &u32, orders: &[OrderView]| {
-            let order_list_index = orders
-                .binary_search_by_key(price, |order| order.encoded_price)
-                .expect("Should find order with matching encoded price");
-            orders
-                .get(order_list_index)
-                .expect("Index should correspond to a valid order")
-                .clone()
-        };
-
         // Map each bid price to its corresponding order.
         let bids = bid_prices
             .iter()
-            .map(|price| find_order_by_price(price, &market.bids))
-            .collect_vec();
+            .map(|price| find_order::<BidOrders>(*price, &market.bids, seat.index))
+            .collect::<Option<Vec<_>>>()
+            .expect("Should find the bid");
 
         // Map each ask price to its corresponding order.
         let asks = ask_prices
             .iter()
-            .map(|price| find_order_by_price(price, &market.asks))
-            .collect_vec();
+            .map(|price| find_order::<AskOrders>(*price, &market.asks, seat.index))
+            .collect::<Option<Vec<_>>>()
+            .expect("Should find the ask");
 
         // Sum the maker's base inventory by adding the seat balance + the bid collateral amounts.
         let base_inventory = bids

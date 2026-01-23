@@ -13,6 +13,7 @@ use crate::{
         market::Market,
         market_header::MarketHeader,
         order::{
+            BookSide,
             Order,
             OrdersCollection,
         },
@@ -24,6 +25,16 @@ use crate::{
 };
 
 pub struct BidOrders;
+
+impl BookSide for BidOrders {
+    /// Bids are sorted by price in descending order, so compare prices in reverse order.
+    /// That is, a price of 20 has a higher priority than a price of 10, so it should come before
+    /// 10 when sorted.
+    #[inline(always)]
+    fn cmp_prices(a: u32, b: u32) -> core::cmp::Ordering {
+        b.cmp(&a)
+    }
+}
 
 impl OrdersCollection for BidOrders {
     /// Bids are inserted in descending order. The top of the book (first price on the book) is thus

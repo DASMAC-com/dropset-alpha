@@ -1,3 +1,5 @@
+use core::cmp::Ordering;
+
 use price::{
     LeEncodedPrice,
     OrderInfo,
@@ -26,6 +28,11 @@ use crate::{
         U64_SIZE,
     },
 };
+
+pub trait BookSide {
+    /// Compare two prices relative to the book side.
+    fn cmp_prices(a: u32, b: u32) -> Ordering;
+}
 
 /// Marker trait to indicate that a struct represents a collection of orders.
 pub trait OrdersCollection {
