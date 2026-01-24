@@ -37,12 +37,13 @@ pub fn get_normalized_mid_price(
         );
     }
 
-    if !candlestick_response.candles.is_sorted_by_key(|c| c.time) {
-        anyhow::bail!("Candlesticks aren't sorted by time (ascending).");
-    }
+    let sorted_candles = {
+        let mut candles = candlestick_response.candles;
+        candles.sort_by_key(|c| c.time);
+        candles
+    };
 
-    let latest = candlestick_response.candles.last();
-    let latest_price = match latest {
+    let latest_price = match sorted_candles.last() {
         Some(candlestick) => {
             candlestick
                 .mid
