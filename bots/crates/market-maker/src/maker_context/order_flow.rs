@@ -151,7 +151,7 @@ mod tests {
     fn filters_redundant_orders() {
         // All order sizes are equal.
         // For bids and asks: cancels at prices 1, 2, 3 and posts at 3, 4, 5.
-        // The order with price 3 is redundant.
+        // The orders with price 3 are thus redundant.
         let size = 1;
 
         let cancel_1 = to_order_view_stub(dec!(1.00), size);
