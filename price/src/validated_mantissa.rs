@@ -80,7 +80,8 @@ impl ValidatedPriceMantissa {
         }
 
         let validated_mantissa = Self(
-            res.try_into()
+            res.trunc()
+                .try_into()
                 .map_err(|_| OrderInfoError::InvalidPriceMantissa)?,
         );
 
