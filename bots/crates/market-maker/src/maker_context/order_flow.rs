@@ -21,7 +21,7 @@ use crate::maker_context::{
     utils::split_symmetric_difference,
 };
 
-/// Given the collections ofbids/asks to cancel and bids/asks to post, determine which orders would
+/// Given the collections of bids/asks to cancel and bids/asks to post, determine which orders would
 /// be redundant and then filter them out from the set of resulting instructions.
 ///
 /// That is, if an order would be canceled and then reposted, the cancel and post instruction are
@@ -219,7 +219,11 @@ mod tests {
         assert_eq!(
             cancels,
             vec![
-                CancelOrderInstructionData::new(cancel_2.clone().encoded_price, true, MAKER_SEAT_INDEX),
+                CancelOrderInstructionData::new(
+                    cancel_2.clone().encoded_price,
+                    true,
+                    MAKER_SEAT_INDEX
+                ),
                 CancelOrderInstructionData::new(cancel_2.encoded_price, false, MAKER_SEAT_INDEX),
             ]
         );
