@@ -129,14 +129,22 @@ impl<'a> Stack<'a> {
 
     /// Tries to remove a free node and if successful, returns its sector index.
     ///
-    /// The sector index returned is always in-bounds and non-NIL.
+    /// An Ok([`SectorIndex`]) is always in-bounds and non-NIL.
+    ///
+    /// NOTE: If the returned index is discarded without being re-inserted into a data structure
+    /// (or pushed back onto the free stack), that sector becomes unreachable and is effectively
+    /// leaked from future use.
+    ///
+    /// The node's sector data is not zeroed prior to being removed, so when repurposing the free
+    /// node for another data structure, the returned free node's data should be considered
+    /// invalid/garbage data until it's updated appropriately.
     pub fn remove_free_node(&mut self) -> Result<SectorIndex, DropsetError> {
-        if self.top() == NIL {
-            return Err(DropsetError::NoFreeNodesLeft);
-        }
-
         // The free node is the node at the top of the stack.
         let free_index = self.top();
+
+        if free_index == NIL {
+            return Err(DropsetError::NoFreeNodesLeft);
+        }
 
         Node::check_in_bounds(self.sectors, free_index)?;
         // Safety: The free index was just checked as in-bounds.
@@ -144,10 +152,6 @@ impl<'a> Stack<'a> {
 
         // Copy the current top's `next` as that will become the new `top`.
         let new_top = node_being_freed.next();
-
-        // Zero out the rest of the node by setting `next` to 0. The payload and `prev` were zeroed
-        // out when adding to the free list.
-        node_being_freed.set_next(0);
 
         self.set_top(new_top);
         self.header.decrement_num_free_sectors();
