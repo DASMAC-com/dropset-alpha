@@ -1,5 +1,5 @@
-//! Derive helper for generating namespaced instruction data types and a `try_from_u8`-style tag
-//! macro from an instruction enum definition.
+//! Derive helper for generating namespaced instruction data types and a TryFrom<u8> for each
+//! instruction enum variant.
 
 use instruction_macros_impl::{
     parse::{
