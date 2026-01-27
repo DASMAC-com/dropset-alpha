@@ -9,12 +9,8 @@
 //!
 //! The `solana-sdk` feature is disabled but enables `crate::instructions::generated_solana_sdk` for
 //! use with non-pinocchio based programs.
-//!
-//! This module also re-exports the [`DropsetInstruction_try_from_tag`] macro.
 
 use instruction_macros::ProgramInstruction;
-
-use crate::error::DropsetError;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, ProgramInstruction)]
@@ -121,15 +117,6 @@ pub enum DropsetInstruction {
     // instruction data, but it is not used by the program.
     #[account(0, signer,   name = "event_authority", desc = "The event authority PDA signer.")]
     FlushEvents,
-}
-
-impl TryFrom<u8> for DropsetInstruction {
-    type Error = DropsetError;
-
-    #[inline(always)]
-    fn try_from(tag: u8) -> Result<Self, Self::Error> {
-        DropsetInstruction_try_from_tag!(tag, DropsetError::InvalidInstructionTag)
-    }
 }
 
 #[cfg(test)]

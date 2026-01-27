@@ -28,7 +28,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let DeriveInstructionData {
-        try_from_u8_macro,
+        try_from_u8,
         pack_into_slice_trait,
         instruction_data,
     } = match derive_instruction_data(input.clone()) {
@@ -60,11 +60,11 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Simple command to view all multi-segment paths (note this silences the cargo expand output):
     // DEBUG_PATHS=1 cargo expand 1>/dev/null
     if std::env::var("DEBUG_PATHS").is_ok() {
-        debug::debug_print_multi_segment_paths(&[&try_from_u8_macro, &namespaced_outputs]);
+        debug::debug_print_multi_segment_paths(&[&try_from_u8, &namespaced_outputs]);
     }
 
     quote! {
-        #try_from_u8_macro
+        #try_from_u8
         #pack_into_slice_trait
         #instruction_data
         #namespaced_outputs
@@ -77,7 +77,7 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let input = parse_macro_input!(input as DeriveInput);
 
     let DeriveInstructionEventData {
-        try_from_u8_macro,
+        try_from_u8,
         pack_into_slice_trait,
         instruction_data,
     } = match derive_instruction_event_data(input.clone()) {
@@ -88,11 +88,11 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     // Simple command to view all multi-segment paths (note this silences the cargo expand output):
     // DEBUG_PATHS=1 cargo expand 1>/dev/null
     if std::env::var("DEBUG_PATHS").is_ok() {
-        debug::debug_print_multi_segment_paths(&[&try_from_u8_macro, &instruction_data]);
+        debug::debug_print_multi_segment_paths(&[&try_from_u8, &instruction_data]);
     }
 
     quote! {
-        #try_from_u8_macro
+        #try_from_u8
         #pack_into_slice_trait
         #instruction_data
     }

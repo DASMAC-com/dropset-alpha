@@ -20,8 +20,6 @@ mod tests;
 
 use instruction_macros::ProgramInstructionEvent;
 
-use crate::error::DropsetError;
-
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, ProgramInstructionEvent)]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
@@ -60,13 +58,4 @@ pub enum DropsetEventTag {
     MarketOrderEvent,
     #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
     CloseSeatEvent,
-}
-
-impl TryFrom<u8> for DropsetEventTag {
-    type Error = DropsetError;
-
-    #[inline(always)]
-    fn try_from(tag: u8) -> Result<Self, Self::Error> {
-        DropsetEventTag_try_from_tag!(tag, DropsetError::InvalidInstructionEventTag)
-    }
 }
