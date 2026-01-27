@@ -51,7 +51,10 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
 
     /// Helper method to pop a node from the free stack.
     ///
-    /// A returned `Ok(index)` is always in-bounds and non-NIL.
+    /// An Ok([`SectorIndex`]) is always in-bounds and non-NIL.
+    ///
+    /// NOTE: See [`Stack::remove_free_node`] for how to safely avoid bricking the freed node. The
+    /// node's data is also not zeroed prior to return.
     #[inline(always)]
     fn acquire_free_node(&mut self) -> Result<SectorIndex, DropsetError> {
         let mut free_stack = Stack::new_from_parts(self.header, self.sectors);
