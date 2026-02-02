@@ -32,7 +32,7 @@ fn instruction_data_len_cost() {
 
     let account_metas = vec![
         AccountMeta::new(alice_address, true),
-        AccountMeta::new(bob_address, true),
+        AccountMeta::new(bob_address, false),
     ];
 
     let transfer = mollusk.process_instruction(&Instruction::new_with_bytes(
