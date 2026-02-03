@@ -22,6 +22,7 @@ pub const ID: Address = Address::from_str_const("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC
 /// repeating this in every file is just to output it with a macro to make it readable and DRY.
 macro_rules! create_big_order_info_pack_and_unpack_test {
     () => {
+        /// Helper to keep this macro easy to read. Avoids 50 extra lines from formatting.
         const fn const_addr(array: [u8; 32]) -> Address {
             Address::new_from_array(array)
         }
