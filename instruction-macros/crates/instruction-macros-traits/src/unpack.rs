@@ -108,7 +108,8 @@ unsafe impl Unpack for bool {
 unsafe impl Unpack for Address {
     #[inline(always)]
     unsafe fn read_bytes(src: *const u8) -> Result<Self, ProgramError> {
-        Ok(Address::new_from_array(*(src as *const [u8; Address::LEN])))
+        // Safety: The Address type is #[repr(transparent)] over [u8; 32] and align-1.
+        Ok(*(src as *const Address))
     }
 
     #[inline(always)]
