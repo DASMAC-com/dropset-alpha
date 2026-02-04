@@ -28,7 +28,8 @@ impl StatementsAndLayoutInfo {
             instruction_args
                 .iter()
                 .fold((Size::Lit(0), vec![]), |(curr, mut layout_docs), arg| {
-                    // Pack statements must also pack the discriminant first, so start at byte `1`
+                    // Packing tagged structs means the discriminant/tag byte comes first, so the
+                    // pack offset starts at 1.
                     let pack_offset = Size::Lit(1).plus(curr.clone());
 
                     let arg_name = &arg.name;
