@@ -25,7 +25,7 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
 
     let pack_trait = fully_qualified_pack_trait();
 
-    // Account for structsa with no fields
+    // Account for structs with no fields.
     if field_names.is_empty() {
         return quote! {
             unsafe impl #pack_trait for #struct_ident {
@@ -35,9 +35,7 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
                 unsafe fn write_bytes(&self, dst: *mut u8) {}
 
                 #[inline(always)]
-                fn pack(&self) -> [u8; 0] {
-                    []
-                }
+                fn pack(&self) -> [u8; 0] { [] }
             }
         };
     }
