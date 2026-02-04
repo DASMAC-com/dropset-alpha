@@ -70,7 +70,7 @@ unsafe impl Unpack for u8 {
     #[inline(always)]
     fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.is_empty() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidInstructionData);
         }
 
         // Safety: `data` has at least 1 byte.
@@ -94,7 +94,7 @@ unsafe impl Unpack for bool {
     #[inline(always)]
     fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.is_empty() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidInstructionData);
         }
 
         // Safety: `data` has at least 1 byte.
@@ -114,7 +114,7 @@ unsafe impl Unpack for Address {
     #[inline(always)]
     fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.len() < size_of::<Address>() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidInstructionData);
         }
 
         // Safety: `data` has at least 32 bytes.
