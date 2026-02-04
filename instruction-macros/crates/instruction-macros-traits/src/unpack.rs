@@ -42,13 +42,13 @@ macro_rules! impl_unpack_uint {
             #[inline(always)]
             unsafe fn read_bytes(src: *const u8) -> Result<$ty, ProgramError> {
                 Ok(Self::from_le_bytes(
-                    *(src as *const [u8; core::mem::size_of::<$ty>()]),
+                    *(src as *const [u8; <$ty as Pack>::LEN]),
                 ))
             }
 
             #[inline(always)]
             fn unpack(data: &[u8]) -> Result<$ty, ProgramError> {
-                if data.len() < core::mem::size_of::<$ty>() {
+                if data.len() < <$ty as Pack>::LEN {
                     return Err(ProgramError::InvalidInstructionData);
                 }
 
@@ -114,7 +114,7 @@ unsafe impl Unpack for Address {
 
     #[inline(always)]
     fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
-        if data.len() < size_of::<Address>() {
+        if data.len() < <Address as Pack>::LEN {
             return Err(ProgramError::InvalidInstructionData);
         }
 
