@@ -67,7 +67,7 @@ pub struct MakerContext {
 
 impl MakerContext {
     /// Creates a new maker context from a token pair.
-    pub fn init(
+    pub async fn init(
         rpc: &CustomRpcClient,
         maker: Keypair,
         base_mint: Address,
@@ -77,8 +77,8 @@ impl MakerContext {
         initial_price_feed_response: OandaCandlestickResponse,
     ) -> anyhow::Result<Self> {
         let market_ctx =
-            MarketContext::new_from_token_pair(rpc, base_mint, quote_mint, None, None)?;
-        let market = market_ctx.view_market(rpc)?;
+            MarketContext::new_from_token_pair(rpc, base_mint, quote_mint, None, None).await?;
+        let market = market_ctx.view_market(rpc).await?;
         let latest_state = MakerState::new_from_market(maker.pubkey(), market)?;
         let mid_price = get_normalized_mid_price(initial_price_feed_response, &pair, &market_ctx)?;
         let maker_address = maker.pubkey();

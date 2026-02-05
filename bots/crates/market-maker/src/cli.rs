@@ -77,4 +77,5 @@ pub async fn initialize_context_from_cli(
         target_base,
         initial_price_feed_response,
     )
+    .await
 }

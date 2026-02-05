@@ -41,10 +41,11 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, trader)
         .await?;
 
-    println!("Market after user deposit\n{:#?}", e2e.view_market()?);
+    println!("Market after user deposit\n{:#?}", e2e.view_market().await?);
 
     let user_seat = e2e
-        .find_seat(&trader.pubkey())?
+        .fetch_seat(&trader.pubkey())
+        .await?
         .expect("User should have been registered on deposit");
 
     let order_info_args = OrderInfoArgs::new(
@@ -70,9 +71,12 @@ async fn main() -> anyhow::Result<()> {
         post_ask_res.parsed_transaction.signature
     );
 
-    println!("Market after posting user ask:\n{:#?}", e2e.view_market()?);
+    println!(
+        "Market after posting user ask:\n{:#?}",
+        e2e.view_market().await?
+    );
 
-    let user_seat = e2e.find_seat(&trader.pubkey())?.unwrap();
+    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
     println!("User seat after posting ask: {user_seat:#?}");
 
     // Post an ask. The user provides base as collateral and receives quote when filled.
@@ -104,10 +108,10 @@ async fn main() -> anyhow::Result<()> {
 
     println!(
         "Market after posting many user asks:\n{:#?}",
-        e2e.view_market()?
+        e2e.view_market().await?
     );
 
-    let user_seat = e2e.find_seat(&trader.pubkey())?.unwrap();
+    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
     println!("User seat after posting many asks: {user_seat:#?}");
 
     Ok(())

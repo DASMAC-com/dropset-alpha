@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, payer_1)
         .await?;
 
-    let market = e2e.view_market()?;
+    let market = e2e.view_market().await?;
 
     // Sanity check.
     assert!(payer_1.pubkey() != payer_2.pubkey());

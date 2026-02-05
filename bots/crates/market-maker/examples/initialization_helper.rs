@@ -64,7 +64,8 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let seat = e2e
-        .find_seat(&maker_address)?
+        .fetch_seat(&maker_address)
+        .await?
         .expect("Should have a seat")
         .index;
 
@@ -80,7 +81,8 @@ async fn main() -> anyhow::Result<()> {
         maker_keypair: maker.insecure_clone().to_base58_string(),
         market: e2e.market.market,
         maker_seat: e2e
-            .view_market()?
+            .view_market()
+            .await?
             .seats
             .iter()
             .find(|s| s.user == maker_address)

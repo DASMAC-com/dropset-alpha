@@ -37,12 +37,12 @@ pub struct TokenContext {
 impl TokenContext {
     /// Creates a new [`TokenContext`] from an existing token. Checks that the token mint exists
     /// on-chain and is owned by a valid token program.
-    pub fn new_from_existing(
+    pub async fn new_from_existing(
         rpc: &CustomRpcClient,
         mint_token: Address,
         mint_authority: Option<Keypair>,
     ) -> anyhow::Result<Self> {
-        let mint_account = rpc.client.get_account(&mint_token)?;
+        let mint_account = rpc.client.get_account(&mint_token).await?;
         check_spl_token_program_account(&mint_account.owner)?;
         let mint = Mint::unpack(&mint_account.data)?;
 
@@ -82,7 +82,8 @@ impl TokenContext {
     ) -> anyhow::Result<Self> {
         let mint_rent = rpc
             .client
-            .get_minimum_balance_for_rent_exemption(Mint::LEN)?;
+            .get_minimum_balance_for_rent_exemption(Mint::LEN)
+            .await?;
         let create_mint_account = solana_system_interface::instruction::create_account(
             &mint_authority.pubkey(),
             &mint.pubkey(),
@@ -168,9 +169,13 @@ impl TokenContext {
             .map(|txn| txn.parsed_transaction.signature)
     }
 
-    pub fn get_balance_for(&self, rpc: &CustomRpcClient, owner: &Address) -> anyhow::Result<u64> {
+    pub async fn get_balance_for(
+        &self,
+        rpc: &CustomRpcClient,
+        owner: &Address,
+    ) -> anyhow::Result<u64> {
         let ata = self.get_ata_for(owner);
-        let account_data = rpc.client.get_account_data(&ata)?;
+        let account_data = rpc.client.get_account_data(&ata).await?;
         let account_data = Account::unpack(&account_data)?;
         Ok(account_data.amount)
     }

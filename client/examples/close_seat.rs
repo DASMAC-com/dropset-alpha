@@ -38,11 +38,12 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, &trader)
         .await?;
 
-    let market = e2e.view_market()?;
+    let market = e2e.view_market().await?;
     print_kv!("Seats before", market.header.num_seats, LogColor::Info);
 
     let user_seat = e2e
-        .find_seat(&trader.pubkey())?
+        .fetch_seat(&trader.pubkey())
+        .await?
         .expect("User should have been registered on deposit");
 
     e2e.market
@@ -50,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, &trader)
         .await?;
 
-    let market = e2e.view_market()?;
+    let market = e2e.view_market().await?;
     print_kv!("Seats after", market.header.num_seats, LogColor::Info);
 
     Ok(())

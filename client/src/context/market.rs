@@ -65,15 +65,15 @@ impl Denomination {
 impl MarketContext {
     /// Creates a new [`MarketContext`] from two mint token addresses. Verifies that the tokens
     /// exist on-chain but does not verify the market does.
-    pub fn new_from_token_pair(
+    pub async fn new_from_token_pair(
         rpc: &CustomRpcClient,
         base_mint: Address,
         quote_mint: Address,
         base_mint_authority: Option<Keypair>,
         quote_mint_authority: Option<Keypair>,
     ) -> anyhow::Result<Self> {
-        let base = TokenContext::new_from_existing(rpc, base_mint, base_mint_authority)?;
-        let quote = TokenContext::new_from_existing(rpc, quote_mint, quote_mint_authority)?;
+        let base = TokenContext::new_from_existing(rpc, base_mint, base_mint_authority).await?;
+        let quote = TokenContext::new_from_existing(rpc, quote_mint, quote_mint_authority).await?;
 
         let (market_address, _bump) = find_market_address(&base.mint_address, &quote.mint_address);
         let base_market_ata = base.get_ata_for(&market_address);
@@ -141,18 +141,22 @@ impl MarketContext {
         .expect("Should be a single signer instruction")
     }
 
-    pub fn view_market(&self, rpc: &CustomRpcClient) -> anyhow::Result<MarketViewAll> {
-        let market_account = rpc.client.get_account(&self.market)?;
+    pub async fn view_market(&self, rpc: &CustomRpcClient) -> anyhow::Result<MarketViewAll> {
+        let market_account = rpc.client.get_account(&self.market).await?;
         try_market_view_all_from_owner_and_data(market_account.owner, &market_account.data)
     }
 
-    pub fn find_seat(
+    pub async fn fetch_seat(
         &self,
         rpc: &CustomRpcClient,
         user: &Address,
     ) -> anyhow::Result<Option<MarketSeatView>> {
-        let market_seats = self.view_market(rpc)?.seats;
-        Ok(market_seats.into_iter().find(|seat| &seat.user == user))
+        let market = self.view_market(rpc).await?;
+        Ok(self.find_seat(&market.seats, user))
+    }
+
+    pub fn find_seat(&self, seats: &[MarketSeatView], user: &Address) -> Option<MarketSeatView> {
+        seats.iter().find(|seat| &seat.user == user).cloned()
     }
 
     pub fn close_seat(&self, user: Address, sector_index_hint: u32) -> SingleSignerInstruction {

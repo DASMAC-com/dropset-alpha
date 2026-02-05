@@ -31,10 +31,7 @@ use solana_client::{
     },
 };
 use strum_macros::Display;
-use tokio::{
-    sync::watch,
-    time::sleep,
-};
+use tokio::sync::watch;
 use tokio_stream::StreamExt;
 use transaction_parser::views::try_market_view_all_from_owner_and_data;
 
@@ -241,6 +238,6 @@ async fn throttled_order_update(
 
         // Sleep for the throttle window in milliseconds before doing work again.
         // This effectively means the loop only does the cancel/post work once every window of time.
-        sleep(Duration::from_millis(throttle_window_ms)).await;
+        tokio::time::sleep(Duration::from_millis(throttle_window_ms)).await;
     }
 }

@@ -112,19 +112,24 @@ impl E2e {
         })
     }
 
-    pub fn view_market(&self) -> anyhow::Result<MarketViewAll> {
-        self.market.view_market(&self.rpc)
+    pub async fn view_market(&self) -> anyhow::Result<MarketViewAll> {
+        self.market.view_market(&self.rpc).await
     }
 
-    pub fn find_seat(&self, user: &Address) -> anyhow::Result<Option<MarketSeatView>> {
-        self.market.find_seat(&self.rpc, user)
+    pub async fn fetch_seat(&self, user: &Address) -> anyhow::Result<Option<MarketSeatView>> {
+        let market = self.view_market().await?;
+        Ok(self.find_seat(&market.seats, user))
     }
 
-    pub fn get_base_balance(&self, user: &Address) -> anyhow::Result<u64> {
-        self.market.base.get_balance_for(&self.rpc, user)
+    pub fn find_seat(&self, seats: &[MarketSeatView], user: &Address) -> Option<MarketSeatView> {
+        self.market.find_seat(seats, user)
     }
 
-    pub fn get_quote_balance(&self, user: &Address) -> anyhow::Result<u64> {
-        self.market.quote.get_balance_for(&self.rpc, user)
+    pub async fn get_base_balance(&self, user: &Address) -> anyhow::Result<u64> {
+        self.market.base.get_balance_for(&self.rpc, user).await
+    }
+
+    pub async fn get_quote_balance(&self, user: &Address) -> anyhow::Result<u64> {
+        self.market.quote.get_balance_for(&self.rpc, user).await
     }
 }

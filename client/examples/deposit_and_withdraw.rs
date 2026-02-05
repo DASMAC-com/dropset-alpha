@@ -18,10 +18,11 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, &trader)
         .await?;
 
-    println!("{:#?}", e2e.view_market());
+    println!("{:#?}", e2e.view_market().await?);
 
     let user_seat = e2e
-        .find_seat(&trader.pubkey())?
+        .fetch_seat(&trader.pubkey())
+        .await?
         .expect("User should have been registered on deposit");
 
     let res = e2e

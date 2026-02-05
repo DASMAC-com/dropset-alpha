@@ -54,12 +54,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .await?;
 
-    let seats: Vec<SectorIndex> = traders
+    let market_seats = e2e.view_market().await?.seats;
+    let trader_seats: Vec<SectorIndex> = traders
         .iter()
         .map(|trader| {
-            e2e.find_seat(&trader.address())
-                .ok()
-                .flatten()
+            e2e.find_seat(&market_seats, &trader.address())
                 .expect("Trader should have a seat")
                 .index
         })
@@ -76,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (deposits, withdraws): (Vec<Instruction>, Vec<Instruction>) = traders
         .iter()
-        .zip(seats)
+        .zip(trader_seats)
         .map(|(trader, seat)| {
             let trader_addr = trader.address();
             let (deposit, withdraw) = base_amounts.get(&trader_addr).unwrap();
@@ -108,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
         .sorted_by_key(|v| v.0)
         .collect_vec();
 
-    let market = e2e.view_market()?;
+    let market = e2e.view_market().await?;
 
     // Check that seats are ordered by address (ascending) and compare the final state of each
     // user's seat to the expected state.

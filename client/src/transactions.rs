@@ -1,4 +1,4 @@
-//! Lightweight RPC client utilities for funding accounts, sending transactions,
+//! Lightweight, nonblocking RPC client utilities for funding accounts, sending transactions,
 //! and pretty-printing `dropset`-related transaction logs.
 
 use std::collections::HashSet;
@@ -9,7 +9,7 @@ use anyhow::{
 };
 use itertools::Itertools;
 use solana_address::Address;
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
@@ -55,7 +55,7 @@ impl Default for CustomRpcClient {
     fn default() -> Self {
         CustomRpcClient {
             client: RpcClient::new_with_commitment(
-                "http://localhost:8899",
+                "http://localhost:8899".into(),
                 CommitmentConfig::confirmed(),
             ),
             config: Default::default(),
@@ -82,7 +82,7 @@ impl CustomRpcClient {
 
     pub fn new_from_url(url: &str, config: SendTransactionConfig) -> Self {
         CustomRpcClient {
-            client: RpcClient::new_with_commitment(url, CommitmentConfig::confirmed()),
+            client: RpcClient::new_with_commitment(url.into(), CommitmentConfig::confirmed()),
             config,
         }
     }
@@ -128,16 +128,18 @@ pub const DEFAULT_FUND_AMOUNT: u64 = 10_000_000_000;
 async fn fund(rpc: &RpcClient, address: &Address) -> anyhow::Result<()> {
     let airdrop_signature: Signature = rpc
         .request_airdrop(address, DEFAULT_FUND_AMOUNT)
+        .await
         .context("Failed to request airdrop")?;
 
     let mut i = 0;
     // Wait for airdrop confirmation.
     while !rpc
         .confirm_transaction(&airdrop_signature)
+        .await
         .context("Couldn't confirm transaction")?
         && i < MAX_TRIES
     {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         i += 1;
     }
 
@@ -186,6 +188,7 @@ async fn send_transaction_with_config(
 ) -> anyhow::Result<ParsedTransactionWithEvents> {
     let bh = rpc
         .get_latest_blockhash()
+        .await
         .or(Err(()))
         .expect("Should be able to get blockhash.");
 
@@ -212,7 +215,7 @@ async fn send_transaction_with_config(
     )
     .expect("Should sign");
 
-    let res = rpc.send_and_confirm_transaction(&tx);
+    let res = rpc.send_and_confirm_transaction(&tx).await;
     match res {
         Ok(signature) => {
             let encoded = fetch_transaction_json(rpc, signature).await?;
@@ -262,7 +265,7 @@ async fn send_transaction_with_config(
 }
 
 async fn fetch_transaction_json(
-    rpc: &solana_client::rpc_client::RpcClient,
+    rpc: &RpcClient,
     sig: Signature,
 ) -> anyhow::Result<EncodedConfirmedTransactionWithStatusMeta> {
     rpc.get_transaction_with_config(
@@ -273,16 +276,15 @@ async fn fetch_transaction_json(
             max_supported_transaction_version: Some(0),
         },
     )
+    .await
     .context("Should be able to fetch transaction with config")
 }
 
 /// Checks if an account at the given address exists on-chain.
-pub async fn account_exists(
-    rpc: &solana_client::rpc_client::RpcClient,
-    address: &Address,
-) -> anyhow::Result<bool> {
+pub async fn account_exists(rpc: &RpcClient, address: &Address) -> anyhow::Result<bool> {
     Ok(rpc
         .get_account_with_commitment(address, CommitmentConfig::confirmed())
+        .await
         .context("Couldn't retrieve account data")?
         .value
         .is_some())

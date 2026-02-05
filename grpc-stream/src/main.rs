@@ -12,10 +12,7 @@ use grpc_stream::parse_update::{
     InstructionEventsWithIndices,
     ParsedUpdate,
 };
-use tokio::time::{
-    sleep,
-    Duration,
-};
+use tokio::time::Duration;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::{
     geyser::{
@@ -112,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
             }
             Err(error) => {
                 eprintln!("❌ Stream error: {}", error);
-                sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
     }

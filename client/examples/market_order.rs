@@ -78,10 +78,10 @@ impl BalanceDelta {
 }
 
 impl Balances {
-    pub fn get(e2e: &E2e, user: &Address) -> anyhow::Result<Self> {
+    pub async fn fetch(e2e: &E2e, user: &Address) -> anyhow::Result<Self> {
         Ok(Self {
-            base: e2e.get_base_balance(user)?,
-            quote: e2e.get_quote_balance(user)?,
+            base: e2e.get_base_balance(user).await?,
+            quote: e2e.get_quote_balance(user).await?,
         })
     }
 
@@ -109,7 +109,7 @@ struct MarketSnapshot {
 }
 
 impl MarketSnapshot {
-    pub fn new(e2e: &E2e, order_ctx: &OrderContext) -> anyhow::Result<Self> {
+    pub async fn new(e2e: &E2e, order_ctx: &OrderContext<'_>) -> anyhow::Result<Self> {
         let order_info = order_ctx.order_info()?;
         let OrderContext {
             maker,
@@ -117,7 +117,7 @@ impl MarketSnapshot {
             taker,
             ..
         } = order_ctx;
-        let market = e2e.view_market()?;
+        let market = e2e.view_market().await?;
 
         let maker_seat = market
             .seats
@@ -136,8 +136,8 @@ impl MarketSnapshot {
         })
         .cloned();
 
-        let taker_balances = Balances::get(e2e, &taker.pubkey())?;
-        let market_balances = Balances::get(e2e, &e2e.market.market)?;
+        let taker_balances = Balances::fetch(e2e, &taker.pubkey()).await?;
+        let market_balances = Balances::fetch(e2e, &e2e.market.market).await?;
 
         Ok(Self {
             maker_order,
@@ -214,7 +214,7 @@ async fn post_maker_order(
         .await?;
 
     // The maker should have the first and only seat in the market.
-    let market = e2e.view_market()?;
+    let market = e2e.view_market().await?;
     let maker_seat = market.seats.first().expect("Should have one market seat");
     assert_eq!(maker_seat.user, maker.pubkey());
 
@@ -258,8 +258,8 @@ async fn initialize_traders_and_market(ctx: &OrderContext<'_>) -> anyhow::Result
     )
     .await?;
 
-    let maker_init = Balances::get(&e2e, &ctx.maker.pubkey())?;
-    let taker_init = Balances::get(&e2e, &ctx.taker.pubkey())?;
+    let maker_init = Balances::fetch(&e2e, &ctx.maker.pubkey()).await?;
+    let taker_init = Balances::fetch(&e2e, &ctx.taker.pubkey()).await?;
 
     maker_init.check(maker_base, maker_quote)?;
     taker_init.check(taker_base, taker_quote)?;
@@ -361,7 +361,7 @@ async fn main() -> anyhow::Result<()> {
         let e2e = initialize_traders_and_market(&ctx).await?;
 
         // Local helpers.
-        let create_snapshot = || MarketSnapshot::new(&e2e, &ctx);
+        let create_snapshot = async || MarketSnapshot::new(&e2e, &ctx).await;
         let taker_base_size = ctx.taker_size_base()?;
         let taker_quote_size = ctx.taker_size_quote()?;
 
@@ -376,9 +376,9 @@ async fn main() -> anyhow::Result<()> {
 
         // -----------------------------------------------------------------------------------------
         // Send the first taker order.
-        let before_1 = create_snapshot()?;
+        let before_1 = create_snapshot().await?;
         let fill_1 = run_partial_fill(&e2e, &ctx, Denomination::Base).await?;
-        let after_1 = create_snapshot()?;
+        let after_1 = create_snapshot().await?;
 
         assert_fill_deltas(side, &before_1, &after_1, taker_base_size, taker_quote_size);
 
@@ -386,7 +386,7 @@ async fn main() -> anyhow::Result<()> {
         // Send the second taker order.
         let before_2 = after_1;
         let fill_2 = run_partial_fill(&e2e, &ctx, Denomination::Quote).await?;
-        let after_2 = create_snapshot()?;
+        let after_2 = create_snapshot().await?;
 
         assert_fill_deltas(side, &before_2, &after_2, taker_base_size, taker_quote_size);
 
