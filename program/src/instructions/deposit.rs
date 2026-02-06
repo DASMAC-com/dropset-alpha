@@ -5,7 +5,7 @@ use dropset_interface::{
     instructions::DepositInstructionData,
     state::{
         market_seat::MarketSeat,
-        node::Node,
+        sector::Sector,
         sector::NIL,
     },
 };
@@ -67,7 +67,7 @@ pub unsafe fn process_deposit<'a>(
     let sector_index = if sector_index_hint != NIL {
         // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
-        Node::check_in_bounds(market.sectors, sector_index_hint)?;
+        Sector::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
         let seat =
             unsafe { find_mut_seat_with_hint(market, sector_index_hint, ctx.user.address()) }?;

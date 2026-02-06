@@ -4,13 +4,14 @@ use dropset_interface::{
     error::DropsetError,
     state::{
         market::{
-            MarketRef,
+            Market,
             MarketRefMut,
         },
+        market_header::MarketHeader,
         market_seat::MarketSeat,
-        node::Node,
         seats_dll::SeatsLinkedList,
         sector::{
+            Sector,
             SectorIndex,
             NIL,
         },
@@ -31,7 +32,7 @@ pub fn try_insert_market_seat(
     // Return an error early if the user already exists in the seat list at the previous index.
     if prev_index != NIL {
         // Safety: `prev_index` is non-NIL and was returned by an iterator, so it must be in-bounds.
-        let prev_node = unsafe { Node::from_sector_index(list.sectors, prev_index) };
+        let prev_node = unsafe { Sector::from_sector_index(list.sectors, prev_index) };
         let prev_seat = prev_node.load_payload::<MarketSeat>();
         if address_eq(&seat.user, &prev_seat.user) {
             return Err(DropsetError::UserAlreadyExists);
@@ -79,13 +80,17 @@ fn find_new_seat_prev_and_next(
 /// # Safety
 ///
 /// Caller guarantees `hint` is in-bounds of `market.sectors` bytes.
-pub unsafe fn find_seat_with_hint<'a>(
-    market: MarketRef<'a>,
+pub unsafe fn find_seat_with_hint<'a, H, S>(
+    market: &'a Market<H, S>,
     hint: SectorIndex,
     user: &Address,
-) -> Result<&'a MarketSeat, DropsetError> {
+) -> Result<&'a MarketSeat, DropsetError>
+where
+    H: AsRef<MarketHeader>,
+    S: AsRef<[u8]>,
+{
     // Safety: Caller guarantees `hint` is in-bounds.
-    let node = unsafe { Node::from_sector_index(market.sectors, hint) };
+    let node = unsafe { Sector::from_sector_index(market.sectors.as_ref(), hint) };
     let seat = node.load_payload::<MarketSeat>();
     if address_eq(user, &seat.user) {
         Ok(seat)
@@ -100,12 +105,12 @@ pub unsafe fn find_seat_with_hint<'a>(
 ///
 /// Caller guarantees `hint` is in-bounds of `market.sectors` bytes.
 pub unsafe fn find_mut_seat_with_hint<'a>(
-    market: MarketRefMut<'a>,
+    market: &'a mut MarketRefMut<'a>,
     hint: SectorIndex,
     user: &Address,
 ) -> Result<&'a mut MarketSeat, DropsetError> {
     // Safety: Caller guarantees `hint` is in-bounds.
-    let node = unsafe { Node::from_sector_index_mut(market.sectors, hint) };
+    let node = unsafe { Sector::from_sector_index_mut(market.sectors, hint) };
     let seat = node.load_payload_mut::<MarketSeat>();
     if address_eq(user, &seat.user) {
         Ok(seat)

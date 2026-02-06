@@ -13,10 +13,10 @@ use crate::{
         },
         market::Market,
         market_header::MarketHeader,
-        node::{
+        sector::{
             AllBitPatternsValid,
-            NodePayload,
-            NODE_PAYLOAD_SIZE,
+            Payload,
+            PAYLOAD_SIZE,
         },
         sector::{
             LeSectorIndex,
@@ -52,8 +52,8 @@ pub trait OrdersCollection {
         S: AsRef<[u8]>;
 }
 
-const ORDER_PADDING: usize = NODE_PAYLOAD_SIZE
-    - (size_of::<LeEncodedPrice>() + size_of::<LeSectorIndex>() + U64_SIZE + U64_SIZE);
+const ORDER_PADDING: usize =
+    PAYLOAD_SIZE - (size_of::<LeEncodedPrice>() + size_of::<LeSectorIndex>() + U64_SIZE + U64_SIZE);
 
 /// Represents a maker order in the orderbook.
 #[repr(C)]
@@ -136,7 +136,7 @@ impl Order {
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for Order {
-    const LEN: usize = NODE_PAYLOAD_SIZE;
+    const LEN: usize = size_of::<Order>();
 
     #[inline(always)]
     fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
@@ -145,11 +145,11 @@ unsafe impl Transmutable for Order {
     }
 }
 
-const_assert_eq!(size_of::<Order>(), NODE_PAYLOAD_SIZE);
+const_assert_eq!(size_of::<Order>(), PAYLOAD_SIZE);
 const_assert_eq!(align_of::<Order>(), 1);
 
-// Safety: Const asserts ensure size_of::<Order>() == NODE_PAYLOAD_SIZE.
-unsafe impl NodePayload for Order {}
+// Safety: Const asserts ensure size_of::<Order>() == PAYLOAD_SIZE.
+unsafe impl Payload for Order {}
 
 // Safety: All bit patterns are valid.
 unsafe impl AllBitPatternsValid for Order {}

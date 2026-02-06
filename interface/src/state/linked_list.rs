@@ -5,9 +5,9 @@ use crate::{
     state::{
         free_stack::Stack,
         market_header::MarketHeader,
-        node::{
-            Node,
-            NODE_PAYLOAD_SIZE,
+        sector::{
+            Sector,
+            PAYLOAD_SIZE,
         },
         sector::{
             SectorIndex,
@@ -31,7 +31,7 @@ pub trait LinkedListHeaderOperations {
 }
 
 /// A doubly linked list of nodes containing arbitrary payloads of size
-/// [`crate::state::node::NODE_PAYLOAD_SIZE`].
+/// [`crate::state::sector::PAYLOAD_SIZE`].
 ///
 /// Each node exists as a union of the traversable payload type and a free node.
 pub struct LinkedList<'a, T: LinkedListHeaderOperations> {
@@ -58,18 +58,18 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
     #[inline(always)]
     fn acquire_free_node(&mut self) -> Result<SectorIndex, DropsetError> {
         let mut free_stack = Stack::new_from_parts(self.header, self.sectors);
-        free_stack.remove_free_node()
+        free_stack.pop_free_sector()
     }
 
     pub fn push_front(
         &mut self,
-        payload: &[u8; NODE_PAYLOAD_SIZE],
+        payload: &[u8; PAYLOAD_SIZE],
     ) -> Result<SectorIndex, DropsetError> {
         let new_index = self.acquire_free_node()?;
         let head_index = T::head(self.header);
 
         // Safety: `acquire_free_node` guarantees `new_index` is in-bounds and non-NIL.
-        let new_node = unsafe { Node::from_sector_index_mut(self.sectors, new_index) };
+        let new_node = unsafe { Sector::from_sector_index_mut(self.sectors, new_index) };
         // Create the new node with the incoming payload. It has no `prev` and its `next` node is
         // the current head.
         new_node.set_payload(payload);
@@ -81,7 +81,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             T::set_tail(self.header, new_index);
         } else {
             // Safety: `head_index` is non-NIL and per the linked list impl, must be in-bounds.
-            let head = unsafe { Node::from_sector_index_mut(self.sectors, head_index) };
+            let head = unsafe { Sector::from_sector_index_mut(self.sectors, head_index) };
             // If the head is a non-NIL sector index, set its `prev` to the new head index.
             head.set_prev(new_index);
         }
@@ -93,15 +93,12 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
         Ok(new_index)
     }
 
-    pub fn push_back(
-        &mut self,
-        payload: &[u8; NODE_PAYLOAD_SIZE],
-    ) -> Result<SectorIndex, DropsetError> {
+    pub fn push_back(&mut self, payload: &[u8; PAYLOAD_SIZE]) -> Result<SectorIndex, DropsetError> {
         let new_index = self.acquire_free_node()?;
         let tail_index = T::tail(self.header);
 
         // Safety: `acquire_free_node` guarantees `new_index` is in-bounds and non-NIL.
-        let new_node = unsafe { Node::from_sector_index_mut(self.sectors, new_index) };
+        let new_node = unsafe { Sector::from_sector_index_mut(self.sectors, new_index) };
         // Create the new node with the incoming payload. It has no `next` and its `prev` node is
         // the current tail.
         new_node.set_payload(payload);
@@ -113,7 +110,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             T::set_head(self.header, new_index);
         } else {
             // Safety: `tail_index` is non-NIL and per the linked list impl, must be in-bounds.
-            let tail = unsafe { Node::from_sector_index_mut(self.sectors, tail_index) };
+            let tail = unsafe { Sector::from_sector_index_mut(self.sectors, tail_index) };
             // If the tail is a non-NIL sector index, set its `next` to the new tail index.
             tail.set_next(new_index);
         }
@@ -132,19 +129,19 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
         &mut self,
         // The sector index of the node to insert a new node before.
         next_index: SectorIndex,
-        payload: &[u8; NODE_PAYLOAD_SIZE],
+        payload: &[u8; PAYLOAD_SIZE],
     ) -> Result<SectorIndex, DropsetError> {
         let new_index = self.acquire_free_node()?;
 
         // Safety: Caller must guarantee `next_index` is in-bounds.
-        let next_node = unsafe { Node::from_sector_index_mut(self.sectors, next_index) };
+        let next_node = unsafe { Sector::from_sector_index_mut(self.sectors, next_index) };
         // Store the next node's `prev` index.
         let prev_index = next_node.prev();
         // Set `next_node`'s `prev` to the new node's index.
         next_node.set_prev(new_index);
 
         // Safety: `acquire_free_node` guarantees `new_index` is in-bounds.
-        let new_node = unsafe { Node::from_sector_index_mut(self.sectors, new_index) };
+        let new_node = unsafe { Sector::from_sector_index_mut(self.sectors, new_index) };
         // Create the new node with the incoming payload, with its `prev` and `next` as the
         // corresponding adjacent nodes.
         new_node.set_prev(prev_index);
@@ -157,7 +154,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             T::set_head(self.header, new_index);
         } else {
             // Safety: `prev_index` is non-NIL and per the linked list impl, must be in-bounds.
-            let prev = unsafe { Node::from_sector_index_mut(self.sectors, prev_index) };
+            let prev = unsafe { Sector::from_sector_index_mut(self.sectors, prev_index) };
             // If `prev_index` is non-NIL, set it's `next` to the new index.
             prev.set_next(new_index);
         }
@@ -175,7 +172,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
     pub unsafe fn remove_at(&mut self, index: SectorIndex) {
         let (prev_index, next_index) = {
             // Safety: Caller guarantees `index` is in-bounds.
-            let node = unsafe { Node::from_sector_index_mut(self.sectors, index) };
+            let node = unsafe { Sector::from_sector_index_mut(self.sectors, index) };
             (node.prev(), node.next())
         };
 
@@ -183,7 +180,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             NIL => T::set_head(self.header, next_index),
             // Safety: `prev_index` matched against non-NIL and came from a node directly.
             prev_index => unsafe {
-                Node::from_sector_index_mut(self.sectors, prev_index).set_next(next_index);
+                Sector::from_sector_index_mut(self.sectors, prev_index).set_next(next_index);
             },
         }
 
@@ -191,14 +188,14 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             NIL => T::set_tail(self.header, prev_index),
             // Safety: `next_index` matched against non-NIL and came from a node directly.
             next_index => unsafe {
-                Node::from_sector_index_mut(self.sectors, next_index).set_prev(prev_index);
+                Sector::from_sector_index_mut(self.sectors, next_index).set_prev(prev_index);
             },
         }
 
         T::decrement_num_nodes(self.header);
 
         let mut free_stack = Stack::new_from_parts(self.header, self.sectors);
-        free_stack.push_free_node(index);
+        free_stack.push_free_sector(index);
     }
 
     pub fn iter(&self) -> LinkedListIter<'_> {
@@ -215,16 +212,16 @@ pub struct LinkedListIter<'a> {
 }
 
 impl<'a> Iterator for LinkedListIter<'a> {
-    type Item = (SectorIndex, &'a Node);
+    type Item = (SectorIndex, &'a Sector);
 
     /// Returns the next node if it's non-NIL, otherwise, returns `None`.
-    fn next(&mut self) -> Option<(SectorIndex, &'a Node)> {
+    fn next(&mut self) -> Option<(SectorIndex, &'a Sector)> {
         if self.curr == NIL {
             return None;
         }
 
         // Safety: `self.curr` is non-NIL and per the linked list impl, must be in-bounds.
-        let node = unsafe { Node::from_sector_index(self.sectors, self.curr) };
+        let node = unsafe { Sector::from_sector_index(self.sectors, self.curr) };
         let res = (self.curr, node);
 
         self.curr = node.next();

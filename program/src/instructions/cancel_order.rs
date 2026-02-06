@@ -6,7 +6,7 @@ use dropset_interface::{
     instructions::CancelOrderInstructionData,
     state::{
         market_seat::MarketSeat,
-        node::Node,
+        sector::Sector,
         sector::SectorIndex,
     },
 };
@@ -46,11 +46,12 @@ pub unsafe fn process_cancel_order<'a>(
     } = CancelOrderInstructionData::unpack_untagged(instruction_data)?;
     let mut ctx = CancelOrderContext::load(accounts)?;
 
+    // Safety: The market account is currently not borrowed in any capacity.
+    let market = &mut unsafe { ctx.market_account.load_unchecked_mut() };
+
     // Remove the order from the user seat's order sectors mapping.
     let order_sector_index = {
-        // Safety: Scoped mutable borrow of the market account.
-        let market = unsafe { ctx.market_account.load_unchecked_mut() };
-        Node::check_in_bounds(market.sectors, user_sector_index_hint)?;
+        Sector::check_in_bounds(market.sectors, user_sector_index_hint)?;
         // Safety: The user sector index hint was just verified in-bounds.
         let user_seat =
             unsafe { find_mut_seat_with_hint(market, user_sector_index_hint, ctx.user.address()) }?;
@@ -63,12 +64,10 @@ pub unsafe fn process_cancel_order<'a>(
 
     // Load the order given the order sector index.
     let order = {
-        // Safety: Scoped borrow of the market account.
-        let market = unsafe { ctx.market_account.load_unchecked() };
         // Safety: The order sector index returned from the `remove` method still points to a
         // sector with a valid order. All order sector indices in a user seat are thus in-bounds and
         // don't need to be explicitly verified as in-bounds.
-        debug_assert!(Node::check_in_bounds(market.sectors, order_sector_index).is_ok());
+        debug_assert!(Sector::check_in_bounds(market.sectors.as_ref(), order_sector_index).is_ok());
         load_order_from_sector_index(market, order_sector_index)
     };
 
@@ -79,7 +78,7 @@ pub unsafe fn process_cancel_order<'a>(
         // Safety: Scoped mutable borrow of the market account.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
         // Safety: The seat index hint was validated above and the user's seat hasn't changed.
-        let node = unsafe { Node::from_sector_index_mut(market.sectors, user_sector_index_hint) };
+        let node = unsafe { Sector::from_sector_index_mut(market.sectors, user_sector_index_hint) };
         let user_seat = node.load_payload_mut::<MarketSeat>();
         user_seat.try_increment_quote_available(order_size_remaining)?;
     } else {
@@ -88,7 +87,7 @@ pub unsafe fn process_cancel_order<'a>(
         // Safety: Scoped mutable borrow of the market account.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
         // Safety: The seat index hint was validated above and the user's seat hasn't changed.
-        let node = unsafe { Node::from_sector_index_mut(market.sectors, user_sector_index_hint) };
+        let node = unsafe { Sector::from_sector_index_mut(market.sectors, user_sector_index_hint) };
         let user_seat = node.load_payload_mut::<MarketSeat>();
         user_seat.try_increment_base_available(order_size_remaining)?;
     }

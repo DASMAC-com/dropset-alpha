@@ -7,7 +7,7 @@ use dropset_interface::state::{
     market::MarketRef,
     market_header::MarketHeader,
     market_seat::MarketSeat,
-    node::Node,
+    sector::Sector,
     order::Order,
     sector::SectorIndex,
     transmutable::Transmutable,
@@ -114,8 +114,8 @@ pub struct OrderView {
     pub quote_remaining: u64,
 }
 
-impl From<(SectorIndex, &Node)> for MarketSeatView {
-    fn from(index_and_seat: (SectorIndex, &Node)) -> Self {
+impl From<(SectorIndex, &Sector)> for MarketSeatView {
+    fn from(index_and_seat: (SectorIndex, &Sector)) -> Self {
         let (sector_index, node) = index_and_seat;
         let seat = node.load_payload::<MarketSeat>();
         Self {
@@ -130,8 +130,8 @@ impl From<(SectorIndex, &Node)> for MarketSeatView {
     }
 }
 
-impl From<(SectorIndex, &Node)> for OrderView {
-    fn from(index_and_order: (SectorIndex, &Node)) -> Self {
+impl From<(SectorIndex, &Sector)> for OrderView {
+    fn from(index_and_order: (SectorIndex, &Sector)) -> Self {
         let (sector_index, node) = index_and_order;
         let order = node.load_payload::<Order>();
         Self {

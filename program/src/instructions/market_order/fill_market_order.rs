@@ -10,7 +10,7 @@ use dropset_interface::{
         bids_dll::BidOrders,
         linked_list::LinkedListHeaderOperations,
         market_seat::MarketSeat,
-        node::Node,
+        sector::Sector,
         sector::{
             SectorIndex,
             NIL,
@@ -333,7 +333,7 @@ unsafe fn update_maker_seat_after_fill<const IS_BUY: bool, const PARTIAL_FILL: b
     // Safety: Single, scoped mutable borrow of the market account data.
     let market = ctx.market_account.load_unchecked_mut();
     // Safety: The user seat sector index is in-bounds, as it came from the order.
-    let node = unsafe { Node::from_sector_index_mut(market.sectors, maker_seat_sector) };
+    let node = unsafe { Sector::from_sector_index_mut(market.sectors, maker_seat_sector) };
     let maker_seat = node.load_payload_mut::<MarketSeat>();
     if IS_BUY {
         // Market buy means a maker's ask got filled, so they receive quote.
@@ -370,7 +370,7 @@ unsafe fn ensure_order_has_been_removed<const IS_BUY: bool>(
     // Safety: Single, scoped mutable borrow of the market account data.
     let market = ctx.market_account.load_unchecked();
     // Safety: The user seat sector index is in-bounds, as it came from the order.
-    let node = unsafe { Node::from_sector_index(market.sectors, top_order.maker_seat_sector) };
+    let node = unsafe { Sector::from_sector_index(market.sectors, top_order.maker_seat_sector) };
     let maker_seat = node.load_payload::<MarketSeat>();
     let encoded_price: EncodedPrice = top_order
         .encoded_price

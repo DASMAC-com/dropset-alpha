@@ -1,3 +1,5 @@
+use core::mem::MaybeUninit;
+
 use price::{
     EncodedPrice,
     LeEncodedPrice,
@@ -23,6 +25,9 @@ use crate::{
 /// That is, each user can have [`MAX_ORDERS`] bids and [`MAX_ORDERS`] asks for a single market.
 pub const MAX_ORDERS: u8 = 5;
 
+/// Helper const for [`MAX_ORDERS`] as a usize.
+pub const MAX_ORDERS_USIZE: usize = MAX_ORDERS as usize;
+
 /// The [`OrderSectors`] that maps the prices of a user's bids and asks to their corresponding
 /// orders' sector indices in the market account data.
 ///
@@ -40,11 +45,11 @@ pub struct UserOrderSectors {
 /// value of `0` to the [`LE_NIL`] sector index.
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OrderSectors([PriceToIndex; MAX_ORDERS as usize]);
+pub struct OrderSectors([PriceToIndex; MAX_ORDERS_USIZE]);
 
 impl Default for OrderSectors {
     fn default() -> Self {
-        Self([PriceToIndex::new_free(); MAX_ORDERS as usize])
+        Self([PriceToIndex::new_free(); MAX_ORDERS_USIZE])
     }
 }
 
@@ -115,10 +120,40 @@ impl OrderSectors {
 
         let sector_index = node.sector_index;
 
-        node.encoded_price = LeEncodedPrice::zero();
-        node.sector_index = LE_NIL;
+        mark_as_free(node);
 
         Ok(sector_index)
+    }
+
+    /// Returns an array of copied sector indices from the mapped user order sectors.
+    #[inline(always)]
+    pub fn to_sector_indices(&self) -> [SectorIndex; MAX_ORDERS_USIZE] {
+        let mut removed = [MaybeUninit::<SectorIndex>::uninit(); MAX_ORDERS_USIZE];
+        let ptr = removed.as_mut_ptr() as *mut SectorIndex;
+
+        // Copy out all removed sector indices.
+        for i in 0..MAX_ORDERS_USIZE {
+            // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `self.0`.
+            let item = unsafe { self.0.get_unchecked(i) };
+            // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `removed`.
+            unsafe {
+                ptr.add(i)
+                    .write(SectorIndex::from_le_bytes(item.sector_index));
+            }
+        }
+
+        // // Then effectively "free" the nodes.
+        // for i in 0..MAX_ORDERS_USIZE {
+        //     // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `self.0`.
+        //     let node = unsafe { self.0.get_unchecked_mut(i) };
+        //     // Free the node if it's not already free.
+        //     if !node.is_free() {
+        //         mark_as_free(node);
+        //     }
+        // }
+
+        // Safety: All elements were initialized.
+        unsafe { *(ptr as *const [SectorIndex; MAX_ORDERS_USIZE]) }
     }
 
     #[inline(always)]
@@ -168,6 +203,13 @@ impl PriceToIndex {
     }
 }
 
+/// Sets/updates a node to be a free node.
+#[inline(always)]
+pub fn mark_as_free(node: &mut PriceToIndex) {
+    node.encoded_price = LeEncodedPrice::zero();
+    node.sector_index = LE_NIL;
+}
+
 // Safety:
 //
 // - Stable layout with `#[repr(C)]`.
@@ -192,7 +234,7 @@ const_assert_eq!(align_of::<UserOrderSectors>(), 1);
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for OrderSectors {
-    const LEN: usize = size_of::<PriceToIndex>() * MAX_ORDERS as usize;
+    const LEN: usize = size_of::<PriceToIndex>() * MAX_ORDERS_USIZE;
 
     #[inline(always)]
     fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
@@ -272,6 +314,7 @@ mod tests {
                 PriceToIndex,
                 UserOrderSectors,
                 MAX_ORDERS,
+                MAX_ORDERS_USIZE,
             },
             U32_SIZE,
         },
@@ -303,7 +346,7 @@ mod tests {
     #[test]
     fn free_orders_transmutable_bytes() {
         let free_bytes_vec = [[0; U32_SIZE], LE_NIL].concat();
-        let max_orders_all_freed: [u8; PriceToIndex::LEN * MAX_ORDERS as usize] = (0..MAX_ORDERS)
+        let max_orders_all_freed: [u8; PriceToIndex::LEN * MAX_ORDERS_USIZE] = (0..MAX_ORDERS)
             .flat_map(|_| free_bytes_vec.iter().cloned())
             .collect::<std::vec::Vec<u8>>()
             .try_into()
@@ -459,7 +502,7 @@ mod tests {
     #[test]
     fn repost_arbitrary_order() {
         let mut order_sectors = UserOrderSectors::default();
-        let index_and_mantissa_pairs: [(u32, ValidatedPriceMantissa); MAX_ORDERS as usize] = [
+        let index_and_mantissa_pairs: [(u32, ValidatedPriceMantissa); MAX_ORDERS_USIZE] = [
             (1, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
             (2, ValidatedPriceMantissa::try_from(22_222_222).unwrap()),
             (3, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),
@@ -467,7 +510,7 @@ mod tests {
             (5, ValidatedPriceMantissa::try_from(55_555_555).unwrap()),
         ];
 
-        let index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS as usize] =
+        let index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] =
             index_and_mantissa_pairs
                 .into_iter()
                 .map(|(i, mantissa)| (i, EncodedPrice::new(to_biased_exponent!(0), mantissa)))
@@ -523,7 +566,7 @@ mod tests {
         assert!(order_sectors.bids.iter().all(|bid| !bid.is_free()));
 
         // Check the final result in whole.
-        let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS as usize] = [
+        let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] = [
             (1, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
             (7, ValidatedPriceMantissa::try_from(77_777_777).unwrap()),
             (3, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),

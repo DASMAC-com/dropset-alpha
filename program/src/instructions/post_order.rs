@@ -9,7 +9,7 @@ use dropset_interface::{
         asks_dll::AskOrders,
         bids_dll::BidOrders,
         market::MarketRefMut,
-        node::Node,
+        sector::Sector,
         order::{
             Order,
             OrdersCollection,
@@ -77,7 +77,7 @@ pub unsafe fn process_post_order<'a>(
     {
         // Safety: Scoped mutable borrow of the market account to mutate the user's seat.
         let market = unsafe { ctx.market_account.load_unchecked_mut() };
-        Node::check_in_bounds(market.sectors, user_sector_index_hint)?;
+        Sector::check_in_bounds(market.sectors, user_sector_index_hint)?;
         // Find and verify the user's seat with the given index hint.
         // Safety: The index hint was just verified as in-bounds.
         let user_seat =

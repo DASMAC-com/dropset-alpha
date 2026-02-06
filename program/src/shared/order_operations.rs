@@ -8,15 +8,16 @@ use dropset_interface::{
             LinkedListHeaderOperations,
         },
         market::{
-            MarketRef,
+            Market,
             MarketRefMut,
         },
-        node::Node,
+        market_header::MarketHeader,
         order::{
             Order,
             OrdersCollection,
         },
         sector::{
+            Sector,
             SectorIndex,
             NIL,
         },
@@ -50,35 +51,38 @@ pub fn insert_order<T: OrdersCollection + LinkedListHeaderOperations>(
 
 /// Converts a sector index to an order given a sector index.
 ///
-/// Caller should ensure that `validated_sector_index` is indeed a sector index pointing to a valid
-/// order.
+/// Caller should ensure that `validated_sector_index` points to a valid order.
 ///
 /// # Safety
 ///
 /// Caller guarantees `validated_sector_index` is in-bounds of `market.sectors` bytes.
-pub unsafe fn load_order_from_sector_index(
-    market: MarketRef<'_>,
+pub unsafe fn load_order_from_sector_index<'a, H, S>(
+    market: &'a Market<H, S>,
     validated_sector_index: SectorIndex,
-) -> &'_ Order {
+) -> &'a Order
+where
+    H: AsRef<MarketHeader>,
+    S: AsRef<[u8]>,
+{
     // Safety: Caller guarantees 'validated_sector_index' is in-bounds.
-    let node = unsafe { Node::from_sector_index(market.sectors, validated_sector_index) };
+    let node =
+        unsafe { Sector::from_sector_index(market.sectors.as_ref(), validated_sector_index) };
     node.load_payload::<Order>()
 }
 
 /// Converts a sector index to a mutable order given a sector index.
 ///
-/// Caller should ensure that `validated_sector_index` is indeed a sector index pointing to a valid
-/// order.
+/// Caller should ensure that `validated_sector_index` points to a valid order.
 ///
 /// # Safety
 ///
 /// Caller guarantees `validated_sector_index` is in-bounds of `market.sectors` bytes.
-pub unsafe fn load_mut_order_from_sector_index(
-    market: MarketRefMut<'_>,
+pub unsafe fn load_mut_order_from_sector_index<'a>(
+    market: &'a mut MarketRefMut<'a>,
     validated_sector_index: SectorIndex,
-) -> &'_ mut Order {
+) -> &'a mut Order {
     // Safety: Caller guarantees 'validated_sector_index' is in-bounds.
-    let node = unsafe { Node::from_sector_index_mut(market.sectors, validated_sector_index) };
+    let node = unsafe { Sector::from_sector_index_mut(market.sectors, validated_sector_index) };
     node.load_payload_mut::<Order>()
 }
 

@@ -3,7 +3,7 @@
 use dropset_interface::{
     events::CloseSeatEventInstructionData,
     instructions::CloseSeatInstructionData,
-    state::node::Node,
+    state::sector::Sector,
     utils::is_owned_by_spl_token,
 };
 use pinocchio::{
@@ -43,7 +43,7 @@ pub fn process_close_seat<'a>(
         let market = ctx.market_account.load_unchecked();
         let market_bump = market.header.market_bump;
 
-        Node::check_in_bounds(market.sectors, sector_index_hint)?;
+        Sector::check_in_bounds(market.sectors, sector_index_hint)?;
         // Safety: The index hint was just verified as in-bounds.
         let seat = find_seat_with_hint(market, sector_index_hint, ctx.user.address())?;
 

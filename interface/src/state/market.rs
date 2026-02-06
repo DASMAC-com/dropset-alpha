@@ -134,4 +134,15 @@ impl<H: AsRef<MarketHeader>, S: AsRef<[u8]>> Market<H, S> {
     pub fn is_initialized(&self) -> bool {
         self.header.as_ref().discriminant() == MARKET_ACCOUNT_DISCRIMINANT
     }
+
+    #[inline(always)]
+    pub fn check_in_bounds(&self, index: SectorIndex) -> DropsetResult {
+        let sectors = self.sectors.as_ref();
+        let max_num_sectors = (sectors.len() / Self::LEN) as u32;
+        if index >= max_num_sectors {
+            return Err(DropsetError::IndexOutOfBounds);
+        };
+
+        Ok(())
+    }
 }
