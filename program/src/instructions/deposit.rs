@@ -5,8 +5,10 @@ use dropset_interface::{
     instructions::DepositInstructionData,
     state::{
         market_seat::MarketSeat,
-        sector::Sector,
-        sector::NIL,
+        sector::{
+            Sector,
+            NIL,
+        },
     },
 };
 use pinocchio::{
@@ -96,7 +98,7 @@ pub unsafe fn process_deposit<'a>(
             == 0;
 
         if needs_resize {
-            // Safety: Scoped mutable borrow to resize the market account and add a new sector/node.
+            // Safety: Scoped mutable borrow to resize the market account and add a new sector.
             unsafe { ctx.market_account.resize(ctx.user, 1) }?;
         }
 

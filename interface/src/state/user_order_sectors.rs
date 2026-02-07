@@ -39,17 +39,17 @@ pub struct UserOrderSectors {
     pub asks: OrderSectors,
 }
 
-/// An array of [`MAX_ORDERS`] [`PriceToIndex`]s that maps unique prices to a sector index.
+/// An array of [`MAX_ORDERS`] [`PriceToIndexEntry`]s that maps unique prices to a sector index.
 ///
-/// By default, each [`PriceToIndex`] represents an unused item by mapping an encoded price u32
+/// By default, each [`PriceToIndexEntry`] represents an unused item by mapping an encoded price u32
 /// value of `0` to the [`LE_NIL`] sector index.
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OrderSectors([PriceToIndex; MAX_ORDERS_USIZE]);
+pub struct OrderSectors([PriceToIndexEntry; MAX_ORDERS_USIZE]);
 
 impl Default for OrderSectors {
     fn default() -> Self {
-        Self([PriceToIndex::new_free(); MAX_ORDERS_USIZE])
+        Self([PriceToIndexEntry::new_free(); MAX_ORDERS_USIZE])
     }
 }
 
@@ -59,7 +59,7 @@ impl OrderSectors {
     #[inline(always)]
     pub fn get(&self, target_price: &LeEncodedPrice) -> Option<SectorIndex> {
         self.0.iter().find_map(
-            |PriceToIndex {
+            |PriceToIndexEntry {
                  encoded_price,
                  sector_index,
              }| {
@@ -71,38 +71,38 @@ impl OrderSectors {
         )
     }
 
-    /// Fallibly add a [`PriceToIndex`] to a user's orders.
+    /// Fallibly add a [`PriceToIndexEntry`] to a user's orders.
     ///
     /// Fails if the user already has [`MAX_ORDERS`] or the price already has an existing order.
     ///
-    /// The `sector_index` passed to this method should be non-NIL or the node after mutation will
-    /// continue to be treated as a free node.
+    /// The order's sector index passed should be non-NIL or the [`crate::state::sector::Sector`]
+    /// after mutation will continue to be treated as if it were free.
     #[inline(always)]
     pub fn add(
         &mut self,
         new_price: &LeEncodedPrice,
         order_index: &LeSectorIndex,
     ) -> DropsetResult {
-        // Check if the price already exists in a node and fail early if it does.
+        // Check if the price already exists in an entry and fail early if it does.
         if self
             .iter()
-            .any(|node| node.encoded_price.as_slice() == new_price.as_slice())
+            .any(|e| e.encoded_price.as_slice() == new_price.as_slice())
         {
             return Err(DropsetError::OrderWithPriceAlreadyExists);
         }
 
-        let node = self
+        let entry = self
             .iter_mut()
-            .find(|node| node.is_free())
+            .find(|e| e.is_free())
             .ok_or(DropsetError::UserHasMaxOrders)?;
 
-        node.encoded_price = *new_price;
-        node.sector_index = *order_index;
+        entry.encoded_price = *new_price;
+        entry.sector_index = *order_index;
 
         Ok(())
     }
 
-    /// Fallibly remove a [`PriceToIndex`] from a user's orders.
+    /// Fallibly remove a [`PriceToIndexEntry`] from a user's orders.
     ///
     /// Fails if the user does not have an order corresponding to the passed encoded price.
     ///
@@ -112,20 +112,20 @@ impl OrderSectors {
     /// Returns the mapped order's sector index.
     #[inline(always)]
     pub fn remove(&mut self, encoded_price: u32) -> Result<LeSectorIndex, DropsetError> {
-        let node = self
+        let entry = self
             .0
             .iter_mut()
-            .find(|node| node.encoded_price.as_slice() == &encoded_price.to_le_bytes())
+            .find(|e| e.encoded_price.as_slice() == &encoded_price.to_le_bytes())
             .ok_or(DropsetError::OrderNotFound)?;
 
-        let sector_index = node.sector_index;
+        let sector_index = entry.sector_index;
 
-        mark_as_free(node);
+        mark_as_free(entry);
 
         Ok(sector_index)
     }
 
-    /// Returns an array of copied sector indices from the mapped user order sectors.
+    /// Returns an array of copied sector indices from the mapped entries.
     #[inline(always)]
     pub fn to_sector_indices(&self) -> [SectorIndex; MAX_ORDERS_USIZE] {
         let mut removed = [MaybeUninit::<SectorIndex>::uninit(); MAX_ORDERS_USIZE];
@@ -142,44 +142,34 @@ impl OrderSectors {
             }
         }
 
-        // // Then effectively "free" the nodes.
-        // for i in 0..MAX_ORDERS_USIZE {
-        //     // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `self.0`.
-        //     let node = unsafe { self.0.get_unchecked_mut(i) };
-        //     // Free the node if it's not already free.
-        //     if !node.is_free() {
-        //         mark_as_free(node);
-        //     }
-        // }
-
         // Safety: All elements were initialized.
         unsafe { *(ptr as *const [SectorIndex; MAX_ORDERS_USIZE]) }
     }
 
     #[inline(always)]
-    pub fn iter(&self) -> core::slice::Iter<'_, PriceToIndex> {
+    pub fn iter(&self) -> core::slice::Iter<'_, PriceToIndexEntry> {
         self.0.iter()
     }
 
     #[inline(always)]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PriceToIndex> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PriceToIndexEntry> {
         self.0.iter_mut()
     }
 }
 
 /// The paired encoded price and sector index for an order.
 ///
-/// If the sector index equals [`LE_NIL`], it's considered a freed node, otherwise, it contains an
+/// If the sector index equals [`LE_NIL`], it's considered a freed entry, otherwise, it contains an
 /// existing, valid pair of encoded price to sector index.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct PriceToIndex {
+pub struct PriceToIndexEntry {
     pub encoded_price: LeEncodedPrice,
     pub sector_index: LeSectorIndex,
 }
 
-impl PriceToIndex {
-    /// Create a new free node.
+impl PriceToIndexEntry {
+    /// Create a new [`PriceToIndexEntry`] that is free.
     #[inline(always)]
     pub fn new_free() -> Self {
         Self {
@@ -188,7 +178,7 @@ impl PriceToIndex {
         }
     }
 
-    /// Create a new encoded price to sector index node.
+    /// Create a new entry given an input encoded price and sector index.
     #[inline(always)]
     pub fn new(encoded_price: EncodedPrice, sector_index: &SectorIndex) -> Self {
         Self {
@@ -203,11 +193,11 @@ impl PriceToIndex {
     }
 }
 
-/// Sets/updates a node to be a free node.
+/// Updates an entry to be marked as free.
 #[inline(always)]
-pub fn mark_as_free(node: &mut PriceToIndex) {
-    node.encoded_price = LeEncodedPrice::zero();
-    node.sector_index = LE_NIL;
+pub fn mark_as_free(entry: &mut PriceToIndexEntry) {
+    entry.encoded_price = LeEncodedPrice::zero();
+    entry.sector_index = LE_NIL;
 }
 
 // Safety:
@@ -216,7 +206,7 @@ pub fn mark_as_free(node: &mut PriceToIndex) {
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for UserOrderSectors {
-    const LEN: usize = size_of::<PriceToIndex>() * (MAX_ORDERS * 2) as usize;
+    const LEN: usize = size_of::<PriceToIndexEntry>() * (MAX_ORDERS * 2) as usize;
 
     #[inline(always)]
     fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
@@ -234,7 +224,7 @@ const_assert_eq!(align_of::<UserOrderSectors>(), 1);
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for OrderSectors {
-    const LEN: usize = size_of::<PriceToIndex>() * MAX_ORDERS_USIZE;
+    const LEN: usize = size_of::<PriceToIndexEntry>() * MAX_ORDERS_USIZE;
 
     #[inline(always)]
     fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
@@ -251,8 +241,8 @@ const_assert_eq!(align_of::<OrderSectors>(), 1);
 // - Stable layout with `#[repr(C)]`.
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
-unsafe impl Transmutable for PriceToIndex {
-    const LEN: usize = size_of::<PriceToIndex>();
+unsafe impl Transmutable for PriceToIndexEntry {
+    const LEN: usize = size_of::<PriceToIndexEntry>();
 
     #[inline(always)]
     fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
@@ -261,20 +251,20 @@ unsafe impl Transmutable for PriceToIndex {
     }
 }
 
-const_assert_eq!(PriceToIndex::LEN, size_of::<PriceToIndex>());
-const_assert_eq!(align_of::<PriceToIndex>(), 1);
+const_assert_eq!(PriceToIndexEntry::LEN, size_of::<PriceToIndexEntry>());
+const_assert_eq!(align_of::<PriceToIndexEntry>(), 1);
 
 // -------------------------------------------------------------------------------------------------
-// Create readable debug views for the encoded price to order sector mapping.
+/// Readable debug views for [`PriceToIndexEntry`]s.
 #[allow(dead_code)]
 #[derive(Debug)]
-struct PriceToIndexView {
+struct PriceToIndexEntryView {
     pub encoded_price: u32,
     pub sector_index: SectorIndex,
 }
 
-impl From<&PriceToIndex> for PriceToIndexView {
-    fn from(value: &PriceToIndex) -> Self {
+impl From<&PriceToIndexEntry> for PriceToIndexEntryView {
+    fn from(value: &PriceToIndexEntry) -> Self {
         Self {
             encoded_price: u32::from_le_bytes(value.encoded_price.as_array()),
             sector_index: SectorIndex::from_le_bytes(value.sector_index),
@@ -282,11 +272,11 @@ impl From<&PriceToIndex> for PriceToIndexView {
     }
 }
 
-impl core::fmt::Debug for PriceToIndex {
+impl core::fmt::Debug for PriceToIndexEntry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let is_in_use = !self.is_free();
-        let node: Option<PriceToIndexView> = is_in_use.then(|| self.into());
-        write!(f, "{:#?}", node)
+        let entry: Option<PriceToIndexEntryView> = is_in_use.then(|| self.into());
+        write!(f, "{:#?}", entry)
     }
 }
 
@@ -311,7 +301,7 @@ mod tests {
             transmutable::Transmutable,
             user_order_sectors::{
                 OrderSectors,
-                PriceToIndex,
+                PriceToIndexEntry,
                 UserOrderSectors,
                 MAX_ORDERS,
                 MAX_ORDERS_USIZE,
@@ -331,22 +321,22 @@ mod tests {
     }
 
     #[test]
-    fn free_node_transmutable_bytes() {
+    fn free_entry_transmutable_bytes() {
         let free_bytes_vec = [[0; U32_SIZE], LE_NIL].concat();
         let free_bytes: &[u8; U32_SIZE * 2] = free_bytes_vec.as_slice().try_into().unwrap();
-        let new_freed_from_transmute = PriceToIndex::load(free_bytes);
+        let new_freed_from_transmute = PriceToIndexEntry::load(free_bytes);
         assert!(new_freed_from_transmute.is_ok());
         let new_freed = new_freed_from_transmute.expect("Should transmute");
         assert!(new_freed.is_free());
         assert_eq!(new_freed.encoded_price.as_slice(), &[0u8; 4]);
         assert_eq!(new_freed.sector_index, LE_NIL);
-        assert_eq!(new_freed, &PriceToIndex::new_free());
+        assert_eq!(new_freed, &PriceToIndexEntry::new_free());
     }
 
     #[test]
     fn free_orders_transmutable_bytes() {
         let free_bytes_vec = [[0; U32_SIZE], LE_NIL].concat();
-        let max_orders_all_freed: [u8; PriceToIndex::LEN * MAX_ORDERS_USIZE] = (0..MAX_ORDERS)
+        let max_orders_all_freed: [u8; PriceToIndexEntry::LEN * MAX_ORDERS_USIZE] = (0..MAX_ORDERS)
             .flat_map(|_| free_bytes_vec.iter().cloned())
             .collect::<std::vec::Vec<u8>>()
             .try_into()
