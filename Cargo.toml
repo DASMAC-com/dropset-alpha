@@ -33,6 +33,7 @@ itertools = "0.14.0"
 futures = "0.3.31"
 lazy-regex = "3.5.1"
 mollusk-svm = "0.10.0"
+paste = { version = "1.0" }
 pinocchio = { version = "0.10.1" }
 pinocchio-associated-token-account = { version = "0.3.0" }
 pinocchio-log = { version = "0.5.1" }

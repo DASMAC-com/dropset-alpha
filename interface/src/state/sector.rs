@@ -4,7 +4,10 @@
 //! Also defines and implements [`Sector`] structs representing the fixed-size storage sector.
 
 use pinocchio::hint::unlikely;
-use static_assertions::const_assert_eq;
+use static_assertions::{
+    const_assert,
+    const_assert_eq,
+};
 
 use crate::{
     error::{
@@ -20,11 +23,22 @@ use crate::{
 
 pub const SECTOR_SIZE: usize = 136;
 
-/// A sentinel value that marks 1-past the last valid sector index.
+/// A sentinel value that marks 1-past the last valid sector index of a collection of sectors.
 ///
 /// This value will never appear naturally. Even at a sector size of 1 byte, Solana's max account
-/// size of 10 MB would put the max sector index at ~10.5 mil — far less than u32::MAX.
+/// size of 10 MiB would put the max sector index at ~10.5 mil — far less than u32::MAX.
+///
+/// The const assertions below ensure this invariant is always true.
 pub const NIL: SectorIndex = u32::MAX;
+
+/// Calculate the maximum number of sectors with a [`SECTOR_SIZE`] of 1 to enforce the strongest
+/// possible upper bound.
+#[allow(dead_code, clippy::identity_op)]
+const MAX_NUM_SECTORS_IF_SECTOR_SIZE_EQ_1: u64 =
+    solana_system_interface::MAX_PERMITTED_DATA_LENGTH / 1;
+
+// Ensure that the maximum number of sectors in a Solana account is less than `NIL`.
+const_assert!(MAX_NUM_SECTORS_IF_SECTOR_SIZE_EQ_1 < NIL as u64);
 
 /// The little-endian byte representation of [`NIL`].
 pub const LE_NIL: LeSectorIndex = NIL.to_le_bytes();
@@ -159,8 +173,8 @@ impl Sector {
     /// Checks if a given sector index is in-bounds of the passed slice of sector bytes.
     #[inline(always)]
     pub fn check_in_bounds(sectors: &[u8], index: SectorIndex) -> DropsetResult {
-        let max_num_sectors = (sectors.len() / Self::LEN) as u32;
-        if unlikely(index >= max_num_sectors) {
+        let max_num_allocated_sectors = (sectors.len() / Self::LEN) as u32;
+        if unlikely(index >= max_num_allocated_sectors) {
             return Err(DropsetError::IndexOutOfBounds);
         };
 

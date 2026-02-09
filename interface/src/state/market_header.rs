@@ -111,7 +111,91 @@ unsafe impl Transmutable for MarketHeader {
 const_assert_eq!(MarketHeader::LEN, size_of::<MarketHeader>());
 const_assert_eq!(align_of::<MarketHeader>(), 1);
 
+/// Helper macro to implement a getter + unchecked increment/decrement methods for a `[u8; 4]` field
+/// that represents a counter field tracking the number of elements in a collection.
+///
+/// Adds debug assertions for catching underflow + overflow bugs in development early.
+///
+/// This macro should only be used with fields that will never underflow or overflow if the program
+/// logic is correct.
+///
+/// Generates:
+/// - `fn $field(&self) -> u32`
+/// - `fn increment_$field(&mut self)`
+/// - `fn decrement_$field(&mut self) -> Result<(), DropsetError>`
+macro_rules! impl_u32_counter_field {
+    ($field:ident) => {
+        #[inline(always)]
+        pub fn $field(&self) -> u32 {
+            u32::from_le_bytes(self.$field)
+        }
+
+        paste::paste! {
+            #[inline(always)]
+            pub fn [<increment_ $field>](&mut self) {
+                let $field = self.$field();
+                // Debug assertion to catch bugs in development.
+                // This is only a possible issue if the program logic itself is incorrect.
+                debug_assert!($field < u32::MAX);
+                self.$field = unsafe { $field.unchecked_add(1).to_le_bytes() };
+            }
+
+            #[inline(always)]
+            pub fn [<decrement_ $field>](&mut self) {
+                let $field = self.$field();
+                // Debug assertion to catch bugs in development.
+                // This is only a possible issue if the program logic itself is incorrect.
+                debug_assert!($field > 0);
+                self.$field = unsafe { $field.unchecked_sub(1).to_le_bytes() };
+            }
+        }
+    };
+}
+
+/// Implements a getter and setter for a `[u8; 4]` field storing a little-endian `SectorIndex`.
+///
+/// Generates:
+/// - `fn $field(&self) -> SectorIndex`
+/// - `fn set_$field(&mut self, index: SectorIndex)`
+macro_rules! impl_get_set_sector_index_field {
+    ($field:ident) => {
+        #[inline(always)]
+        pub fn $field(&self) -> SectorIndex {
+            u32::from_le_bytes(self.$field)
+        }
+
+        paste::paste! {
+            #[inline(always)]
+            pub fn [<set_ $field>](&mut self, index: SectorIndex) {
+                self.$field = index.to_le_bytes();
+            }
+        }
+    };
+}
+
 impl MarketHeader {
+    impl_u32_counter_field!(num_seats);
+
+    impl_u32_counter_field!(num_bids);
+
+    impl_u32_counter_field!(num_asks);
+
+    impl_u32_counter_field!(num_free_sectors);
+
+    impl_get_set_sector_index_field!(free_stack_top);
+
+    impl_get_set_sector_index_field!(seats_dll_head);
+
+    impl_get_set_sector_index_field!(seats_dll_tail);
+
+    impl_get_set_sector_index_field!(bids_dll_head);
+
+    impl_get_set_sector_index_field!(bids_dll_tail);
+
+    impl_get_set_sector_index_field!(asks_dll_head);
+
+    impl_get_set_sector_index_field!(asks_dll_tail);
+
     /// Initializes market header data to the header destination pointer with a `core::ptr::write`.
     ///
     /// # Safety
@@ -159,136 +243,6 @@ impl MarketHeader {
     #[inline(always)]
     pub fn discriminant(&self) -> u64 {
         u64::from_le_bytes(self.discriminant)
-    }
-
-    #[inline(always)]
-    pub fn num_seats(&self) -> u32 {
-        u32::from_le_bytes(self.num_seats)
-    }
-
-    #[inline(always)]
-    pub fn increment_num_seats(&mut self) {
-        self.num_seats = self.num_seats().saturating_add(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn decrement_num_seats(&mut self) {
-        self.num_seats = self.num_seats().saturating_sub(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn num_bids(&self) -> u32 {
-        u32::from_le_bytes(self.num_bids)
-    }
-
-    #[inline(always)]
-    pub fn increment_num_bids(&mut self) {
-        self.num_bids = self.num_bids().saturating_add(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn decrement_num_bids(&mut self) {
-        self.num_bids = self.num_bids().saturating_sub(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn num_asks(&self) -> u32 {
-        u32::from_le_bytes(self.num_asks)
-    }
-
-    #[inline(always)]
-    pub fn increment_num_asks(&mut self) {
-        self.num_asks = self.num_asks().saturating_add(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn decrement_num_asks(&mut self) {
-        self.num_asks = self.num_asks().saturating_sub(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn num_free_sectors(&self) -> u32 {
-        u32::from_le_bytes(self.num_free_sectors)
-    }
-
-    #[inline(always)]
-    pub fn increment_num_free_sectors(&mut self) {
-        self.num_free_sectors = self.num_free_sectors().saturating_add(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn decrement_num_free_sectors(&mut self) {
-        self.num_free_sectors = self.num_free_sectors().saturating_sub(1).to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn free_stack_top(&self) -> SectorIndex {
-        u32::from_le_bytes(self.free_stack_top)
-    }
-
-    #[inline(always)]
-    pub fn set_free_stack_top(&mut self, index: SectorIndex) {
-        self.free_stack_top = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn seats_dll_head(&self) -> SectorIndex {
-        u32::from_le_bytes(self.seats_dll_head)
-    }
-
-    #[inline(always)]
-    pub fn set_seats_dll_head(&mut self, index: SectorIndex) {
-        self.seats_dll_head = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn seats_dll_tail(&self) -> SectorIndex {
-        u32::from_le_bytes(self.seats_dll_tail)
-    }
-
-    #[inline(always)]
-    pub fn set_seats_dll_tail(&mut self, index: SectorIndex) {
-        self.seats_dll_tail = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn bids_dll_head(&self) -> SectorIndex {
-        u32::from_le_bytes(self.bids_dll_head)
-    }
-
-    #[inline(always)]
-    pub fn set_bids_dll_head(&mut self, index: SectorIndex) {
-        self.bids_dll_head = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn bids_dll_tail(&self) -> SectorIndex {
-        u32::from_le_bytes(self.bids_dll_tail)
-    }
-
-    #[inline(always)]
-    pub fn set_bids_dll_tail(&mut self, index: SectorIndex) {
-        self.bids_dll_tail = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn asks_dll_head(&self) -> SectorIndex {
-        u32::from_le_bytes(self.asks_dll_head)
-    }
-
-    #[inline(always)]
-    pub fn set_asks_dll_head(&mut self, index: SectorIndex) {
-        self.asks_dll_head = index.to_le_bytes();
-    }
-
-    #[inline(always)]
-    pub fn asks_dll_tail(&self) -> SectorIndex {
-        u32::from_le_bytes(self.asks_dll_tail)
-    }
-
-    #[inline(always)]
-    pub fn set_asks_dll_tail(&mut self, index: SectorIndex) {
-        self.asks_dll_tail = index.to_le_bytes();
     }
 
     #[inline(always)]

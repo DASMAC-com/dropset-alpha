@@ -13,11 +13,9 @@ use crate::{
             AllBitPatternsValid,
             Payload,
             Sector,
-            PAYLOAD_SIZE,
-        },
-        sector::{
             SectorIndex,
             NIL,
+            PAYLOAD_SIZE,
         },
         transmutable::Transmutable,
     },
@@ -84,6 +82,7 @@ impl<'a> Stack<'a> {
 
         sector.set_next(curr_top);
         self.set_top(index);
+        self.header.increment_num_free_sectors();
     }
 
     /// Initialize zeroed out bytes as free stack sectors.

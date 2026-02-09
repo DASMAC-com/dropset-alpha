@@ -38,7 +38,7 @@ pub enum DropsetError {
     OrderWithPriceAlreadyExists,
     UserHasMaxOrders,
     OrderNotFound,
-    ExponentUnderflow,
+    ArithmeticUnderflow,
     ArithmeticOverflow,
     InvalidPriceMantissa,
     InvalidBiasedExponent,
@@ -58,7 +58,7 @@ impl From<OrderInfoError> for DropsetError {
     #[inline(always)]
     fn from(order_error: OrderInfoError) -> Self {
         match order_error {
-            OrderInfoError::ExponentUnderflow => DropsetError::ExponentUnderflow,
+            OrderInfoError::ExponentUnderflow => DropsetError::ArithmeticUnderflow,
             OrderInfoError::ArithmeticOverflow => DropsetError::ArithmeticOverflow,
             OrderInfoError::InvalidPriceMantissa => DropsetError::InvalidPriceMantissa,
             OrderInfoError::InvalidBiasedExponent => DropsetError::InvalidBiasedExponent,
@@ -102,8 +102,8 @@ impl From<DropsetError> for &'static str {
             DropsetError::OrderWithPriceAlreadyExists => "An order with this price already exists",
             DropsetError::UserHasMaxOrders => "User already has the max number of open orders",
             DropsetError::OrderNotFound => "Order not found",
-            DropsetError::ExponentUnderflow => "Order exponent underflow",
-            DropsetError::ArithmeticOverflow => "Order arithmetic overflow",
+            DropsetError::ArithmeticUnderflow => "Arithmetic underflow",
+            DropsetError::ArithmeticOverflow => "Arithmetic overflow",
             DropsetError::InvalidPriceMantissa => "Invalid price mantissa in price calculation",
             DropsetError::InvalidBiasedExponent => "Invalid biased exponent in price calculation",
             DropsetError::InfinityIsNotAFloat => "Can't convert infinity to a float value",
