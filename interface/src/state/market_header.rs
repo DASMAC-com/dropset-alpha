@@ -116,8 +116,8 @@ const_assert_eq!(align_of::<MarketHeader>(), 1);
 ///
 /// Adds debug assertions for catching underflow + overflow bugs in development early.
 ///
-/// This macro should only be used with fields that will never underflow or overflow if the program
-/// logic is correct.
+/// This macro should only be used with fields that will never underflow or overflow due to a single
+/// decrement/increment (respectively0 if the program logic is correct.
 ///
 /// Generates:
 /// - `fn $field(&self) -> u32`
