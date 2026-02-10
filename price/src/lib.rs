@@ -323,8 +323,13 @@ mod tests {
     #[test]
     fn decimal_price() {
         let mantissa = 12345678;
-        let order = to_order_info(OrderInfoArgs::new_unscaled(mantissa, 1))
-            .expect("Should calculate price");
+        let order = to_order_info(OrderInfoArgs::new(
+            mantissa,
+            1,
+            biased_exponent!(8),
+            biased_exponent!(0),
+        ))
+        .expect("Should calculate price");
         assert_eq!(order.quote_atoms, 12345678);
         assert_eq!(order.base_atoms, 100000000);
 
