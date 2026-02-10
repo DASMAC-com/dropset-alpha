@@ -122,7 +122,7 @@ mod tests {
         transmutable::Transmutable,
     };
     use price::{
-        to_biased_exponent,
+        biased_exponent,
         to_order_info,
         OrderInfoArgs,
         UNBIASED_MAX,
@@ -162,8 +162,8 @@ mod tests {
         let order_info = to_order_info(OrderInfoArgs::new(
             price_mantissa,
             1,
-            to_biased_exponent!(UNBIASED_MAX),
-            to_biased_exponent!(-1),
+            biased_exponent!(UNBIASED_MAX),
+            biased_exponent!(-1),
         ))
         .expect("The unit test should pass a valid price mantissa");
 

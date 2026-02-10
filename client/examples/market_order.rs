@@ -20,7 +20,7 @@ use dropset_interface::{
 };
 use itertools::Itertools;
 use price::{
-    to_biased_exponent,
+    biased_exponent,
     to_order_info,
     OrderInfo,
     OrderInfoArgs,
@@ -345,8 +345,8 @@ async fn main() -> anyhow::Result<()> {
             order_info_args: OrderInfoArgs {
                 price_mantissa: 11_000_000,
                 base_scalar: 5,
-                base_exponent_biased: to_biased_exponent!(8),
-                quote_exponent_biased: to_biased_exponent!(0),
+                base_exponent_biased: biased_exponent!(8),
+                quote_exponent_biased: biased_exponent!(0),
             },
             maker_side: side,
             num_taker_fills: 2,

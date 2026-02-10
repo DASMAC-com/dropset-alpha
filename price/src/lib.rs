@@ -203,8 +203,8 @@ impl From<(u32, u64, u8, u8)> for OrderInfoArgs {
 /// let args: price::OrderInfoArgs = (
 ///     PRICE_MANTISSA as u32,
 ///     BASE_SCALAR,
-///     price::to_biased_exponent!(BASE_EXPONENT_UNBIASED),
-///     price::to_biased_exponent!(QUOTE_EXPONENT_UNBIASED),
+///     price::biased_exponent!(BASE_EXPONENT_UNBIASED),
+///     price::biased_exponent!(QUOTE_EXPONENT_UNBIASED),
 /// ).into();
 /// let order = price::to_order_info(args).expect("Should create order info");
 ///
@@ -259,7 +259,7 @@ pub fn to_order_info(args: OrderInfoArgs) -> Result<OrderInfo, OrderInfoError> {
     )?;
 
     Ok(OrderInfo {
-        encoded_price: EncodedPrice::new(price_exponent_rebiased, validated_mantissa),
+        encoded_price: EncodedPrice::new(validated_mantissa, price_exponent_rebiased),
         base_atoms,
         quote_atoms,
     })
@@ -280,8 +280,8 @@ mod tests {
 
     #[test]
     fn happy_path_simple_price() {
-        let base_biased_exponent = to_biased_exponent!(0);
-        let quote_biased_exponent = to_biased_exponent!(-4);
+        let base_biased_exponent = biased_exponent!(0);
+        let quote_biased_exponent = biased_exponent!(-4);
         let order =
             to_order_info((12_340_000, 1, base_biased_exponent, quote_biased_exponent).into())
                 .expect("Should calculate price");
@@ -297,9 +297,8 @@ mod tests {
 
     #[test]
     fn price_with_max_sig_digits() {
-        let order =
-            to_order_info((12345678, 1, to_biased_exponent!(0), to_biased_exponent!(0)).into())
-                .expect("Should calculate price");
+        let order = to_order_info((12345678, 1, biased_exponent!(0), biased_exponent!(0)).into())
+            .expect("Should calculate price");
         assert_eq!(order.base_atoms, 1);
         assert_eq!(order.quote_atoms, 12345678);
 
@@ -313,9 +312,8 @@ mod tests {
     #[test]
     fn decimal_price() {
         let mantissa = 12345678;
-        let order =
-            to_order_info((mantissa, 1, to_biased_exponent!(8), to_biased_exponent!(0)).into())
-                .expect("Should calculate price");
+        let order = to_order_info((mantissa, 1, biased_exponent!(8), biased_exponent!(0)).into())
+            .expect("Should calculate price");
         assert_eq!(order.quote_atoms, 12345678);
         assert_eq!(order.base_atoms, 100000000);
 
@@ -373,8 +371,8 @@ mod tests {
         assert!(to_order_info(OrderInfoArgs::new(
             PRICE_MANTISSA,
             u64::MAX / PRICE_MANTISSA as u64,
-            to_biased_exponent!(0),
-            to_biased_exponent!(0),
+            biased_exponent!(0),
+            biased_exponent!(0),
         ))
         .is_ok());
 
@@ -382,8 +380,8 @@ mod tests {
             to_order_info(OrderInfoArgs::new(
                 PRICE_MANTISSA + 1,
                 u64::MAX / PRICE_MANTISSA as u64,
-                to_biased_exponent!(0),
-                to_biased_exponent!(0)
+                biased_exponent!(0),
+                biased_exponent!(0)
             )),
             Err(OrderInfoError::ArithmeticOverflow)
         ));
@@ -404,7 +402,7 @@ mod tests {
 
     #[test]
     pub(crate) fn ensure_invalid_quote_exponent_fails_early() {
-        let e_base = to_biased_exponent!(0);
+        let e_base = biased_exponent!(0);
         let e_quote = MAX_BIASED_EXPONENT + 1;
 
         // Ensure the base exponent is valid so that it can't be the trigger for the error.
@@ -424,7 +422,7 @@ mod tests {
     #[test]
     fn max_and_max_plus_one_base() {
         let e_base = MAX_BIASED_EXPONENT;
-        let e_quote = to_biased_exponent!(0);
+        let e_quote = biased_exponent!(0);
 
         // Ensure the quote exponent is valid so that it can't be the trigger for the error.
         let _one_to_the_quote_exponent = pow10_u64!(1u64, e_quote).unwrap();
@@ -469,8 +467,8 @@ mod tests {
         assert!(to_order_info(OrderInfoArgs::new(
             mantissa,
             base_scalar,
-            to_biased_exponent!(0),
-            to_biased_exponent!(QUOTE_EXPONENT_UNBIASED)
+            biased_exponent!(0),
+            biased_exponent!(QUOTE_EXPONENT_UNBIASED)
         ))
         .is_ok());
 
@@ -479,8 +477,8 @@ mod tests {
             to_order_info(OrderInfoArgs::new(
                 mantissa,
                 base_scalar,
-                to_biased_exponent!(0),
-                to_biased_exponent!(QUOTE_EXPONENT_UNBIASED + 1)
+                biased_exponent!(0),
+                biased_exponent!(QUOTE_EXPONENT_UNBIASED + 1)
             )),
             Err(OrderInfoError::ArithmeticOverflow)
         ));

@@ -19,7 +19,7 @@ use dropset_interface::{
     state::sector::NIL,
 };
 use price::{
-    to_biased_exponent,
+    biased_exponent,
     to_order_info,
     OrderInfoArgs,
 };
@@ -54,8 +54,8 @@ async fn main() -> anyhow::Result<()> {
     let order_info_args = OrderInfoArgs::new(
         10_000_000,
         500,
-        to_biased_exponent!(0),
-        to_biased_exponent!(0),
+        biased_exponent!(0),
+        biased_exponent!(0),
     );
 
     let order_info = to_order_info(order_info_args.clone()).expect("Should be a valid order");

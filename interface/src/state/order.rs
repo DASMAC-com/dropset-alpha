@@ -157,7 +157,7 @@ unsafe impl AllBitPatternsValid for Order {}
 #[cfg(test)]
 mod tests {
     use price::{
-        to_biased_exponent,
+        biased_exponent,
         to_order_info,
         EncodedPrice,
         OrderInfoArgs,
@@ -185,8 +185,8 @@ mod tests {
         let order_info = to_order_info(OrderInfoArgs::new(
             10_000_000,
             5,
-            to_biased_exponent!(7),
-            to_biased_exponent!(0),
+            biased_exponent!(7),
+            biased_exponent!(0),
         ))
         .expect("Should create order info");
         let user_seat = 17;

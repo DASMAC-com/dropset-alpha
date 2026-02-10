@@ -102,7 +102,7 @@ pub fn try_encoded_u32_to_decoded_decimal(encoded_u32: u32) -> Result<Decimal, O
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::to_biased_exponent;
+    use crate::biased_exponent;
 
     #[test]
     fn test_sig_figs() {
@@ -150,12 +150,7 @@ mod tests {
         // Test the example in the doctest for the main to order info function.
         let base_atoms = 500 * 10u64.pow(6);
         let res = to_order_info_args(rust_decimal::dec!(1.25), base_atoms);
-        let expected = OrderInfoArgs::new(
-            12_500_000,
-            5,
-            to_biased_exponent!(8),
-            to_biased_exponent!(1),
-        );
+        let expected = OrderInfoArgs::new(12_500_000, 5, biased_exponent!(8), biased_exponent!(1));
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), expected);
     }
