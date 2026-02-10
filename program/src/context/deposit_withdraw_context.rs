@@ -87,7 +87,7 @@ pub(crate) mod tests {
         state::SYSTEM_PROGRAM_ID,
     };
     use pinocchio::{
-        AccountView,
+        account::AccountView,
         Address,
     };
     use solana_account_view::RuntimeAccount;

@@ -52,7 +52,7 @@ pub(crate) mod tests {
         PostOrder,
     };
     use pinocchio::{
-        AccountView,
+        account::AccountView,
         Address,
     };
     use solana_account_view::RuntimeAccount;
