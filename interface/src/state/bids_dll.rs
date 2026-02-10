@@ -103,11 +103,11 @@ impl LinkedListHeaderOperations for BidOrders {
         header.set_bids_dll_tail(new_index);
     }
 
-    fn increment_num_sectors(header: &mut MarketHeader) {
+    fn increment_num_elements(header: &mut MarketHeader) {
         header.increment_num_bids();
     }
 
-    fn decrement_num_sectors(header: &mut MarketHeader) {
+    fn decrement_num_elements(header: &mut MarketHeader) {
         header.decrement_num_bids();
     }
 }

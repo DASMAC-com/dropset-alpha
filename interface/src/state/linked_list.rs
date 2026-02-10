@@ -23,9 +23,9 @@ pub trait LinkedListHeaderOperations {
 
     fn set_tail(header: &mut MarketHeader, new_index: SectorIndex);
 
-    fn increment_num_sectors(header: &mut MarketHeader);
+    fn increment_num_elements(header: &mut MarketHeader);
 
-    fn decrement_num_sectors(header: &mut MarketHeader);
+    fn decrement_num_elements(header: &mut MarketHeader);
 }
 
 /// A doubly linked list of sectors containing arbitrary payloads of size
@@ -84,9 +84,8 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             head.set_prev(new_index);
         }
 
-        // Update the head to the new index and increment the number of seats.
         T::set_head(self.header, new_index);
-        T::increment_num_sectors(self.header);
+        T::increment_num_elements(self.header);
 
         Ok(new_index)
     }
@@ -113,9 +112,8 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             tail.set_next(new_index);
         }
 
-        // Update the tail to the new index and increment the number of seats.
         T::set_tail(self.header, new_index);
-        T::increment_num_sectors(self.header);
+        T::increment_num_elements(self.header);
 
         Ok(new_index)
     }
@@ -157,7 +155,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             prev.set_next(new_index);
         }
 
-        T::increment_num_sectors(self.header);
+        T::increment_num_elements(self.header);
 
         Ok(new_index)
     }
@@ -190,7 +188,7 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
             },
         }
 
-        T::decrement_num_sectors(self.header);
+        T::decrement_num_elements(self.header);
 
         let mut free_stack = Stack::new_from_parts(self.header, self.sectors);
         free_stack.push_free_sector(index);

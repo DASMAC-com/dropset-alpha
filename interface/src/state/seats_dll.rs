@@ -38,12 +38,12 @@ impl LinkedListHeaderOperations for Seats {
     }
 
     #[inline(always)]
-    fn increment_num_sectors(header: &mut MarketHeader) {
+    fn increment_num_elements(header: &mut MarketHeader) {
         header.increment_num_seats();
     }
 
     #[inline(always)]
-    fn decrement_num_sectors(header: &mut MarketHeader) {
+    fn decrement_num_elements(header: &mut MarketHeader) {
         header.decrement_num_seats();
     }
 }
