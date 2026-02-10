@@ -112,12 +112,12 @@ const_assert_eq!(MarketHeader::LEN, size_of::<MarketHeader>());
 const_assert_eq!(align_of::<MarketHeader>(), 1);
 
 /// Helper macro to implement a getter + unchecked increment/decrement methods for a `[u8; 4]` field
-/// that represents a counter field tracking the number of elements in a collection.
+/// that represents a u32 counter field tracking the number of elements in a collection.
 ///
 /// Adds debug assertions for catching underflow + overflow bugs in development early.
 ///
 /// This macro should only be used with fields that will never underflow or overflow due to a single
-/// decrement/increment (respectively0 if the program logic is correct.
+/// decrement or increment (respectively) if the program logic is correct.
 ///
 /// Generates:
 /// - `fn $field(&self) -> u32`
@@ -152,7 +152,8 @@ macro_rules! impl_u32_counter_field {
     };
 }
 
-/// Implements a getter and setter for a `[u8; 4]` field storing a little-endian `SectorIndex`.
+/// Implements a getter and setter for a `[u8; 4]` field storing the little-endian bytes
+/// representing a `SectorIndex`.
 ///
 /// Generates:
 /// - `fn $field(&self) -> SectorIndex`
