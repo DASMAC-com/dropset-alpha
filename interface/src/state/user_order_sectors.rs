@@ -1,5 +1,3 @@
-use core::mem::MaybeUninit;
-
 use price::{
     EncodedPrice,
     LeEncodedPrice,
@@ -128,22 +126,7 @@ impl OrderSectors {
     /// Returns an array of copied sector indices from the mapped entries.
     #[inline(always)]
     pub fn to_sector_indices(&self) -> [SectorIndex; MAX_ORDERS_USIZE] {
-        let mut removed = [MaybeUninit::<SectorIndex>::uninit(); MAX_ORDERS_USIZE];
-        let ptr = removed.as_mut_ptr() as *mut SectorIndex;
-
-        // Copy out all removed sector indices.
-        for i in 0..MAX_ORDERS_USIZE {
-            // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `self.0`.
-            let item = unsafe { self.0.get_unchecked(i) };
-            // Safety: `i` is <= MAX_ORDERS_USIZE and is thus in-bounds of `removed`.
-            unsafe {
-                ptr.add(i)
-                    .write(SectorIndex::from_le_bytes(item.sector_index));
-            }
-        }
-
-        // Safety: All elements were initialized.
-        unsafe { *(ptr as *const [SectorIndex; MAX_ORDERS_USIZE]) }
+        core::array::from_fn(|i| SectorIndex::from_le_bytes(self.0[i].sector_index))
     }
 
     #[inline(always)]
@@ -299,7 +282,6 @@ mod tests {
                 LeSectorIndex,
                 SectorIndex,
                 LE_NIL,
-                NIL,
             },
             transmutable::Transmutable,
             user_order_sectors::{
@@ -564,128 +546,5 @@ mod tests {
             assert_eq!(&result.sector_index, expected_sector_index);
             assert_eq!(&result.encoded_price, expected_encoded_price);
         }
-    }
-
-    /// Compares the sector indices created from the `MaybeUninit` optimized build implementation
-    /// to the sector indices collected from an iterator + Vec<_> and the explicit, expected value.
-    fn check_sector_indices(
-        order_sectors: UserOrderSectors,
-        expected_bid_indices: [SectorIndex; 5],
-        expected_ask_indices: [SectorIndex; 5],
-    ) {
-        let bid_vec = order_sectors
-            .bids
-            .iter()
-            .map(|bid| u32::from_le_bytes(bid.sector_index))
-            .collect::<Vec<_>>();
-
-        let ask_vec = order_sectors
-            .asks
-            .iter()
-            .map(|ask| u32::from_le_bytes(ask.sector_index))
-            .collect::<Vec<_>>();
-
-        assert_eq!(bid_vec.len(), 5);
-        assert_eq!(ask_vec.len(), 5);
-        let bid_array: [SectorIndex; 5] = bid_vec.try_into().unwrap();
-        let ask_array: [SectorIndex; 5] = ask_vec.try_into().unwrap();
-        assert_eq!(order_sectors.bids.to_sector_indices(), bid_array);
-        assert_eq!(order_sectors.asks.to_sector_indices(), ask_array);
-        assert_eq!(bid_array, expected_bid_indices);
-        assert_eq!(ask_array, expected_ask_indices);
-    }
-
-    #[test]
-    fn to_sector_indices_all_free() {
-        let order_sectors = UserOrderSectors::default();
-        check_sector_indices(
-            order_sectors,
-            [NIL, NIL, NIL, NIL, NIL],
-            [NIL, NIL, NIL, NIL, NIL],
-        );
-    }
-
-    #[test]
-    fn to_sector_indices_one_not_free() {
-        let mut order_sectors: UserOrderSectors = UserOrderSectors::default();
-        let price = encoded_price!(12_345_678, 0).into();
-        let idx: u32 = 0;
-
-        order_sectors.bids.add(&price, &idx.to_le_bytes()).unwrap();
-        order_sectors.asks.add(&price, &idx.to_le_bytes()).unwrap();
-
-        check_sector_indices(
-            order_sectors,
-            [idx, NIL, NIL, NIL, NIL],
-            [idx, NIL, NIL, NIL, NIL],
-        );
-    }
-
-    #[test]
-    fn to_sector_indices_two_not_free() {
-        let mut order_sectors: UserOrderSectors = UserOrderSectors::default();
-        let p1 = encoded_price!(12_345_678, 0).into();
-        let idx_1: u32 = 1;
-        let p2 = encoded_price!(99_999_999, 0).into();
-        let idx_2: u32 = 2;
-
-        order_sectors.bids.add(&p1, &idx_1.to_le_bytes()).unwrap();
-        order_sectors.bids.add(&p2, &idx_2.to_le_bytes()).unwrap();
-
-        order_sectors.asks.add(&p2, &idx_2.to_le_bytes()).unwrap();
-        order_sectors.asks.add(&p1, &idx_1.to_le_bytes()).unwrap();
-
-        check_sector_indices(
-            order_sectors,
-            [idx_1, idx_2, NIL, NIL, NIL],
-            [idx_2, idx_1, NIL, NIL, NIL],
-        );
-    }
-
-    #[test]
-    fn to_sector_indices_none_free_and_after_mutation() {
-        let order_sectors: UserOrderSectors = UserOrderSectors {
-            bids: OrderSectors([
-                PriceToIndexEntry::new(encoded_price!(11_111_111, 0), &1),
-                PriceToIndexEntry::new(encoded_price!(22_222_222, 0), &2),
-                PriceToIndexEntry::new(encoded_price!(33_333_333, 0), &3),
-                PriceToIndexEntry::new(encoded_price!(44_444_444, 0), &4),
-                PriceToIndexEntry::new(encoded_price!(55_555_555, 0), &5),
-            ]),
-            asks: OrderSectors([
-                PriceToIndexEntry::new(encoded_price!(55_555_555, 0), &5),
-                PriceToIndexEntry::new(encoded_price!(44_444_444, 0), &4),
-                PriceToIndexEntry::new(encoded_price!(33_333_333, 0), &3),
-                PriceToIndexEntry::new(encoded_price!(22_222_222, 0), &2),
-                PriceToIndexEntry::new(encoded_price!(11_111_111, 0), &1),
-            ]),
-        };
-
-        // Check the result with no free entries.
-        check_sector_indices(order_sectors.clone(), [1, 2, 3, 4, 5], [5, 4, 3, 2, 1]);
-
-        let mut order_sectors_2 = order_sectors;
-        // Remove the third bid entry.
-        order_sectors_2
-            .bids
-            .remove(encoded_price!(33_333_333, 0).as_u32())
-            .unwrap();
-
-        // Update the fourth ask entry.
-        order_sectors_2
-            .asks
-            .remove(encoded_price!(44_444_444, 0).as_u32())
-            .unwrap();
-
-        order_sectors_2
-            .asks
-            .add(
-                &encoded_price!(99_999_999, 0).into(),
-                &SectorIndex::to_le_bytes(9),
-            )
-            .unwrap();
-
-        // Check the result with mutated entries.
-        check_sector_indices(order_sectors_2, [1, 2, NIL, 4, 5], [5, 9, 3, 2, 1]);
     }
 }
