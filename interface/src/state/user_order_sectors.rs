@@ -126,7 +126,10 @@ impl OrderSectors {
     /// Returns an array of copied sector indices from the mapped entries.
     #[inline(always)]
     pub fn to_sector_indices(&self) -> [SectorIndex; MAX_ORDERS_USIZE] {
-        core::array::from_fn(|i| SectorIndex::from_le_bytes(self.0[i].sector_index))
+        core::array::from_fn(|i| {
+            let item = self.0[i];
+            SectorIndex::from_le_bytes(item.sector_index)
+        })
     }
 
     #[inline(always)]
