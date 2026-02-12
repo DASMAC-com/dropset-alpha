@@ -17,7 +17,7 @@ use dropset_interface::{
 };
 use itertools::Itertools;
 use price::{
-    to_biased_exponent,
+    biased_exponent,
     OrderInfoArgs,
 };
 use solana_sdk::signer::Signer;
@@ -48,12 +48,8 @@ async fn main() -> anyhow::Result<()> {
         .await?
         .expect("User should have been registered on deposit");
 
-    let order_info_args = OrderInfoArgs::new(
-        10_000_000,
-        500,
-        to_biased_exponent!(0),
-        to_biased_exponent!(0),
-    );
+    let order_info_args =
+        OrderInfoArgs::new(10_000_000, 500, biased_exponent!(0), biased_exponent!(0));
 
     // Post an ask. The user provides base as collateral and receives quote when filled.
     let is_bid = false;

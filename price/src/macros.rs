@@ -166,25 +166,60 @@ macro_rules! checked_mul {
     }};
 }
 
-/// Utility macro for converting unbiased exponents to biased exponents.
+/// Utility macro for infallibly converting unbiased exponents to biased exponents.
 ///
 /// The input must be a literal or const value so that the const assertions work properly.
 ///
-/// Requires the [`static_assertions`] library.
+/// Requires the [`static_assertions`] crate.
 #[macro_export]
-macro_rules! to_biased_exponent {
+macro_rules! biased_exponent {
     ($unbiased_exponent:expr) => {{
-        const UNBIASED: i16 = $unbiased_exponent as i16;
-        ::static_assertions::const_assert!(UNBIASED >= $crate::UNBIASED_MIN);
-        ::static_assertions::const_assert!(UNBIASED <= $crate::UNBIASED_MAX);
-        (UNBIASED + $crate::BIAS as i16) as u8
+        const __UNBIASED: i16 = $unbiased_exponent as i16;
+        ::static_assertions::const_assert!(__UNBIASED >= $crate::UNBIASED_MIN);
+        ::static_assertions::const_assert!(__UNBIASED <= $crate::UNBIASED_MAX);
+        (__UNBIASED + $crate::BIAS as i16) as u8
+    }};
+}
+
+/// Utility macro for infallibly converting integer literals to [`crate::ValidatedPriceMantissa`]s.
+///
+/// The input must be a literal or const value so that the const assertions work properly.
+///
+/// Requires the [`static_assertions`] crate.
+#[macro_export]
+macro_rules! price_mantissa {
+    ($price_mantissa:expr) => {{
+        const __PRICE_MANTISSA: u32 = $price_mantissa as u32;
+        ::static_assertions::const_assert!(__PRICE_MANTISSA >= $crate::MANTISSA_DIGITS_LOWER_BOUND);
+        ::static_assertions::const_assert!(__PRICE_MANTISSA <= $crate::MANTISSA_DIGITS_UPPER_BOUND);
+        $crate::ValidatedPriceMantissa::try_from(__PRICE_MANTISSA).unwrap()
+    }};
+}
+
+/// Utility macro for infallibly creating an encoded price with two literals:
+/// - A price mantissa (u32)
+/// - An unbiased exponent (u8)
+///
+/// Requires the [`static_assertions`] crate.
+#[macro_export]
+macro_rules! encoded_price {
+    ($price_mantissa:expr, $unbiased_exponent:expr) => {{
+        $crate::EncodedPrice::new(
+            $crate::price_mantissa!($price_mantissa),
+            $crate::biased_exponent!($unbiased_exponent),
+        )
     }};
 }
 
 #[cfg(test)]
 mod tests {
+    use static_assertions::const_assert_eq;
+
     use crate::{
+        client_helpers::try_to_biased_exponent,
+        EncodedPrice,
         OrderInfoError,
+        ValidatedPriceMantissa,
         BIAS,
         MAX_BIASED_EXPONENT,
         UNBIASED_MAX,
@@ -210,12 +245,84 @@ mod tests {
     #[test]
     fn unbiased_exponent_happy_paths() {
         let expected_min = (UNBIASED_MIN + BIAS as i16) as u8;
-        assert_eq!(to_biased_exponent!(UNBIASED_MIN), expected_min);
+        assert_eq!(biased_exponent!(UNBIASED_MIN), expected_min);
 
         let expected_mid = BIAS;
-        assert_eq!(to_biased_exponent!(0), expected_mid);
+        assert_eq!(biased_exponent!(0), expected_mid);
 
         let expected_max = (UNBIASED_MAX + BIAS as i16) as u8;
-        assert_eq!(to_biased_exponent!(UNBIASED_MAX), expected_max);
+        assert_eq!(biased_exponent!(UNBIASED_MAX), expected_max);
+    }
+
+    #[test]
+    fn biased_exponents() {
+        const_assert_eq!(BIAS, biased_exponent!(0));
+        const_assert_eq!(BIAS + 1, biased_exponent!(1));
+        const_assert_eq!(BIAS - 1, biased_exponent!(-1));
+        const_assert_eq!(BIAS + 2, biased_exponent!(2));
+        const_assert_eq!(BIAS - 2, biased_exponent!(-2));
+    }
+
+    #[test]
+    fn price_mantissas() {
+        assert_eq!(
+            ValidatedPriceMantissa::try_from(10_000_000).unwrap(),
+            price_mantissa!(10_000_000)
+        );
+        assert_eq!(
+            ValidatedPriceMantissa::try_from(99_999_999).unwrap(),
+            price_mantissa!(99_999_999)
+        );
+    }
+
+    /// Validate all macro output exhaustively.
+    #[test]
+    fn exhaustive_encoded_prices() {
+        macro_rules! check_encoded_prices {
+            ($price_mantissa:expr, $unbiased_exponent:expr) => {{
+                let a = encoded_price!($price_mantissa, $unbiased_exponent);
+                let b = EncodedPrice::new(
+                    ValidatedPriceMantissa::try_from($price_mantissa).unwrap(),
+                    try_to_biased_exponent($unbiased_exponent).unwrap(),
+                );
+                assert_eq!(a, b);
+            }};
+        }
+
+        check_encoded_prices!(10_000_000, UNBIASED_MIN);
+        check_encoded_prices!(10_000_001, UNBIASED_MIN);
+        check_encoded_prices!(55_555_555, UNBIASED_MIN);
+        check_encoded_prices!(99_999_998, UNBIASED_MIN);
+        check_encoded_prices!(99_999_999, UNBIASED_MIN);
+        check_encoded_prices!(10_000_000, UNBIASED_MIN + 1);
+        check_encoded_prices!(10_000_001, UNBIASED_MIN + 1);
+        check_encoded_prices!(55_555_555, UNBIASED_MIN + 1);
+        check_encoded_prices!(99_999_998, UNBIASED_MIN + 1);
+        check_encoded_prices!(99_999_999, UNBIASED_MIN + 1);
+        check_encoded_prices!(10_000_000, -1);
+        check_encoded_prices!(10_000_001, -1);
+        check_encoded_prices!(55_555_555, -1);
+        check_encoded_prices!(99_999_998, -1);
+        check_encoded_prices!(99_999_999, -1);
+        check_encoded_prices!(10_000_000, 0);
+        check_encoded_prices!(10_000_001, 0);
+        check_encoded_prices!(55_555_555, 0);
+        check_encoded_prices!(99_999_998, 0);
+        check_encoded_prices!(99_999_999, 0);
+        check_encoded_prices!(10_000_000, 1);
+        check_encoded_prices!(10_000_001, 1);
+        check_encoded_prices!(55_555_555, 1);
+        check_encoded_prices!(99_999_998, 1);
+        check_encoded_prices!(99_999_999, 1);
+        check_encoded_prices!(10_000_000, UNBIASED_MAX - 1);
+        check_encoded_prices!(10_000_001, UNBIASED_MAX - 1);
+        check_encoded_prices!(55_555_555, UNBIASED_MAX - 1);
+        check_encoded_prices!(99_999_998, UNBIASED_MAX - 1);
+        check_encoded_prices!(99_999_999, UNBIASED_MAX - 1);
+        check_encoded_prices!(10_000_000, UNBIASED_MAX);
+        check_encoded_prices!(10_000_001, UNBIASED_MAX);
+        check_encoded_prices!(55_555_555, UNBIASED_MAX);
+        check_encoded_prices!(99_999_998, UNBIASED_MAX);
+        check_encoded_prices!(99_999_999, UNBIASED_MAX);
     }
 }

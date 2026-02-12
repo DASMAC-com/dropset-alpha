@@ -116,10 +116,10 @@ pub enum DropsetInstruction {
 
 #[cfg(test)]
 mod test {
-    use strum::IntoEnumIterator;
-
     extern crate std;
     use std::collections::HashSet;
+
+    use strum::IntoEnumIterator;
 
     use super::*;
 

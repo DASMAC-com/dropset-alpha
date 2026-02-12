@@ -22,16 +22,16 @@ const U32_SIZE: usize = core::mem::size_of::<u32>();
 ///                    32
 /// ```
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EncodedPrice(u32);
 
 pub const ENCODED_PRICE_INFINITY: u32 = u32::MAX;
 pub const ENCODED_PRICE_ZERO: u32 = 0;
 
 impl EncodedPrice {
-    /// Creates a new [`EncodedPrice`] from a biased price exponent and a validated price mantissa.
+    /// Creates a new [`EncodedPrice`] from a validated price mantissa and a biased price exponent.
     #[inline(always)]
-    pub fn new(price_exponent_biased: u8, price_mantissa: ValidatedPriceMantissa) -> Self {
+    pub fn new(price_mantissa: ValidatedPriceMantissa, price_exponent_biased: u8) -> Self {
         // The biased price exponent doesn't need to be checked because a leftwards bitshift will
         // always discard irrelevant bits.
         let exponent_bits = (price_exponent_biased as u32) << PRICE_MANTISSA_BITS;
@@ -82,10 +82,10 @@ impl TryFrom<u32> for EncodedPrice {
         let exponent_bits = raw_value >> PRICE_MANTISSA_BITS;
         let price_mantissa = raw_value & PRICE_MANTISSA_MASK;
         let res = Self::new(
+            ValidatedPriceMantissa::try_from(price_mantissa)?,
             exponent_bits
                 .try_into()
                 .or(Err(OrderInfoError::InvalidBiasedExponent))?,
-            ValidatedPriceMantissa::try_from(price_mantissa)?,
         );
 
         debug_assert_eq!(res.0, raw_value);
@@ -129,10 +129,9 @@ const_assert_eq!(size_of::<LeEncodedPrice>(), U32_SIZE);
 #[cfg(test)]
 mod tests {
     use crate::{
-        to_biased_exponent,
+        encoded_price,
         EncodedPrice,
         LeEncodedPrice,
-        ValidatedPriceMantissa,
         BIAS,
         PRICE_MANTISSA_BITS,
         PRICE_MANTISSA_MASK,
@@ -141,16 +140,13 @@ mod tests {
     #[test]
     fn encoded_price_mantissa_bits() {
         const EXPONENT: u8 = 0b0_1111;
-        let price_mantissa = 0b000_1111_0000_1111_0000_1111_0000;
-        let encoded_price = EncodedPrice::new(
-            to_biased_exponent!(EXPONENT),
-            ValidatedPriceMantissa::try_from(price_mantissa).unwrap(),
-        );
+        const PRICE_MANTISSA: u32 = 0b000_1111_0000_1111_0000_1111_0000;
+        let encoded_price = encoded_price!(PRICE_MANTISSA, EXPONENT);
         assert_eq!(
             encoded_price.0 >> PRICE_MANTISSA_BITS,
             (EXPONENT + BIAS) as u32
         );
-        assert_eq!(encoded_price.0 & PRICE_MANTISSA_MASK, price_mantissa);
+        assert_eq!(encoded_price.0 & PRICE_MANTISSA_MASK, PRICE_MANTISSA);
     }
 
     #[test]
@@ -165,10 +161,7 @@ mod tests {
     fn round_trip_encoded_to_le_encoded() {
         let zero = EncodedPrice::zero();
         let infinity = EncodedPrice::infinity();
-        let one = EncodedPrice::new(
-            1,
-            12_345_678.try_into().expect("Should be a valid mantissa"),
-        );
+        let one = encoded_price!(12_345_678, 1);
         let check_round_trip = |encoded: EncodedPrice| {
             let le_encoded_price = LeEncodedPrice::from(encoded);
             assert_eq!(le_encoded_price.as_slice(), &encoded.as_u32().to_le_bytes());

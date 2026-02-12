@@ -7,5 +7,5 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-solana-address.workspace = true
+solana-address = { workspace = true, features = ["copy"] }
 solana-program-error.workspace = true

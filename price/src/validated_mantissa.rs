@@ -8,7 +8,7 @@ use crate::{
     MANTISSA_DIGITS_UPPER_BOUND,
 };
 #[derive(Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 pub struct ValidatedPriceMantissa(u32);
 
 impl TryFrom<u32> for ValidatedPriceMantissa {
