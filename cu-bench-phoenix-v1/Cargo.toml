@@ -17,6 +17,7 @@ phoenix-v1 = { version = "0.1.1", features = ["no-entrypoint"] }
 proc-macro2 = "=1.0.80"
 solana-logger = "=1.14.9"
 solana-program = "=1.14.9"
+solana-program-runtime = "=1.14.9"
 solana-program-test = "=1.14.9"
 solana-sdk = "=1.14.9"
 spl-associated-token-account = { version = "=1.1.1", features = ["no-entrypoint"] }
@@ -44,3 +45,14 @@ debug = false
 codegen-units = 1
 overflow-checks = true
 strip = "debuginfo"
+
+# Fast compile time profile for development.
+[profile.fast]
+inherits = "dev"
+opt-level = 0          # or 1, if you want a little perf without huge compile cost
+debug = true           # keep good backtraces
+lto = "off"
+codegen-units = 256    # faster compiles
+incremental = true
+overflow-checks = true # keep safety (dev default)
+strip = "none"

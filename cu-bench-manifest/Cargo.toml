@@ -12,6 +12,7 @@ anyhow = "1.0.101"
 manifest-dex = { git = "https://github.com/Bonasa-Tech/manifest", tag = "program-v3.0.10" }
 solana-logger = "2.2"
 solana-program = "=2.2"
+solana-program-runtime = "2.2"
 solana-program-test = "2.2"
 solana-sdk = "2.2"
 spl-token = { version = "8.0.0", features = ["no-entrypoint"] }
@@ -40,3 +41,14 @@ debug = false
 codegen-units = 1
 overflow-checks = true
 strip = "debuginfo"
+
+# Fast compile time profile for development.
+[profile.fast]
+inherits = "dev"
+opt-level = 0          # or 1, if you want a little perf without huge compile cost
+debug = true           # keep good backtraces
+lto = "off"
+codegen-units = 256    # faster compiles
+incremental = true
+overflow-checks = true # keep safety (dev default)
+strip = "none"
