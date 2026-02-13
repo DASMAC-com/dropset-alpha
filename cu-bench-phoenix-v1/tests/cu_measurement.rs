@@ -6,11 +6,11 @@ use cu_bench_phoenix_v1::{
     ioc_buy,
     measure_ixn,
     mint_to_pub,
-    new_warmed_fixture,
-    send_tx_measure_cu,
+    new_initialized_fixture,
+    send_txn,
+    send_txn_measure_cu,
     simple_post_only_ask,
     NUM_BASE_LOTS_PER_BASE_UNIT,
-    NUM_INITIAL_ORDERS_PER_SIDE,
     QUOTE_UNIT,
 };
 use phoenix::program::{
@@ -26,7 +26,7 @@ use solana_sdk::signature::Signer;
 
 #[tokio::test]
 async fn cu_deposit() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
     let maker = f.maker_keypair();
 
     let ix = create_deposit_funds_instruction(
@@ -47,7 +47,7 @@ async fn cu_deposit() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_place_limit_order_1() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
     let maker = f.maker_keypair();
 
     let order = simple_post_only_ask(1600, 10);
@@ -70,7 +70,7 @@ async fn cu_place_limit_order_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_place_multiple_4() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
     let maker = f.maker_keypair();
 
     let ix = create_new_multiple_order_instruction(
@@ -114,24 +114,55 @@ async fn cu_place_multiple_4() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_cancel_all() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
     let maker = f.maker_keypair();
+
+    const NUM_ORDERS: u64 = 5;
+
+    // Place asks and bids.
+    let asks: Vec<CondensedOrder> = (0..NUM_ORDERS)
+        .map(|i| CondensedOrder {
+            price_in_ticks: 1100 + i * 100,
+            size_in_base_lots: 10,
+        })
+        .collect();
+    let bids: Vec<CondensedOrder> = (0..NUM_ORDERS)
+        .map(|i| CondensedOrder {
+            price_in_ticks: 100 + i * 100,
+            size_in_base_lots: 10,
+        })
+        .collect();
+
+    let num_orders = (asks.len() + bids.len()) as u64;
+
+    let place_orders_ixn = create_new_multiple_order_instruction(
+        &f.market,
+        &maker.pubkey(),
+        &f.base_mint,
+        &f.quote_mint,
+        &MultipleOrderPacket {
+            bids,
+            asks,
+            client_order_id: None,
+            reject_post_only: false,
+        },
+    );
+    send_txn(&mut f.context, &[place_orders_ixn], &[&maker]).await;
 
     let ix = create_cancel_all_order_with_free_funds_instruction(&f.market, &maker.pubkey());
 
     writeln!(
         f.logs,
-        "\n========== Instruction: CancelAllOrders ({}) ==========",
-        NUM_INITIAL_ORDERS_PER_SIDE * 2
+        "\n========== Instruction: CancelAllOrders ({num_orders}) ==========",
     )
     .unwrap();
-    measure_ixn(&mut f, ix, NUM_INITIAL_ORDERS_PER_SIDE * 2, maker).await;
+    measure_ixn(&mut f, ix, num_orders, maker).await;
     Ok(())
 }
 
 #[tokio::test]
 async fn cu_swap_fill_1() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
 
     // Use the payer as the taker.
     let payer = f.payer_keypair();
@@ -172,7 +203,7 @@ async fn cu_swap_fill_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_swap_fill_3() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
 
     let payer = f.payer_keypair();
 
@@ -212,7 +243,7 @@ async fn cu_swap_fill_3() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_withdraw() -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
     let maker = f.maker_keypair();
 
     let ix =
@@ -223,35 +254,31 @@ async fn cu_withdraw() -> anyhow::Result<()> {
     Ok(())
 }
 
-// ── Maker spam test ─────────────────────────────────────────────────────────
+// ── Multiple maker orders ───────────────────────────────────────────────────
 
 #[tokio::test]
 async fn measure_several_maker_cancel_replace() -> anyhow::Result<()> {
-    maker_cancel_replace(100, 5).await
+    maker_cancel_replace(20, 5).await
 }
 
 #[tokio::test]
 async fn measure_many_maker_cancel_replace() -> anyhow::Result<()> {
-    maker_cancel_replace(10, 5).await
+    maker_cancel_replace(100, 5).await
 }
 
 async fn maker_cancel_replace(n_orders: usize, n_rounds: usize) -> anyhow::Result<()> {
-    let mut f = new_warmed_fixture().await?;
+    let mut f = new_initialized_fixture().await?;
 
     writeln!(
         &mut f.logs,
-        "\n========== Maker spam: cancel all + place {n_orders}, {n_rounds} times =========="
-    )?;
-    writeln!(
-        &mut f.logs,
-        "(Market pre-warmed, book has 5 asks + 5 bids)\n"
+        "\n========== Multiple maker orders: cancel all + place {n_orders}, {n_rounds} times =========="
     )?;
 
-    let mut num_existing_orders = NUM_INITIAL_ORDERS_PER_SIDE * 2;
+    let mut num_existing_orders = 0;
     let mut total_cancel_cu = 0;
-    let mut total_num_cancels = NUM_INITIAL_ORDERS_PER_SIDE;
+    let mut total_num_cancels = 0;
     let mut total_place_cu = 0;
-    let mut total_num_places = NUM_INITIAL_ORDERS_PER_SIDE;
+    let mut total_num_places = 0;
 
     for round in 0..n_rounds {
         let maker = f.maker_keypair();
@@ -260,7 +287,7 @@ async fn maker_cancel_replace(n_orders: usize, n_rounds: usize) -> anyhow::Resul
         // Cancel all existing orders (free funds variant).
         let cancel_ix =
             create_cancel_all_order_with_free_funds_instruction(&f.market, &maker.pubkey());
-        let cancel_cu = send_tx_measure_cu(&mut f.context, &[cancel_ix], &[&maker]).await;
+        let cancel_cu = send_txn_measure_cu(&mut f.context, &[cancel_ix], &[&maker]).await;
 
         let bids = vec![];
         // Place n_orders new asks.
@@ -286,12 +313,18 @@ async fn maker_cancel_replace(n_orders: usize, n_rounds: usize) -> anyhow::Resul
             },
         );
 
-        let place_cu = send_tx_measure_cu(&mut f.context, &[place_ix], &[&maker]).await;
+        let place_cu = send_txn_measure_cu(&mut f.context, &[place_ix], &[&maker]).await;
 
         let round_cu = cancel_cu + place_cu;
 
         let cancel_round_cu = cancel_cu;
-        let cancel_per = cancel_round_cu / num_existing_orders;
+        let cancel_per = cancel_round_cu
+            / if num_existing_orders == 0 {
+                // Just measure the flat CU cost for no cancels.
+                1
+            } else {
+                num_existing_orders
+            };
         total_cancel_cu += cancel_round_cu;
         total_num_cancels += num_existing_orders;
 

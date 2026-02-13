@@ -979,6 +979,7 @@ dependencies = [
  "manifest-dex",
  "solana-logger",
  "solana-program",
+ "solana-program-runtime",
  "solana-program-test",
  "solana-sdk",
  "spl-token",

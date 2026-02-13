@@ -46,6 +46,16 @@ pub struct TestFixture {
     pub market_fixture: MarketFixture,
     pub global_fixture: GlobalFixture,
     pub sol_global_fixture: GlobalFixture,
+    pub logs: String,
+}
+
+impl Drop for TestFixture {
+    fn drop(&mut self) {
+        if self.logs.is_empty() {
+            return;
+        }
+        eprintln!("\n{}", self.logs);
+    }
 }
 
 impl TestFixture {
@@ -92,6 +102,7 @@ impl TestFixture {
             sol_global_fixture,
             payer_sol_fixture,
             payer_usdc_fixture,
+            logs: Default::default(),
         }
     }
 

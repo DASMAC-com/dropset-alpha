@@ -11,11 +11,11 @@ use std::{
 use cu_bench_manifest::{
     batch_update_ix,
     collect_order_indices,
+    expand_market,
     measure_ix,
-    new_warmed_fixture,
+    new_fixture,
     send_tx_measure_cu,
     simple_ask,
-    N_WARMUP_ORDERS,
     ONE_SOL,
     SOL_UNIT_SIZE,
     USDC_UNIT_SIZE,
@@ -31,9 +31,11 @@ use manifest::program::{
 };
 use solana_program_test::tokio;
 
+const START_INDEX: u64 = 0;
+
 #[tokio::test]
 async fn cu_deposit() -> anyhow::Result<()> {
-    let (mut test_fixture, _trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, _trader_index) = new_fixture().await?;
 
     test_fixture
         .sol_mint_fixture
@@ -58,7 +60,7 @@ async fn cu_deposit() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_batch_update_place_1() -> anyhow::Result<()> {
-    let (test_fixture, trader_index) = new_warmed_fixture().await?;
+    let (test_fixture, trader_index) = new_fixture().await?;
 
     let payer = test_fixture.payer();
     let ix = batch_update_ix(
@@ -76,7 +78,7 @@ async fn cu_batch_update_place_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_batch_update_cancel_1() -> anyhow::Result<()> {
-    let (mut test_fixture, trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, trader_index) = new_fixture().await?;
 
     let payer_keypair = test_fixture.payer_keypair();
 
@@ -97,8 +99,8 @@ async fn cu_batch_update_cancel_1() -> anyhow::Result<()> {
         &payer,
         Some(trader_index),
         vec![CancelOrderParams::new_with_hint(
-            N_WARMUP_ORDERS,
-            Some(order_indices[&N_WARMUP_ORDERS]),
+            START_INDEX,
+            Some(order_indices[&START_INDEX]),
         )],
         vec![],
     );
@@ -110,7 +112,7 @@ async fn cu_batch_update_cancel_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_batch_update_cancel_1_place_1() -> anyhow::Result<()> {
-    let (mut test_fixture, trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, trader_index) = new_fixture().await?;
 
     let payer_keypair = test_fixture.payer_keypair();
 
@@ -131,8 +133,8 @@ async fn cu_batch_update_cancel_1_place_1() -> anyhow::Result<()> {
         &payer,
         Some(trader_index),
         vec![CancelOrderParams::new_with_hint(
-            N_WARMUP_ORDERS,
-            Some(order_indices[&N_WARMUP_ORDERS]),
+            START_INDEX,
+            Some(order_indices[&START_INDEX]),
         )],
         vec![simple_ask(ONE_SOL, 16, 0)],
     );
@@ -144,7 +146,7 @@ async fn cu_batch_update_cancel_1_place_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_batch_update_cancel_4_place_4() -> anyhow::Result<()> {
-    let (mut test_fixture, trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, trader_index) = new_fixture().await?;
 
     let payer_keypair = test_fixture.payer_keypair();
 
@@ -170,8 +172,7 @@ async fn cu_batch_update_cancel_4_place_4() -> anyhow::Result<()> {
         &payer,
         Some(trader_index),
         // The canceled orders' sequence numbers and indices are the same (for each order).
-        // The first canceled order begins at the number of warmup orders already placed.
-        (N_WARMUP_ORDERS..=N_WARMUP_ORDERS + 3)
+        (START_INDEX..=START_INDEX + 3)
             .map(|i| CancelOrderParams::new_with_hint(i, Some(order_indices[&i])))
             .collect(),
         vec![
@@ -189,7 +190,7 @@ async fn cu_batch_update_cancel_4_place_4() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_swap_fill_1() -> anyhow::Result<()> {
-    let (mut test_fixture, _trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, _trader_index) = new_fixture().await?;
 
     println!("\n========== CU: Swap (fill 1 order) ==========");
 
@@ -225,7 +226,7 @@ async fn cu_swap_fill_1() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_swap_fill_3() -> anyhow::Result<()> {
-    let (mut test_fixture, trader_index) = new_warmed_fixture().await?;
+    let (mut test_fixture, trader_index) = new_fixture().await?;
 
     println!("\n========== CU: Swap (fill 3 orders) ==========");
 
@@ -277,7 +278,7 @@ async fn cu_swap_fill_3() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn cu_withdraw() -> anyhow::Result<()> {
-    let (test_fixture, _trader_index) = new_warmed_fixture().await?;
+    let (test_fixture, _trader_index) = new_fixture().await?;
 
     println!("\n========== CU: Withdraw ==========");
 
@@ -296,46 +297,58 @@ async fn cu_withdraw() -> anyhow::Result<()> {
     Ok(())
 }
 
-// -------------------------
-// Maker spam test (kept, lightly refactored)
-// -------------------------
+// ── Multiple maker orders ──────────────────────────────────────────────────
 
 #[tokio::test]
-async fn measure_many_maker_batch_replace() -> anyhow::Result<()> {
-    const N_ORDERS_PER_BATCH: u64 = 4;
-    const N_BATCHES: u64 = 5;
+async fn measure_several_maker_cancel_replace() -> anyhow::Result<()> {
+    maker_cancel_replace(20, 5).await
+}
 
-    let cu_logs = &mut String::new();
+#[tokio::test]
+async fn measure_many_maker_cancel_replace_1() -> anyhow::Result<()> {
+    maker_cancel_replace(50, 5).await
+}
 
-    let (mut test_fixture, trader_index) = new_warmed_fixture().await?;
+#[tokio::test]
+async fn measure_many_maker_cancel_replace() -> anyhow::Result<()> {
+    maker_cancel_replace(100, 5).await
+}
+
+async fn maker_cancel_replace(n_orders: u64, n_rounds: u64) -> anyhow::Result<()> {
+    let (mut test_fixture, trader_index) = new_fixture().await?;
 
     let payer = test_fixture.payer();
     let payer_keypair = test_fixture.payer_keypair();
 
-    writeln!(cu_logs, "\n========== Maker spam: cancel {N_ORDERS_PER_BATCH} + place {N_ORDERS_PER_BATCH}, {N_BATCHES} times ==========")?;
-    writeln!(cu_logs, "(Market pre-warmed, book has 5 asks + 5 bids)\n")?;
+    writeln!(
+        &mut test_fixture.logs,
+        "\n========== Multiple maker orders: cancel {n_orders} + place {n_orders}, {n_rounds} times =========="
+    )?;
 
-    // Place N_ORDERS_PER_BATCH initial asks to kick things off.
+    // Ensure the market has enough free blocks for large batches.
+    expand_market(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.market_fixture.key,
+        n_orders as u32 * 2,
+    )
+    .await?;
+
+    // Place n_orders initial asks to kick things off.
+    let initial_places: Vec<PlaceOrderParams> = (0..n_orders)
+        .map(|i| simple_ask(ONE_SOL, 20 + i as u32, 0))
+        .collect();
     test_fixture
-        .batch_update_for_keypair(
-            Some(trader_index),
-            vec![],
-            vec![
-                simple_ask(ONE_SOL, 20, 0),
-                simple_ask(ONE_SOL, 21, 0),
-                simple_ask(ONE_SOL, 22, 0),
-                simple_ask(ONE_SOL, 23, 0),
-            ],
-            &payer_keypair,
-        )
+        .batch_update_for_keypair(Some(trader_index), vec![], initial_places, &payer_keypair)
         .await?;
 
-    let mut prev_seq_nums: Vec<u64> =
-        (N_WARMUP_ORDERS..N_WARMUP_ORDERS + N_ORDERS_PER_BATCH).collect();
-    let mut total_cu: u64 = 0;
+    let mut prev_seq_nums: Vec<u64> = (START_INDEX..START_INDEX + n_orders).collect();
+    let mut total_cancel_cu: u64 = 0;
+    let mut total_place_cu: u64 = 0;
+    let mut total_num_cancels: u64 = 0;
+    let mut total_num_places: u64 = 0;
 
-    for round in 0..N_BATCHES {
-        let base_price = 30 + round * 10;
+    for round in 0..n_rounds {
+        let n_cancels = prev_seq_nums.len() as u64;
 
         // Look up data indices for the orders we're about to cancel.
         let order_indices = collect_order_indices(&mut test_fixture).await;
@@ -345,48 +358,67 @@ async fn measure_many_maker_batch_replace() -> anyhow::Result<()> {
             .map(|&seq| CancelOrderParams::new_with_hint(seq, Some(order_indices[&seq])))
             .collect();
 
-        let places: Vec<PlaceOrderParams> = (0..4)
-            .map(|i| simple_ask(ONE_SOL, (base_price + i) as u32, 0))
-            .collect();
-
-        let ix = batch_update_ix(&test_fixture, &payer, Some(trader_index), cancels, places);
-
-        let cu = send_tx_measure_cu(
+        let cancel_ix = batch_update_ix(&test_fixture, &payer, Some(trader_index), cancels, vec![]);
+        let cancel_cu = send_tx_measure_cu(
             Rc::clone(&test_fixture.context),
-            &[ix],
+            &[cancel_ix],
             Some(&payer),
             &[&payer_keypair],
         )
         .await;
 
-        // Each round places N_ORDERS_PER_BATCH new orders.
-        // The N_ORDERS_PER_BATCH initial asks add an additional N_ORDERS_PER_BATCH offset.
-        let first_seq = N_WARMUP_ORDERS + (round + 1) * N_ORDERS_PER_BATCH;
-        prev_seq_nums = (first_seq..first_seq + N_ORDERS_PER_BATCH).collect();
+        // Place n_orders new asks.
+        let base_price = 100 + round * (n_orders + 10);
+        let places: Vec<PlaceOrderParams> = (0..n_orders)
+            .map(|i| simple_ask(ONE_SOL, (base_price + i) as u32, 0))
+            .collect();
 
-        total_cu += cu;
+        let place_ix = batch_update_ix(&test_fixture, &payer, Some(trader_index), vec![], places);
+        let place_cu = send_tx_measure_cu(
+            Rc::clone(&test_fixture.context),
+            &[place_ix],
+            Some(&payer),
+            &[&payer_keypair],
+        )
+        .await;
+
+        let round_cu = cancel_cu + place_cu;
+        let cancel_per = cancel_cu / n_cancels;
+        let place_per = place_cu / n_orders;
+
+        total_cancel_cu += cancel_cu;
+        total_place_cu += place_cu;
+        total_num_cancels += n_cancels;
+        total_num_places += n_orders;
+
+        // Each round places n_orders new orders whose seq nums follow sequentially.
+        let first_seq = START_INDEX + (round + 1) * n_orders;
+        prev_seq_nums = (first_seq..first_seq + n_orders).collect();
+
         writeln!(
-            cu_logs,
-            "  Round {} (cancel {N_ORDERS_PER_BATCH} + place {N_ORDERS_PER_BATCH})   {:>6} CU",
+            &mut test_fixture.logs,
+            "  Round {} (cancel {:>3} + place {:>3})   {:>6} CU  (avg cancel: {:>4}, avg place: {:>4})",
             round + 1,
-            cu
+            n_cancels,
+            n_orders,
+            round_cu,
+            cancel_per,
+            place_per,
         )?;
     }
 
     writeln!(
-        cu_logs,
-        "  TOTAL  ({N_BATCHES} rounds)              {:>6} CU",
-        total_cu
+        &mut test_fixture.logs,
+        "  Average cancel  ({n_rounds} rounds)       {:>6} CU",
+        total_cancel_cu / total_num_cancels,
     )?;
     writeln!(
-        cu_logs,
-        "  Average per round              {:>6} CU",
-        total_cu / N_BATCHES
+        &mut test_fixture.logs,
+        "  Average place                    {:>6} CU",
+        total_place_cu / total_num_places,
     )?;
 
-    writeln!(cu_logs, "\n{}", "=".repeat(60))?;
-
-    print!("{cu_logs}");
+    writeln!(&mut test_fixture.logs, "\n{}", "=".repeat(60))?;
 
     Ok(())
 }

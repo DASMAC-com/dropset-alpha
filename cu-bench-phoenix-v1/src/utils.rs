@@ -4,10 +4,6 @@ use phoenix::{
     program::{
         deposit::DepositParams,
         instruction_builders::*,
-        new_order::{
-            CondensedOrder,
-            MultipleOrderPacket,
-        },
         status::{
             MarketStatus,
             SeatApprovalStatus,
@@ -25,6 +21,7 @@ use solana_program::{
     pubkey::Pubkey,
     system_instruction,
 };
+use solana_program_runtime::compute_budget::MAX_COMPUTE_UNIT_LIMIT;
 use solana_program_test::{
     processor,
     ProgramTest,
@@ -33,12 +30,12 @@ use solana_program_test::{
 };
 use solana_sdk::{
     commitment_config::CommitmentLevel,
+    compute_budget::ComputeBudgetInstruction,
     program_pack::Pack as _,
     signature::{
         Keypair,
         Signer,
     },
-    signers::Signers,
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
@@ -162,7 +159,7 @@ impl TestFixture {
             MarketStatus::Active,
         ));
 
-        send_tx(&mut context, &init_ixs, &[&payer, &market]).await;
+        send_txn(&mut context, &init_ixs, &[&payer, &market]).await;
 
         // Setup maker: fund, create ATAs, mint tokens.
         let maker = Keypair::new();
@@ -194,7 +191,7 @@ impl TestFixture {
             &market.pubkey(),
             &maker.pubkey(),
         );
-        send_tx(&mut context, &[request_ix], &[&payer]).await;
+        send_txn(&mut context, &[request_ix], &[&payer]).await;
 
         let approve_ix = create_change_seat_status_instruction(
             &payer.pubkey(),
@@ -202,7 +199,7 @@ impl TestFixture {
             &maker.pubkey(),
             SeatApprovalStatus::Approved,
         );
-        send_tx(&mut context, &[approve_ix], &[&payer]).await;
+        send_txn(&mut context, &[approve_ix], &[&payer]).await;
 
         let base_mint_key = base_mint.pubkey();
         let quote_mint_key = quote_mint.pubkey();
@@ -230,12 +227,10 @@ impl TestFixture {
     }
 }
 
-// ── Warmup ──────────────────────────────────────────────────────────────────
 pub const NUM_INITIAL_ORDERS_PER_SIDE: u64 = 5;
 
-/// Deposit tokens and place seed orders (5 bids + 5 asks) so the book is
-/// non-empty for subsequent benchmarks.
-pub async fn warm_up_market(f: &mut TestFixture) -> anyhow::Result<()> {
+/// Deposit tokens for the maker and payer.
+pub async fn initialize_fixture(f: &mut TestFixture) -> anyhow::Result<()> {
     let maker = f.maker_keypair();
     let payer = f.payer_keypair();
 
@@ -250,57 +245,15 @@ pub async fn warm_up_market(f: &mut TestFixture) -> anyhow::Result<()> {
             base_lots_to_deposit: 500 * NUM_BASE_LOTS_PER_BASE_UNIT,
         },
     );
-    send_tx(&mut f.context, &[deposit_ix], &[&payer, &maker]).await;
-
-    // Place initial asks and bids.
-    let asks: Vec<CondensedOrder> = (0..NUM_INITIAL_ORDERS_PER_SIDE)
-        .map(|i| CondensedOrder {
-            price_in_ticks: 1100 + i * 100,
-            size_in_base_lots: 10,
-        })
-        .collect();
-    let bids: Vec<CondensedOrder> = (0..NUM_INITIAL_ORDERS_PER_SIDE)
-        .map(|i| CondensedOrder {
-            price_in_ticks: 100 + i * 100,
-            size_in_base_lots: 10,
-        })
-        .collect();
-
-    let place_asks_ix = create_new_multiple_order_instruction(
-        &f.market,
-        &maker.pubkey(),
-        &f.base_mint,
-        &f.quote_mint,
-        &MultipleOrderPacket {
-            bids: vec![],
-            asks,
-            client_order_id: None,
-            reject_post_only: true,
-        },
-    );
-    send_tx(&mut f.context, &[place_asks_ix], &[&payer, &maker]).await;
-
-    let place_bids_ix = create_new_multiple_order_instruction(
-        &f.market,
-        &maker.pubkey(),
-        &f.base_mint,
-        &f.quote_mint,
-        &MultipleOrderPacket {
-            bids,
-            asks: vec![],
-            client_order_id: None,
-            reject_post_only: true,
-        },
-    );
-    send_tx(&mut f.context, &[place_bids_ix], &[&payer, &maker]).await;
+    send_txn(&mut f.context, &[deposit_ix], &[&payer, &maker]).await;
 
     Ok(())
 }
 
-/// Create a fresh fixture and warm it up.
-pub async fn new_warmed_fixture() -> anyhow::Result<TestFixture> {
+/// Create a fresh fixture then initialize and return it.
+pub async fn new_initialized_fixture() -> anyhow::Result<TestFixture> {
     let mut f = TestFixture::new().await;
-    warm_up_market(&mut f).await?;
+    initialize_fixture(&mut f).await?;
     Ok(f)
 }
 
@@ -309,7 +262,7 @@ pub async fn new_warmed_fixture() -> anyhow::Result<TestFixture> {
 /// Simulate a transaction to get CU consumed, then process it to apply state
 /// changes. In Solana 1.14.x, `simulate_transaction` returns
 /// `TransactionSimulationDetails` which includes `units_consumed`.
-pub async fn send_tx_measure_cu(
+pub async fn send_txn_measure_cu(
     ctx: &mut ProgramTestContext,
     ixs: &[Instruction],
     extra_signers: &[&Keypair],
@@ -325,7 +278,19 @@ pub async fn send_tx_measure_cu(
     let mut signers: Vec<&Keypair> = vec![&payer];
     signers.extend(extra_signers);
 
-    let tx = Transaction::new_signed_with_payer(ixs, Some(&payer.pubkey()), &signers, blockhash);
+    let tx = Transaction::new_signed_with_payer(
+        &[
+            vec![
+                ComputeBudgetInstruction::set_compute_unit_limit(MAX_COMPUTE_UNIT_LIMIT),
+                ComputeBudgetInstruction::set_compute_unit_price(1),
+            ],
+            ixs.to_vec(),
+        ]
+        .concat(),
+        Some(&payer.pubkey()),
+        &signers,
+        blockhash,
+    );
 
     // Simulate to get CU consumed.
     let sim = ctx
@@ -357,7 +322,7 @@ pub async fn measure_ixn(
     n_items: u64,
     signer: Keypair,
 ) -> u64 {
-    let cu = send_tx_measure_cu(&mut fixture.context, &[ix], &[&signer]).await;
+    let cu = send_txn_measure_cu(&mut fixture.context, &[ix], &[&signer]).await;
     writeln!(&mut fixture.logs, "Total{} {:>6} CU", " ".repeat(15), cu).unwrap();
     writeln!(
         &mut fixture.logs,
@@ -421,7 +386,7 @@ pub async fn mint_to_pub(
 async fn airdrop(ctx: &mut ProgramTestContext, to: &Pubkey, amount: u64) {
     let payer = clone_keypair(&ctx.payer);
     let ix = system_instruction::transfer(&payer.pubkey(), to, amount);
-    send_tx(ctx, &[ix], &[&payer]).await;
+    send_txn(ctx, &[ix], &[&payer]).await;
 }
 
 async fn create_mint(
@@ -449,7 +414,7 @@ async fn create_mint(
         )
         .unwrap(),
     ];
-    send_tx(ctx, &ixs, &[&payer, mint]).await;
+    send_txn(ctx, &ixs, &[&payer, mint]).await;
 }
 
 async fn create_ata(ctx: &mut ProgramTestContext, wallet: &Pubkey, mint: &Pubkey) -> Pubkey {
@@ -460,7 +425,7 @@ async fn create_ata(ctx: &mut ProgramTestContext, wallet: &Pubkey, mint: &Pubkey
         mint,
         &spl_token::ID,
     );
-    send_tx(ctx, &[ix], &[&payer]).await;
+    send_txn(ctx, &[ix], &[&payer]).await;
     get_associated_token_address(wallet, mint)
 }
 
@@ -481,16 +446,20 @@ async fn mint_to(
         amount,
     )
     .unwrap();
-    send_tx(ctx, &[ix], &[&payer, authority]).await;
+    send_txn(ctx, &[ix], &[&payer, authority]).await;
 }
 
-async fn send_tx<T: Signers>(ctx: &mut ProgramTestContext, ixs: &[Instruction], signers: &T) {
+pub async fn send_txn(ctx: &mut ProgramTestContext, ixs: &[Instruction], signers: &[&Keypair]) {
     let blockhash = ctx
         .banks_client
         .get_new_latest_blockhash(&ctx.last_blockhash)
         .await
         .unwrap();
-    let payer = ctx.payer.pubkey();
-    let tx = Transaction::new_signed_with_payer(ixs, Some(&payer), signers, blockhash);
+    let tx = Transaction::new_signed_with_payer(
+        ixs,
+        Some(&ctx.payer.pubkey()),
+        &[vec![&ctx.payer], signers.to_vec()].concat(),
+        blockhash,
+    );
     ctx.banks_client.process_transaction(tx).await.unwrap();
 }

@@ -3,25 +3,53 @@
 // Do not call helpers with the same `context` in parallel (e.g. `join!`, `spawn_local`).
 #![allow(clippy::await_holding_refcell_ref)]
 
-use std::{cell::RefCell, collections::HashMap, io::Error, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    io::Error,
+    rc::Rc,
+};
 
 use manifest::{
-    deps::hypertree::{DataIndex, HyperTreeValueIteratorTrait as _},
+    deps::hypertree::{
+        DataIndex,
+        HyperTreeValueIteratorTrait as _,
+    },
     program::{
-        batch_update::{CancelOrderParams, PlaceOrderParams},
+        batch_update::{
+            CancelOrderParams,
+            PlaceOrderParams,
+        },
         batch_update_instruction,
     },
-    state::{OrderType, RestingOrder, NO_EXPIRATION_LAST_VALID_SLOT},
+    state::{
+        OrderType,
+        RestingOrder,
+        NO_EXPIRATION_LAST_VALID_SLOT,
+    },
 };
-use solana_program::{hash::Hash, instruction::Instruction, pubkey::Pubkey};
+use solana_program::{
+    hash::Hash,
+    instruction::Instruction,
+    pubkey::Pubkey,
+};
+use solana_program_runtime::execution_budget::MAX_COMPUTE_UNIT_LIMIT;
 use solana_program_test::ProgramTestContext;
-use solana_sdk::{signature::Keypair, transaction::Transaction};
+use solana_sdk::{
+    compute_budget::ComputeBudgetInstruction,
+    signature::Keypair,
+    transaction::Transaction,
+};
 
-use crate::{expand_market, send_tx_with_retry, TestFixture, Token, SOL_UNIT_SIZE, USDC_UNIT_SIZE};
+use crate::{
+    TestFixture,
+    Token,
+    SOL_UNIT_SIZE,
+    USDC_UNIT_SIZE,
+};
 
 pub const ONE_SOL: u64 = SOL_UNIT_SIZE;
 pub const SLOT: u32 = NO_EXPIRATION_LAST_VALID_SLOT;
-pub const N_WARMUP_ORDERS: u64 = 10;
 
 /// Send a transaction and return the compute units consumed.
 pub async fn send_tx_measure_cu(
@@ -36,8 +64,19 @@ pub async fn send_tx_measure_cu(
         if blockhash.is_err() {
             continue;
         }
-        let tx =
-            Transaction::new_signed_with_payer(instructions, payer, signers, blockhash.unwrap());
+        let tx = Transaction::new_signed_with_payer(
+            &[
+                vec![
+                    ComputeBudgetInstruction::set_compute_unit_limit(MAX_COMPUTE_UNIT_LIMIT),
+                    ComputeBudgetInstruction::set_compute_unit_price(1),
+                ],
+                instructions.to_vec(),
+            ]
+            .concat(),
+            payer,
+            signers,
+            blockhash.unwrap(),
+        );
         let result = context
             .banks_client
             .process_transaction_with_metadata(tx)
@@ -72,15 +111,8 @@ pub async fn get_trader_index(test_fixture: &mut TestFixture, trader: &Pubkey) -
     test_fixture.market_fixture.market.get_trader_index(trader)
 }
 
-/// Warm up a market: claim seat, deposit both tokens, pre-expand, and place
-/// initial orders on both sides of the book so that subsequent operations
-/// hit the typical hot path (no expansion, non-empty book).
-/// Returns (trader_index, order_indices) for use as hints.
-pub async fn warm_up_market(
-    test_fixture: &mut TestFixture,
-) -> anyhow::Result<(DataIndex, HashMap<u64, DataIndex>)> {
+pub async fn initialize_test_fixture(test_fixture: &mut TestFixture) -> anyhow::Result<DataIndex> {
     let payer = test_fixture.payer();
-    let payer_keypair = test_fixture.payer_keypair();
 
     // Claim seat
     test_fixture.claim_seat().await?;
@@ -93,82 +125,14 @@ pub async fn warm_up_market(
         .deposit(Token::USDC, 500_000 * USDC_UNIT_SIZE)
         .await?;
 
-    // Pre-expand market so there are plenty of free blocks (no expansion
-    // during measured operations). 32 free blocks is well more than we need.
-    expand_market(
-        Rc::clone(&test_fixture.context),
-        &test_fixture.market_fixture.key,
-        32,
-    )
-    .await?;
-
-    // Place orders on both sides to populate the book.
-    let warmup_ix = batch_update_instruction(
-        &test_fixture.market_fixture.key,
-        &payer,
-        None,
-        vec![],
-        // Asks at prices 10-14
-        vec![
-            simple_bid(ONE_SOL, 10, 0),
-            simple_bid(ONE_SOL, 11, 0),
-            simple_bid(ONE_SOL, 12, 0),
-            simple_bid(ONE_SOL, 13, 0),
-            simple_bid(ONE_SOL, 14, 0),
-        ],
-        None,
-        None,
-        None,
-        None,
-    );
-    send_tx_with_retry(
-        Rc::clone(&test_fixture.context),
-        &[warmup_ix],
-        Some(&payer),
-        &[&payer_keypair],
-    )
-    .await?;
-
-    let warmup_ix = batch_update_instruction(
-        &test_fixture.market_fixture.key,
-        &payer,
-        None,
-        vec![],
-        // Bids at prices 1-5
-        vec![
-            simple_bid(ONE_SOL, 1, 0),
-            simple_bid(ONE_SOL, 2, 0),
-            simple_bid(ONE_SOL, 3, 0),
-            simple_bid(ONE_SOL, 4, 0),
-            simple_bid(ONE_SOL, 5, 0),
-        ],
-        None,
-        None,
-        None,
-        None,
-    );
-    send_tx_with_retry(
-        Rc::clone(&test_fixture.context),
-        &[warmup_ix],
-        Some(&payer),
-        &[&payer_keypair],
-    )
-    .await?;
-
-    // Collect hints for the measured operations.
     let trader_index = get_trader_index(test_fixture, &payer).await;
-    let order_indices = collect_order_indices(test_fixture).await;
-
-    assert_eq!(order_indices.len(), N_WARMUP_ORDERS as usize);
-
-    Ok((trader_index, order_indices))
+    Ok(trader_index)
 }
 
-/// Create a fresh fixture, warm it up (seat, deposits, pre-expand, seed book),
-/// and return (fixture, trader_index). Warmup places seq nums 0..=9.
-pub async fn new_warmed_fixture() -> anyhow::Result<(TestFixture, DataIndex)> {
+/// Create a fresh fixture and return (fixture, trader_index).
+pub async fn new_fixture() -> anyhow::Result<(TestFixture, DataIndex)> {
     let mut test_fixture: TestFixture = TestFixture::new().await;
-    let (trader_index, _warmup_indices) = warm_up_market(&mut test_fixture).await?;
+    let trader_index = initialize_test_fixture(&mut test_fixture).await?;
     Ok((test_fixture, trader_index))
 }
 
