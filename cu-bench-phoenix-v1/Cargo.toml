@@ -24,20 +24,7 @@ spl-associated-token-account = { version = "=1.1.1", features = ["no-entrypoint"
 spl-token = { version = "=3.5.0", features = ["no-entrypoint"] }
 tokio = "1"
 
-# https://doc.rust-lang.org/cargo/reference/profiles.html
-[profile.release]
-codegen-units = 1
-lto = "fat"
-overflow-checks = true
-strip = "debuginfo"
-
-[profile.release.build-override]
-codegen-units = 1
-incremental = false
-opt-level = 3
-strip = "debuginfo"
-
-# Test with release settings so CU usage is accurately measured.
+# By default, tests will build with release settings so CU usage is accurate.
 [profile.test]
 lto = "fat"
 opt-level = 3
@@ -49,10 +36,10 @@ strip = "debuginfo"
 # Fast compile time profile for development.
 [profile.fast]
 inherits = "dev"
-opt-level = 0          # or 1, if you want a little perf without huge compile cost
-debug = true           # keep good backtraces
+opt-level = 0
+debug = true
 lto = "off"
-codegen-units = 256    # faster compiles
+codegen-units = 256
 incremental = true
-overflow-checks = true # keep safety (dev default)
+overflow-checks = true
 strip = "none"
