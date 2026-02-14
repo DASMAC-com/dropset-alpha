@@ -383,8 +383,8 @@ async fn swap_fill(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
         &test_fixture.payer_usdc_fixture.key,
         n * SOL_UNIT_SIZE,
         0,
-        false, // quote (USDC) is input
-        true,  // is_exact_in
+        false, // quote (USDC) is input.
+        true,
         spl_token::id(),
         spl_token::id(),
         false,
