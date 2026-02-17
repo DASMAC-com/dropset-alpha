@@ -303,8 +303,12 @@ pub async fn send_txn_measure_cu(
             Ok(_) => {}
             Err(err) => panic!("Simulation failed: {:?}", err),
         },
-        _ => {}
+        _ => {
+            panic!("Simulation didn't return a result.");
+        }
     }
+    // The compute usage isn't returned by the banks client's `process_transaction`, so this
+    // seemingly redundant simulated transaction is run to get it.
     let cu = sim
         .simulation_details
         .expect("simulation_details should be present")
