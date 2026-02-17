@@ -11,7 +11,7 @@ use std::{
 use cu_bench_manifest::{
     batch_update_ix,
     collect_order_indices,
-    expand_market,
+    expand_market_max,
     new_fixture,
     send_tx_measure_cu,
     simple_ask,
@@ -145,10 +145,9 @@ async fn batch_place(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
     let (test_fixture, trader_index) = new_fixture().await?;
 
     if pre_expand {
-        expand_market(
+        expand_market_max(
             Rc::clone(&test_fixture.context),
             &test_fixture.market_fixture.key,
-            n as u32 * 2,
         )
         .await?;
     }
@@ -194,10 +193,9 @@ async fn batch_cancel(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
     let (mut test_fixture, trader_index) = new_fixture().await?;
 
     if pre_expand {
-        expand_market(
+        expand_market_max(
             Rc::clone(&test_fixture.context),
             &test_fixture.market_fixture.key,
-            n as u32 * 2,
         )
         .await?;
     }
@@ -261,10 +259,9 @@ async fn swap_fill(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
     let (mut test_fixture, trader_index) = new_fixture().await?;
 
     if pre_expand {
-        expand_market(
+        expand_market_max(
             Rc::clone(&test_fixture.context),
             &test_fixture.market_fixture.key,
-            n as u32 * 2,
         )
         .await?;
     }

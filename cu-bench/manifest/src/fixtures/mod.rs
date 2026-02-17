@@ -23,6 +23,7 @@ use solana_program_test::{
 };
 use solana_sdk::{
     account::Account,
+    entrypoint::MAX_PERMITTED_DATA_INCREASE,
     instruction::{
         AccountMeta,
         Instruction,
@@ -127,10 +128,22 @@ pub async fn send_tx_with_retry(
     Ok(())
 }
 
+const MAX_MARKET_BLOCK_INCREASE: usize =
+    MAX_PERMITTED_DATA_INCREASE / manifest::state::MARKET_BLOCK_SIZE;
+
+/// Expand a market account's data length by [MAX_PERMITTED_DATA_INCREASE] bytes.
+pub async fn expand_market_max(
+    context: Rc<RefCell<ProgramTestContext>>,
+    market: &Pubkey,
+) -> Result<(), BanksClientError> {
+    expand_market(context, market, MAX_MARKET_BLOCK_INCREASE).await
+}
+
+/// Expands a market by the number of market blocks passed in.
 pub async fn expand_market(
     context: Rc<RefCell<ProgramTestContext>>,
     market: &Pubkey,
-    num_free_blocks: u32,
+    num_blocks_to_expand_by: usize,
 ) -> Result<(), BanksClientError> {
     use solana_program::system_program;
 
@@ -146,7 +159,7 @@ pub async fn expand_market(
         ],
         data: [
             ManifestInstruction::Expand.to_vec(),
-            num_free_blocks.to_le_bytes().to_vec(),
+            num_blocks_to_expand_by.to_le_bytes().to_vec(),
         ]
         .concat(),
     };
