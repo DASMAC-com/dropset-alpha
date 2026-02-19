@@ -156,7 +156,6 @@ impl MakerContext {
                     .into_iter()
                     .map(|post| self.market_ctx.post_order(self.maker_address, post)),
             )
-            .map(Instruction::from)
             .collect_vec();
 
         Ok(ixns)
