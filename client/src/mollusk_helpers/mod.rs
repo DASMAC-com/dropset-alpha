@@ -10,7 +10,6 @@ use mollusk_svm::{
 };
 use solana_account::Account;
 use solana_address::Address;
-
 use solana_sdk::{
     program_pack::Pack,
     pubkey,
@@ -73,25 +72,29 @@ pub fn new_dropset_mollusk_context(
     context
 }
 
-pub const DEFAULT_MINT_AUTHORITY: Address = pubkey!("mint1authority11111111111111111111111111111");
-pub const DEFAULT_BASE_MINT: Address = pubkey!("base111111111111111111111111111111111111111");
-pub const DEFAULT_QUOTE_MINT: Address = pubkey!("quote11111111111111111111111111111111111111");
-pub const DEFAULT_MINT_DECIMALS: u8 = 8;
-pub const DEFAULT_MARKET_ADDRESS: Address = pubkey!("7iHzqGHqCpmaEhFXbpoGnceWv7zYveUXyUdJYvYYyM1Q");
-pub const DEFAULT_MARKET_BASE_ATA: Address =
-    pubkey!("4n7H8mBnXnKeZh8be3u7SCFygen7pRBgF9H3NP37VtAV");
-pub const DEFAULT_MARKET_QUOTE_ATA: Address =
-    pubkey!("CyoUPgiQGzUB1e8SqgrMKiF5gkoezSiw4yB4x2ya5kAu");
-pub const DEFAULT_TOKEN_PROGRAM: Address = SPL_TOKEN_ID;
-pub const DEFAULT_NUM_SECTORS: u16 = 10;
-pub const DEFAULT_MARKET_BUMP: u8 = 254;
+pub const MOLLUSK_DEFAULT_MINT_AUTHORITY: Address =
+    pubkey!("mint1authority11111111111111111111111111111");
+pub const MOLLUSK_DEFAULT_NUM_SECTORS: u16 = 10;
 
-/// Creates a default [`MarketContext`] using the default test constants.
-pub fn default_market_context() -> MarketContext {
-    let base = TokenContext::new(DEFAULT_BASE_MINT, DEFAULT_TOKEN_PROGRAM, DEFAULT_MINT_DECIMALS);
-    let quote = TokenContext::new(DEFAULT_QUOTE_MINT, DEFAULT_TOKEN_PROGRAM, DEFAULT_MINT_DECIMALS);
-    MarketContext::new(base, quote)
-}
+pub const MOLLUSK_DEFAULT_BASE_TOKEN: TokenContext = TokenContext::new(
+    pubkey!("base111111111111111111111111111111111111111"),
+    SPL_TOKEN_ID,
+    8,
+);
+
+pub const MOLLUSK_DEFAULT_QUOTE_TOKEN: TokenContext = TokenContext::new(
+    pubkey!("quote11111111111111111111111111111111111111"),
+    SPL_TOKEN_ID,
+    8,
+);
+
+pub const MOLLUSK_DEFAULT_MARKET: MarketContext = MarketContext {
+    market: pubkey!("7iHzqGHqCpmaEhFXbpoGnceWv7zYveUXyUdJYvYYyM1Q"),
+    base: MOLLUSK_DEFAULT_BASE_TOKEN,
+    quote: MOLLUSK_DEFAULT_QUOTE_TOKEN,
+    base_market_ata: pubkey!("4n7H8mBnXnKeZh8be3u7SCFygen7pRBgF9H3NP37VtAV"),
+    quote_market_ata: pubkey!("CyoUPgiQGzUB1e8SqgrMKiF5gkoezSiw4yB4x2ya5kAu"),
+};
 
 /// Creates and returns a [MolluskContext] with `dropset` and all token programs created and
 /// initialized. It also creates a default market with two default tokens for base and quote.
@@ -102,7 +105,7 @@ pub fn new_dropset_mollusk_context_with_default_market(
     accounts: Vec<(Address, Account)>,
 ) -> (MolluskContext<HashMap<Address, Account>>, MarketContext) {
     let mint_authority_addr_and_account = (
-        DEFAULT_MINT_AUTHORITY,
+        MOLLUSK_DEFAULT_MINT_AUTHORITY,
         Account {
             data: Default::default(),
             lamports: 100_000_000_000,
@@ -116,26 +119,26 @@ pub fn new_dropset_mollusk_context_with_default_market(
     );
 
     let (create_base, initialize_base) = create_and_initialize_token_instructions(
-        &DEFAULT_MINT_AUTHORITY,
-        &DEFAULT_BASE_MINT,
+        &MOLLUSK_DEFAULT_MINT_AUTHORITY,
+        &MOLLUSK_DEFAULT_BASE_TOKEN.mint_address,
         Rent::default().minimum_balance(Mint::LEN),
-        DEFAULT_MINT_DECIMALS,
-        &DEFAULT_TOKEN_PROGRAM,
+        MOLLUSK_DEFAULT_BASE_TOKEN.mint_decimals,
+        &MOLLUSK_DEFAULT_BASE_TOKEN.token_program,
     )
     .expect("Should create base mint instructions");
 
     let (create_quote, initialize_quote) = create_and_initialize_token_instructions(
-        &DEFAULT_MINT_AUTHORITY,
-        &DEFAULT_QUOTE_MINT,
+        &MOLLUSK_DEFAULT_MINT_AUTHORITY,
+        &MOLLUSK_DEFAULT_QUOTE_TOKEN.mint_address,
         Rent::default().minimum_balance(Mint::LEN),
-        DEFAULT_MINT_DECIMALS,
-        &DEFAULT_TOKEN_PROGRAM,
+        MOLLUSK_DEFAULT_QUOTE_TOKEN.mint_decimals,
+        &MOLLUSK_DEFAULT_QUOTE_TOKEN.token_program,
     )
     .expect("Should create quote mint instructions");
 
-    let market = default_market_context();
-    let register_market: solana_instruction::Instruction =
-        market.register_market(DEFAULT_MINT_AUTHORITY, DEFAULT_NUM_SECTORS).into();
+    let register_market: solana_instruction::Instruction = MOLLUSK_DEFAULT_MARKET
+        .register_market(MOLLUSK_DEFAULT_MINT_AUTHORITY, MOLLUSK_DEFAULT_NUM_SECTORS)
+        .into();
 
     res.process_instruction_chain(&[
         create_base,
@@ -145,7 +148,7 @@ pub fn new_dropset_mollusk_context_with_default_market(
         register_market,
     ]);
 
-    (res, market)
+    (res, MOLLUSK_DEFAULT_MARKET)
 }
 
 #[cfg(test)]
@@ -174,47 +177,65 @@ mod tests {
         assert!(PathBuf::from([dropset.as_str(), ".so"].concat()).is_file());
     }
 
+    /// Verifies that the hardcoded addresses in [`MOLLUSK_DEFAULT_MARKET`] match the PDA
+    /// derivation from [`MarketContext::new`].
     #[test]
-    fn default_market_address() {
-        let (default_market, bump) = find_market_address(&DEFAULT_BASE_MINT, &DEFAULT_QUOTE_MINT);
-        let default_market_base_ata =
-            get_associated_token_address(&default_market, &DEFAULT_BASE_MINT);
-        let default_market_quote_ata =
-            get_associated_token_address(&default_market, &DEFAULT_QUOTE_MINT);
-
-        assert_eq!(DEFAULT_MARKET_ADDRESS, default_market);
-        assert_eq!(DEFAULT_MARKET_BASE_ATA, default_market_base_ata);
-        assert_eq!(DEFAULT_MARKET_QUOTE_ATA, default_market_quote_ata);
-        assert_eq!(DEFAULT_MARKET_BUMP, bump);
+    fn default_market_const_matches_derived() {
+        let derived = MarketContext::new(MOLLUSK_DEFAULT_BASE_TOKEN, MOLLUSK_DEFAULT_QUOTE_TOKEN);
+        assert_eq!(MOLLUSK_DEFAULT_MARKET.market, derived.market);
+        assert_eq!(
+            MOLLUSK_DEFAULT_MARKET.base_market_ata,
+            derived.base_market_ata
+        );
+        assert_eq!(
+            MOLLUSK_DEFAULT_MARKET.quote_market_ata,
+            derived.quote_market_ata
+        );
+        assert_eq!(
+            MOLLUSK_DEFAULT_MARKET.base_market_ata,
+            get_associated_token_address(&derived.market, &MOLLUSK_DEFAULT_BASE_TOKEN.mint_address)
+        );
+        assert_eq!(
+            MOLLUSK_DEFAULT_MARKET.quote_market_ata,
+            get_associated_token_address(
+                &derived.market,
+                &MOLLUSK_DEFAULT_QUOTE_TOKEN.mint_address
+            )
+        );
     }
 
     #[test]
     fn mollusk_with_default_market() -> anyhow::Result<()> {
-        let (ctx, _market) = new_dropset_mollusk_context_with_default_market(vec![]);
+        let (derived_market, bump) = find_market_address(
+            &MOLLUSK_DEFAULT_BASE_TOKEN.mint_address,
+            &MOLLUSK_DEFAULT_QUOTE_TOKEN.mint_address,
+        );
+        let (ctx, market) = new_dropset_mollusk_context_with_default_market(vec![]);
+        assert_eq!(market.market, derived_market);
 
         let account_store = ctx.account_store.borrow();
-        let default_market = account_store
-            .get(&DEFAULT_MARKET_ADDRESS)
+        let market_account = account_store
+            .get(&market.market)
             .ok_or(anyhow!("Couldn't get default market address"))?;
 
-        assert_eq!(default_market.owner, dropset::ID);
-        assert!(!default_market.executable);
-        assert_eq!(default_market.rent_epoch, 0);
-        let market: MarketViewAll =
-            try_market_view_all_from_owner_and_data(default_market.owner, &default_market.data)?;
+        assert_eq!(market_account.owner, dropset::ID);
+        assert!(!market_account.executable);
+        assert_eq!(market_account.rent_epoch, 0);
+        let market_view: MarketViewAll =
+            try_market_view_all_from_owner_and_data(market_account.owner, &market_account.data)?;
 
-        assert_eq!(market.asks.len(), 0);
-        assert_eq!(market.bids.len(), 0);
-        assert_eq!(market.users.len(), 0);
-        assert_eq!(market.seats.len(), 0);
+        assert_eq!(market_view.asks.len(), 0);
+        assert_eq!(market_view.bids.len(), 0);
+        assert_eq!(market_view.users.len(), 0);
+        assert_eq!(market_view.seats.len(), 0);
         assert_eq!(
-            market.header,
+            market_view.header,
             MarketHeaderView {
                 discriminant: MARKET_ACCOUNT_DISCRIMINANT,
                 num_seats: 0,
                 num_bids: 0,
                 num_asks: 0,
-                num_free_sectors: DEFAULT_NUM_SECTORS as u32,
+                num_free_sectors: MOLLUSK_DEFAULT_NUM_SECTORS as u32,
                 free_stack_top: 0,
                 seats_dll_head: NIL,
                 seats_dll_tail: NIL,
@@ -222,9 +243,9 @@ mod tests {
                 bids_dll_tail: NIL,
                 asks_dll_head: NIL,
                 asks_dll_tail: NIL,
-                base_mint: DEFAULT_BASE_MINT,
-                quote_mint: DEFAULT_QUOTE_MINT,
-                market_bump: DEFAULT_MARKET_BUMP,
+                base_mint: MOLLUSK_DEFAULT_BASE_TOKEN.mint_address,
+                quote_mint: MOLLUSK_DEFAULT_QUOTE_TOKEN.mint_address,
+                market_bump: bump,
                 nonce: 1, // The register market event.
                 _padding: [0, 0, 0],
             }

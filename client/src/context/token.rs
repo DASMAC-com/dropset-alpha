@@ -21,7 +21,7 @@ pub struct TokenContext {
 }
 
 impl TokenContext {
-    pub fn new(mint_address: Address, token_program: Address, mint_decimals: u8) -> Self {
+    pub const fn new(mint_address: Address, token_program: Address, mint_decimals: u8) -> Self {
         Self {
             mint_address,
             token_program,
