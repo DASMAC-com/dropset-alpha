@@ -1,5 +1,5 @@
 use client::mollusk_helpers::{
-    helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -28,29 +28,23 @@ fn close_seat() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.header.num_seats, 1);
-
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat");
-
-    assert_eq!(seat.base_available, 1);
-    assert_eq!(seat.quote_available, 0);
-    assert_eq!(seat.user, user);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    let seat_index = 0; // User is the first registered seat.
+    check.num_seats(1);
+    check.has_seat(&user);
+    check.seat_index(&user, seat_index);
+    check.seat_base_available(&user, 1);
+    check.seat_quote_available(&user, 0);
 
     // Close the seat. This returns the 1 base of collateral back to the user's ATA.
     assert!(mollusk
-        .process_instruction_chain(&[market_ctx.close_seat(user, seat.index)])
+        .process_instruction_chain(&[market_ctx.close_seat(user, seat_index)])
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.header.num_seats, 0);
-    assert_eq!(
-        mollusk.get_token_balance(&user, &market_ctx.base.mint_address),
-        1
-    );
+    check.num_seats(0);
+    check.base_token_balance(&user, 1);
+    check.quote_token_balance(&user, 0);
 
     Ok(())
 }
