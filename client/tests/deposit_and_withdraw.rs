@@ -27,10 +27,15 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let base_balance = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
-    let quote_balance = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
-    assert_eq!(base_balance, 10_000);
-    assert_eq!(quote_balance, 20_000);
+    let user_base = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
+    let user_quote = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
+    assert_eq!(user_base, 10_000);
+    assert_eq!(user_quote, 20_000);
+    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
+    let market_quote =
+        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
+    assert_eq!(market_base, 0);
+    assert_eq!(market_quote, 0);
 
     assert!(mollusk
         .process_instruction_chain(&[
@@ -44,6 +49,11 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
     let quote_balance = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
     assert_eq!(base_balance, 9_000);
     assert_eq!(quote_balance, 19_000);
+    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
+    let market_quote =
+        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
+    assert_eq!(market_base, 1_000);
+    assert_eq!(market_quote, 1_000);
 
     let market = mollusk.view_market(&market_ctx.market);
 
@@ -69,10 +79,15 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let base_balance = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
-    let quote_balance = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
-    assert_eq!(base_balance, 10_000);
-    assert_eq!(quote_balance, 20_000);
+    let user_base = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
+    let user_quote = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
+    assert_eq!(user_base, 10_000);
+    assert_eq!(user_quote, 20_000);
+    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
+    let market_quote =
+        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
+    assert_eq!(market_base, 0);
+    assert_eq!(market_quote, 0);
 
     Ok(())
 }
