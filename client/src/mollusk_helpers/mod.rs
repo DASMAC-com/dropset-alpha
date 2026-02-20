@@ -27,6 +27,7 @@ use crate::{
 
 pub mod checks;
 pub mod helper_trait;
+pub mod market_checker;
 pub mod utils;
 
 /// Converts an input deploy file to a program name used by the [`Mollusk::new`] function.
