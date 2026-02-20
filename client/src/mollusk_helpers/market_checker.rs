@@ -105,13 +105,13 @@ impl<'a> MarketChecker<'a> {
     ///     assert_eq!(seat.next_index, NIL);
     /// });
     /// ```
-    pub fn seat(&self, user: &Address, f: impl FnOnce(&MarketSeatView)) {
+    pub fn seat(&self, user: &Address, f: impl FnOnce(MarketSeatView)) {
         let market = self.mollusk.view_market(&self.market_ctx.market);
         let seat = self
             .market_ctx
             .find_seat(&market.seats, user)
             .unwrap_or_else(|| panic!("No seat found for user {user}"));
-        f(&seat);
+        f(seat);
     }
 
     /// Retrieves the market header and passes it to `f` for custom assertions.
