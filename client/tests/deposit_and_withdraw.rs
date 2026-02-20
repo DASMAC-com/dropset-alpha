@@ -1,5 +1,6 @@
 use client::mollusk_helpers::{
     helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -27,16 +28,13 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let user_base = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
-    let user_quote = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
-    assert_eq!(user_base, 10_000);
-    assert_eq!(user_quote, 20_000);
-    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
-    let market_quote =
-        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
-    assert_eq!(market_base, 0);
-    assert_eq!(market_quote, 0);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.base_token_balance(&user, 10_000);
+    check.quote_token_balance(&user, 20_000);
+    check.base_token_balance(&market_ctx.market, 0);
+    check.quote_token_balance(&market_ctx.market, 0);
 
+    // Deposit base and quote.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.deposit_base(user, 1_000, NIL),
@@ -45,22 +43,14 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let base_balance = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
-    let quote_balance = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
-    assert_eq!(base_balance, 9_000);
-    assert_eq!(quote_balance, 19_000);
-    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
-    let market_quote =
-        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
-    assert_eq!(market_base, 1_000);
-    assert_eq!(market_quote, 1_000);
+    check.base_token_balance(&user, 9_000);
+    check.quote_token_balance(&user, 19_000);
+    check.base_token_balance(&market_ctx.market, 1_000);
+    check.quote_token_balance(&market_ctx.market, 1_000);
 
-    let market = mollusk.view_market(&market_ctx.market);
-
-    let seat = market.seats.iter().find(|seat| seat.user == user);
-    assert_eq!(
-        seat,
-        Some(&MarketSeatView {
+    check.has_seat(&user);
+    check.seat(&user, |seat| {
+        let expected_seat = MarketSeatView {
             base_available: 1_000,
             quote_available: 1_000,
             prev_index: NIL,
@@ -68,9 +58,11 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
             next_index: NIL,
             user,
             user_order_sectors: Default::default(),
-        })
-    );
+        };
+        assert_eq!(seat, expected_seat);
+    });
 
+    // Withdraw base and quote.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.withdraw_base(user, 1_000, 0),
@@ -79,15 +71,10 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let user_base = mollusk.get_token_balance(&user, &market_ctx.base.mint_address);
-    let user_quote = mollusk.get_token_balance(&user, &market_ctx.quote.mint_address);
-    assert_eq!(user_base, 10_000);
-    assert_eq!(user_quote, 20_000);
-    let market_base = mollusk.get_token_balance(&market_ctx.market, &market_ctx.base.mint_address);
-    let market_quote =
-        mollusk.get_token_balance(&market_ctx.market, &market_ctx.quote.mint_address);
-    assert_eq!(market_base, 0);
-    assert_eq!(market_quote, 0);
+    check.base_token_balance(&user, 10_000);
+    check.quote_token_balance(&user, 20_000);
+    check.base_token_balance(&market_ctx.market, 0);
+    check.quote_token_balance(&market_ctx.market, 0);
 
     Ok(())
 }
