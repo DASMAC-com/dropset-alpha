@@ -5,7 +5,7 @@ use client::{
         token::TokenContext,
     },
     mollusk_helpers::{
-        helper_trait::DropsetTestHelper,
+        market_checker::MarketChecker,
         new_dropset_mollusk_context,
         utils::create_mock_user_account,
     },
@@ -139,15 +139,9 @@ fn register_market() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    assert_eq!(
-        mollusk.get_token_balance(&funder, &market_ctx.base.mint_address),
-        10_000
-    );
-
-    assert_eq!(
-        mollusk.get_token_balance(&funder, &market_ctx.quote.mint_address),
-        20_000
-    );
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.base_token_balance(funder, 10_000);
+    check.quote_token_balance(funder, 20_000);
 
     Ok(())
 }

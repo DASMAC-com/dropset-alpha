@@ -1,5 +1,6 @@
 use client::mollusk_helpers::{
     helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -23,25 +24,20 @@ fn post_and_cancel() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
-    // Mint base tokens and create the user's ATA.
+    // Mint base tokens and create the user's ATA, then deposit base (and create the user's seat).
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.base.mint_to_owner(&user, 10_000)?,
+            market_ctx.deposit_base(user, 1_000, NIL),
         ])
         .program_result
         .is_ok());
 
-    // Deposit base and create the user's seat.
-    assert!(mollusk
-        .process_instruction_chain(&[market_ctx.deposit_base(user, 1_000, NIL)])
-        .program_result
-        .is_ok());
-
-    let market = mollusk.view_market(&market_ctx.market);
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat after deposit");
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.has_seat(user);
+    let seat_index = 0;
+    check.seat_index(user, seat_index);
 
     let order_info_args = OrderInfoArgs::new_unscaled(10_000_000, 500);
     let order_info = to_order_info(order_info_args.clone()).expect("Should be a valid order");
@@ -51,28 +47,27 @@ fn post_and_cancel() -> anyhow::Result<()> {
     assert!(mollusk
         .process_instruction_chain(&[market_ctx.post_order(
             user,
-            PostOrderInstructionData::new(order_info_args, is_bid, seat.index),
+            PostOrderInstructionData::new(order_info_args, is_bid, seat_index),
         )])
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.asks.len(), 1);
-    assert_eq!(market.bids.len(), 0);
-    assert_eq!(market.asks[0].encoded_price, order_info.encoded_price);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_asks(1);
+    check.num_bids(0);
+    check.asks(|asks| assert_eq!(asks[0].encoded_price, order_info.encoded_price));
 
     // Cancel the ask.
     assert!(mollusk
         .process_instruction_chain(&[market_ctx.cancel_order(
             user,
-            CancelOrderInstructionData::new(order_info.encoded_price.as_u32(), is_bid, seat.index),
+            CancelOrderInstructionData::new(order_info.encoded_price.as_u32(), is_bid, seat_index),
         )])
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.asks.len(), 0);
-    assert_eq!(market.bids.len(), 0);
+    check.num_asks(0);
+    check.num_bids(0);
 
     Ok(())
 }
@@ -107,7 +102,7 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
+    let market = mollusk.view_market(market_ctx.market);
     let seat = market_ctx
         .find_seat(&market.seats, &user)
         .expect("User should have a seat");
@@ -212,9 +207,10 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.asks.len(), 6);
-    assert_eq!(market.bids.len(), 6);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_asks(6);
+    check.num_bids(6);
+    let market = mollusk.view_market(market_ctx.market);
 
     // Verify sort order is maintained after all the insertions and removals.
     assert!(market

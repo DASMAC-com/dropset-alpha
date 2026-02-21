@@ -31,10 +31,10 @@ fn close_seat() -> anyhow::Result<()> {
     let check = MarketChecker::new(&mollusk, &market_ctx);
     let seat_index = 0; // User is the first registered seat.
     check.num_seats(1);
-    check.has_seat(&user);
-    check.seat_index(&user, seat_index);
-    check.seat_base_available(&user, 1);
-    check.seat_quote_available(&user, 0);
+    check.has_seat(user);
+    check.seat_index(user, seat_index);
+    check.seat_base_available(user, 1);
+    check.seat_quote_available(user, 0);
 
     // Close the seat. This returns the 1 base of collateral back to the user's ATA.
     assert!(mollusk
@@ -43,8 +43,8 @@ fn close_seat() -> anyhow::Result<()> {
         .is_ok());
 
     check.num_seats(0);
-    check.base_token_balance(&user, 1);
-    check.quote_token_balance(&user, 0);
+    check.base_token_balance(user, 1);
+    check.quote_token_balance(user, 0);
 
     Ok(())
 }

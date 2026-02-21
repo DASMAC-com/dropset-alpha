@@ -1,5 +1,4 @@
 use client::mollusk_helpers::{
-    helper_trait::DropsetTestHelper,
     market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
@@ -29,10 +28,10 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .is_ok());
 
     let check = MarketChecker::new(&mollusk, &market_ctx);
-    check.base_token_balance(&user, 10_000);
-    check.quote_token_balance(&user, 20_000);
-    check.base_token_balance(&market_ctx.market, 0);
-    check.quote_token_balance(&market_ctx.market, 0);
+    check.base_token_balance(user, 10_000);
+    check.quote_token_balance(user, 20_000);
+    check.base_token_balance(market_ctx.market, 0);
+    check.quote_token_balance(market_ctx.market, 0);
 
     // Deposit base and quote.
     assert!(mollusk
@@ -43,13 +42,13 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    check.base_token_balance(&user, 9_000);
-    check.quote_token_balance(&user, 19_000);
-    check.base_token_balance(&market_ctx.market, 1_000);
-    check.quote_token_balance(&market_ctx.market, 1_000);
+    check.base_token_balance(user, 9_000);
+    check.quote_token_balance(user, 19_000);
+    check.base_token_balance(market_ctx.market, 1_000);
+    check.quote_token_balance(market_ctx.market, 1_000);
 
-    check.has_seat(&user);
-    check.seat(&user, |seat| {
+    check.has_seat(user);
+    check.seat(user, |seat| {
         let expected_seat = MarketSeatView {
             base_available: 1_000,
             quote_available: 1_000,
@@ -71,10 +70,10 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    check.base_token_balance(&user, 10_000);
-    check.quote_token_balance(&user, 20_000);
-    check.base_token_balance(&market_ctx.market, 0);
-    check.quote_token_balance(&market_ctx.market, 0);
+    check.base_token_balance(user, 10_000);
+    check.quote_token_balance(user, 20_000);
+    check.base_token_balance(market_ctx.market, 0);
+    check.quote_token_balance(market_ctx.market, 0);
 
     Ok(())
 }
