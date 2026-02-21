@@ -49,7 +49,7 @@ fn post_only_crossing_check() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
+    let market = mollusk.view_market(market_ctx.market);
     let seat = market_ctx
         .find_seat(&market.seats, &user)
         .expect("User should have a seat after deposit");
@@ -108,7 +108,7 @@ fn crossing_check_clears_with_cancel() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
+    let market = mollusk.view_market(market_ctx.market);
     let seat = market_ctx
         .find_seat(&market.seats, &user)
         .expect("User should have a seat");
@@ -165,7 +165,7 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
+    let market = mollusk.view_market(market_ctx.market);
     let seat_a = market_ctx
         .find_seat(&market.seats, &user_a)
         .expect("User A should have a seat");
@@ -183,7 +183,7 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
+    let market = mollusk.view_market(market_ctx.market);
     let seat_b = market_ctx
         .find_seat(&market.seats, &user_b)
         .expect("User B should have a seat");
