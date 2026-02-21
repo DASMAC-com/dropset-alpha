@@ -1,5 +1,6 @@
 use client::mollusk_helpers::{
     helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -31,10 +32,7 @@ fn post_asks() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat after deposit");
+    let seat = mollusk.get_seat(market_ctx.market, user);
 
     // Post 5 asks at distinct prices in ascending order (lowest price = highest ask priority).
     let is_bid = false;
@@ -57,9 +55,10 @@ fn post_asks() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.asks.len(), num_asks as usize);
-    assert_eq!(market.bids.len(), 0);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_asks(num_asks as usize);
+    check.num_bids(0);
+    let market = mollusk.view_market(market_ctx.market);
 
     let total_ask_collateral = market
         .asks
@@ -67,14 +66,8 @@ fn post_asks() -> anyhow::Result<()> {
         .map(|ask| ask.base_remaining)
         .sum::<u64>();
 
-    // Ensure that the ask collateral was subtracted from the seat's ask remaining.
-    assert_eq!(
-        10_000 - total_ask_collateral,
-        market_ctx
-            .find_seat(&market.seats, &user)
-            .unwrap()
-            .base_available
-    );
+    // Ensure that the ask collateral was subtracted from the seat's base available.
+    check.seat_base_available(user, 10_000 - total_ask_collateral);
 
     // Ensure that the orders were sorted upon insertion properly by checking that each order has
     // a higher price priority than the next.

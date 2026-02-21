@@ -1,5 +1,6 @@
 use client::mollusk_helpers::{
     helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -41,8 +42,9 @@ fn two_seats() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(&market_ctx.market);
-    assert_eq!(market.seats.len(), 3);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_seats(3);
+    let market = mollusk.view_market(market_ctx.market);
     assert_eq!(market.seats[0].user, ADDR_A);
     assert_eq!(market.seats[0].base_available, 300);
     assert_eq!(market.seats[1].user, ADDR_B);

@@ -8,21 +8,23 @@ use spl_associated_token_account_interface::address::get_associated_token_addres
 use spl_token_interface::state::Account as TokenAccount;
 use transaction_parser::views::{
     try_market_view_all,
+    MarketSeatView,
     MarketViewAll,
 };
 
-
 pub trait DropsetTestHelper {
-    fn get_token_balance(&self, user: &Address, token_mint: &Address) -> u64;
+    fn get_token_balance(&self, user: Address, token_mint: Address) -> u64;
 
-    fn view_market(&self, market_address: &Address) -> MarketViewAll;
+    fn view_market(&self, market_address: Address) -> MarketViewAll;
+
+    fn get_seat(&self, market_address: Address, user: Address) -> MarketSeatView;
 }
 
 impl DropsetTestHelper for MolluskContext<HashMap<Address, Account>> {
-    fn get_token_balance(&self, user: &Address, token_mint: &Address) -> u64 {
+    fn get_token_balance(&self, user: Address, token_mint: Address) -> u64 {
         let account_store = self.account_store.borrow();
 
-        let user_ata = get_associated_token_address(user, token_mint);
+        let user_ata = get_associated_token_address(&user, &token_mint);
 
         let acc = account_store.get(&user_ata).unwrap_or_else(|| {
             panic!("User token account doesn't exist, user: {user}, token account: {user_ata}")
@@ -33,12 +35,22 @@ impl DropsetTestHelper for MolluskContext<HashMap<Address, Account>> {
             .expect("Should unpack token account")
     }
 
-    fn view_market(&self, market_address: &Address) -> MarketViewAll {
+    fn view_market(&self, market_address: Address) -> MarketViewAll {
         let account_store = self.account_store.borrow();
 
         let acc = account_store
-            .get(market_address)
+            .get(&market_address)
             .expect("Market address should exist in mollusk account store");
         try_market_view_all(&acc.data).expect("Account data isn't valid for a market account")
+    }
+
+    fn get_seat(&self, market_address: Address, user: Address) -> MarketSeatView {
+        let market = self.view_market(market_address);
+        market
+            .seats
+            .iter()
+            .find(|seat| seat.user == user)
+            .cloned()
+            .expect("Should find user seat")
     }
 }
