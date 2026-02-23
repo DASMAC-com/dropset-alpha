@@ -104,9 +104,7 @@ impl<'a> MarketRefMut<'a> {
     }
 
     #[inline(always)]
-    pub fn orders<T: OrdersCollection>(
-        &mut self,
-    ) -> LinkedList<'_, T> {
+    pub fn orders<T: OrdersCollection>(&mut self) -> LinkedList<'_, T> {
         LinkedList::new_from_parts(self.header, self.sectors)
     }
 }
