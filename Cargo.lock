@@ -1021,6 +1021,7 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-account",
+ "solana-account-view",
  "solana-address 2.0.0",
  "solana-client",
  "solana-commitment-config",

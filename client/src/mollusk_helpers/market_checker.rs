@@ -113,6 +113,12 @@ impl<'a> MarketChecker<'a> {
         f(market.header);
     }
 
+    /// Retrieves the market's raw bytes and passes it to `f` for custom assertions.
+    pub fn market_data(&self, f: impl FnOnce(Vec<u8>)) {
+        let data = self.mollusk.view_market_data(self.market_ctx.market);
+        f(data);
+    }
+
     /// Retrieves the market's bids and passes them to `f` for custom assertions.
     pub fn bids(&self, f: impl FnOnce(Vec<OrderView>)) {
         let market = self.mollusk.view_market(self.market_ctx.market);

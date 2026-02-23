@@ -7,6 +7,7 @@ use dropset_interface::{
         CancelOrderInstructionData,
         CloseSeatInstructionData,
         DepositInstructionData,
+        ExpandMarketInstructionData,
         MarketOrderInstructionData,
         PostOrderInstructionData,
         RegisterMarketInstructionData,
@@ -242,6 +243,7 @@ impl MarketContext {
                 market_ata: self.base_market_ata,
                 mint: self.base.mint_address,
                 token_program: self.base.token_program,
+                system_program: SYSTEM_PROGRAM_ID,
                 dropset_program: dropset::ID,
             },
             false => Deposit {
@@ -252,6 +254,7 @@ impl MarketContext {
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint_address,
                 token_program: self.quote.token_program,
+                system_program: SYSTEM_PROGRAM_ID,
                 dropset_program: dropset::ID,
             },
         }
@@ -268,6 +271,7 @@ impl MarketContext {
                 market_ata: self.base_market_ata,
                 mint: self.base.mint_address,
                 token_program: self.base.token_program,
+                system_program: SYSTEM_PROGRAM_ID,
                 dropset_program: dropset::ID,
             },
             false => Withdraw {
@@ -278,9 +282,21 @@ impl MarketContext {
                 market_ata: self.quote_market_ata,
                 mint: self.quote.mint_address,
                 token_program: self.quote.token_program,
+                system_program: SYSTEM_PROGRAM_ID,
                 dropset_program: dropset::ID,
             },
         }
         .create_instruction(data)
+    }
+
+    pub fn expand(&self, payer: Address, num_sectors: u16) -> Instruction {
+        ExpandMarket {
+            event_authority: event_authority::ID,
+            payer,
+            market_account: self.market,
+            system_program: SYSTEM_PROGRAM_ID,
+            dropset_program: dropset::ID,
+        }
+        .create_instruction(ExpandMarketInstructionData::new(num_sectors))
     }
 }
