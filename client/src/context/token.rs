@@ -5,7 +5,7 @@ use solana_address::Address;
 use solana_instruction::Instruction;
 use solana_sdk::program_pack::Pack;
 use spl_associated_token_account_interface::{
-    address::get_associated_token_address,
+    address::get_associated_token_address_with_program_id,
     instruction::{
         create_associated_token_account,
         create_associated_token_account_idempotent,
@@ -47,7 +47,7 @@ impl TokenContext {
     }
 
     pub fn get_ata_for(&self, owner: &Address) -> Address {
-        get_associated_token_address(owner, &self.mint_address)
+        get_associated_token_address_with_program_id(owner, &self.mint_address, &self.token_program)
     }
 
     /// Builds a create-ATA instruction for the given `owner`, funded by `funder`.
