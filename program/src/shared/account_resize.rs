@@ -13,9 +13,6 @@ use pinocchio::{
 /// Transfers `lamports_diff` lamports from `payer` to `account`, where `lamports_diff` is the
 /// calculated difference in lamports required for the account given the requested additional space.
 ///
-/// Typically this call should be followed by an account resize. It isn't provided here so the
-/// caller can decide on a case by case basis which version of the resize invocation to call.
-///
 /// - If the lamport diff is zero, the transfer CPI isn't invoked.
 /// - Otherwise, the `payer` transfers the necessary lamports.
 ///

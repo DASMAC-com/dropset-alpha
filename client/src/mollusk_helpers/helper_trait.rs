@@ -18,6 +18,8 @@ pub trait DropsetTestHelper {
     fn view_market(&self, market_address: Address) -> MarketViewAll;
 
     fn get_seat(&self, market_address: Address, user: Address) -> MarketSeatView;
+
+    fn view_market_data(&self, market_address: Address) -> Vec<u8>;
 }
 
 impl DropsetTestHelper for MolluskContext<HashMap<Address, Account>> {
@@ -37,11 +39,20 @@ impl DropsetTestHelper for MolluskContext<HashMap<Address, Account>> {
 
     fn view_market(&self, market_address: Address) -> MarketViewAll {
         let account_store = self.account_store.borrow();
-
         let acc = account_store
             .get(&market_address)
             .expect("Market address should exist in mollusk account store");
+
         try_market_view_all(&acc.data).expect("Account data isn't valid for a market account")
+    }
+
+    fn view_market_data(&self, market_address: Address) -> Vec<u8> {
+        let account_store = self.account_store.borrow();
+        let acc = account_store
+            .get(&market_address)
+            .expect("Market address should exist in mollusk account store");
+
+        acc.data.clone()
     }
 
     fn get_seat(&self, market_address: Address, user: Address) -> MarketSeatView {

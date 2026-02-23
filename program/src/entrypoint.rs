@@ -73,6 +73,9 @@ pub fn process_instruction(
             DropsetInstruction::BatchReplace => {
                 return process_batch_replace(accounts, instruction_data)
             }
+            DropsetInstruction::ExpandMarket => {
+                process_expand_market(accounts, instruction_data, event_buffer)
+            }
         }
     }?;
 
