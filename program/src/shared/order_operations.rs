@@ -1,4 +1,4 @@
-//! Core logic for manipulating and traversing [`Order`]s in the [`OrdersLinkedList`].
+//! Core logic for manipulating and traversing [`Order`]s in an [`OrdersCollection`].
 
 use dropset_interface::{
     error::DropsetError,

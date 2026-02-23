@@ -1,4 +1,5 @@
-//! Renders the implementation for the [`crate::pack::Pack`] trait for a `derive(Pack)` struct.
+//! Renders the implementation for the `Pack` trait for a `derive(Pack)` struct.
+//! See the `instruction-macros-traits` crate for more info.
 
 use proc_macro2::TokenStream;
 use quote::quote;

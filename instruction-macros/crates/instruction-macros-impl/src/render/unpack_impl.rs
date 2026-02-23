@@ -1,5 +1,5 @@
-//! Renders the implementation for the [`crate::unpack::Unpack`] trait for a `derive(Unpack)`
-//! struct.
+//! Renders the implementation for the `Unpack` trait for a `derive(Unpack)` struct.
+//! See the `instruction-macros-traits` crate for more info.
 
 use proc_macro2::TokenStream;
 use quote::quote;

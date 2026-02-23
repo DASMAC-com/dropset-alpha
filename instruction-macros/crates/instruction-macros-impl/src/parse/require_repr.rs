@@ -1,4 +1,4 @@
-//! See [`require_repr_u8`].
+//! See [`require_repr`].
 
 use syn::{
     punctuated::Punctuated,

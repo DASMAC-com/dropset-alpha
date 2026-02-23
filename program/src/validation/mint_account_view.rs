@@ -1,4 +1,4 @@
-//! See [`MintInfo`].
+//! See [`MintAccountView`].
 
 use dropset_interface::{
     error::DropsetError,
@@ -86,8 +86,9 @@ impl<'a> MintAccountView<'a> {
     #[inline(always)]
     pub unsafe fn get_mint_decimals(&self) -> Result<u8, ProgramError> {
         let data = unsafe { self.account.borrow_unchecked() };
-        // Safety: `MintInfo` is verified in the market header and thus can only be constructed if a
-        // mint account is initialized.
+        // Safety: `self` contains verifiably initialized base and quote mints, since the market
+        // header stores their addresses and they are checked against the values in the header any
+        // time `self` is constructed.
         Ok(unsafe { pinocchio_load_unchecked::<Mint>(data) }
             .map_err(|_| ProgramError::InvalidAccountData)?
             .decimals)
