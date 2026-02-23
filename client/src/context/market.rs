@@ -294,8 +294,8 @@ impl MarketContext {
             event_authority: event_authority::ID,
             payer,
             market_account: self.market,
-            dropset_program: dropset::ID,
             system_program: SYSTEM_PROGRAM_ID,
+            dropset_program: dropset::ID,
         }
         .create_instruction(ExpandMarketInstructionData::new(num_sectors))
     }
