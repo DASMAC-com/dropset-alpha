@@ -159,32 +159,17 @@ impl MarketContext {
         .create_instruction(CloseSeatInstructionData::new(sector_index_hint))
     }
 
-    pub fn deposit_base(
-        &self,
-        user: Address,
-        amount: u64,
-        sector_index_hint: u32,
-    ) -> Instruction {
+    pub fn deposit_base(&self, user: Address, amount: u64, sector_index_hint: u32) -> Instruction {
         let data = DepositInstructionData::new(amount, sector_index_hint);
         self.deposit(user, data, true)
     }
 
-    pub fn deposit_quote(
-        &self,
-        user: Address,
-        amount: u64,
-        sector_index_hint: u32,
-    ) -> Instruction {
+    pub fn deposit_quote(&self, user: Address, amount: u64, sector_index_hint: u32) -> Instruction {
         let data = DepositInstructionData::new(amount, sector_index_hint);
         self.deposit(user, data, false)
     }
 
-    pub fn withdraw_base(
-        &self,
-        user: Address,
-        amount: u64,
-        sector_index_hint: u32,
-    ) -> Instruction {
+    pub fn withdraw_base(&self, user: Address, amount: u64, sector_index_hint: u32) -> Instruction {
         let data = WithdrawInstructionData::new(amount, sector_index_hint);
         self.withdraw(user, data, true)
     }
@@ -199,11 +184,7 @@ impl MarketContext {
         self.withdraw(user, data, false)
     }
 
-    pub fn post_order(
-        &self,
-        user: Address,
-        data: PostOrderInstructionData,
-    ) -> Instruction {
+    pub fn post_order(&self, user: Address, data: PostOrderInstructionData) -> Instruction {
         PostOrder {
             event_authority: event_authority::ID,
             user,
@@ -213,11 +194,7 @@ impl MarketContext {
         .create_instruction(data)
     }
 
-    pub fn cancel_order(
-        &self,
-        user: Address,
-        data: CancelOrderInstructionData,
-    ) -> Instruction {
+    pub fn cancel_order(&self, user: Address, data: CancelOrderInstructionData) -> Instruction {
         CancelOrder {
             event_authority: event_authority::ID,
             user,
@@ -227,11 +204,7 @@ impl MarketContext {
         .create_instruction(data)
     }
 
-    pub fn market_order(
-        &self,
-        user: Address,
-        data: MarketOrderInstructionData,
-    ) -> Instruction {
+    pub fn market_order(&self, user: Address, data: MarketOrderInstructionData) -> Instruction {
         MarketOrder {
             event_authority: event_authority::ID,
             user,
@@ -249,11 +222,7 @@ impl MarketContext {
         .create_instruction(data)
     }
 
-    pub fn batch_replace(
-        &self,
-        user: Address,
-        data: BatchReplaceInstructionData,
-    ) -> Instruction {
+    pub fn batch_replace(&self, user: Address, data: BatchReplaceInstructionData) -> Instruction {
         BatchReplace {
             event_authority: event_authority::ID,
             user,
@@ -263,12 +232,7 @@ impl MarketContext {
         .create_instruction(data)
     }
 
-    fn deposit(
-        &self,
-        user: Address,
-        data: DepositInstructionData,
-        is_base: bool,
-    ) -> Instruction {
+    fn deposit(&self, user: Address, data: DepositInstructionData, is_base: bool) -> Instruction {
         match is_base {
             true => Deposit {
                 event_authority: event_authority::ID,
@@ -294,12 +258,7 @@ impl MarketContext {
         .create_instruction(data)
     }
 
-    fn withdraw(
-        &self,
-        user: Address,
-        data: WithdrawInstructionData,
-        is_base: bool,
-    ) -> Instruction {
+    fn withdraw(&self, user: Address, data: WithdrawInstructionData, is_base: bool) -> Instruction {
         match is_base {
             true => Withdraw {
                 event_authority: event_authority::ID,
