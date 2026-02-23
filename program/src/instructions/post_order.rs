@@ -27,7 +27,7 @@ use price::to_order_info;
 
 use crate::{
     context::{
-        mutate_orders_context::MutateOrdersContext,
+        post_order_context::PostOrderContext,
         EventBufferContext,
     },
     events::EventBuffer,
@@ -56,7 +56,7 @@ pub unsafe fn process_post_order<'a>(
     } = PostOrderInstructionData::unpack_untagged(instruction_data)?;
 
     // Safety: No account data in `accounts` is currently borrowed.
-    let mut ctx = unsafe { MutateOrdersContext::load(accounts) }?;
+    let mut ctx = unsafe { PostOrderContext::load(accounts) }?;
 
     let order_info = to_order_info(order_info_args).map_err(DropsetError::from)?;
 

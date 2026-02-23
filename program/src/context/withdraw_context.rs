@@ -1,6 +1,6 @@
-//! See [`DepositWithdrawContext`].
+//! See [`WithdrawContext`].
 
-use dropset_interface::instructions::generated_program::Deposit;
+use dropset_interface::instructions::generated_program::Withdraw;
 use pinocchio::{
     account::AccountView,
     error::ProgramError,
@@ -12,12 +12,13 @@ use crate::validation::{
     token_account_view::TokenAccountView,
 };
 
-/// The account context for the [`Deposit`] and
-/// [`dropset_interface::instructions::generated_program::Withdraw`] instructions, verifying token
-/// ownership, mint consistency, and associated token account correctness.
+/// The account context for the [`Withdraw`] instruction, verifying token ownership, mint
+/// consistency, and associated token account correctness.
+///
+/// Note that the event authority is validated by the inevitable
+/// [dropset_interface::instructions::generated_program::FlushEvents] self-CPI.
 #[derive(Clone)]
-pub struct DepositWithdrawContext<'a> {
-    // The event authority is validated by the inevitable `FlushEvents` self-CPI.
+pub struct WithdrawContext<'a> {
     pub event_authority: &'a AccountView,
     pub user: &'a AccountView,
     pub market_account: MarketAccountView<'a>,
@@ -26,17 +27,13 @@ pub struct DepositWithdrawContext<'a> {
     pub mint: MintAccountView<'a>,
 }
 
-impl<'a> DepositWithdrawContext<'a> {
+impl<'a> WithdrawContext<'a> {
     /// # Safety
     ///
     /// Caller guarantees no accounts passed have their data borrowed in any capacity. This is a
     /// more restrictive safety contract than is necessary for soundness but is much simpler.
-    pub unsafe fn load(
-        accounts: &'a [AccountView],
-    ) -> Result<DepositWithdrawContext<'a>, ProgramError> {
-        // `Withdraw`'s account info fields are in the same exact order as `Deposit`'s, so just use
-        // `Deposit::load_accounts` for both. This invariant is checked below in unit tests.
-        let Deposit {
+    pub unsafe fn load(accounts: &'a [AccountView]) -> Result<WithdrawContext<'a>, ProgramError> {
+        let Withdraw {
             event_authority,
             user,
             market_account,
@@ -44,9 +41,8 @@ impl<'a> DepositWithdrawContext<'a> {
             market_ata,
             mint,
             token_program: _,
-            system_program: _,
             dropset_program: _,
-        } = Deposit::load_accounts(accounts)?;
+        } = Withdraw::load_accounts(accounts)?;
 
         // Safety: Scoped borrow of market account data.
         let (market_account, mint) = unsafe {
