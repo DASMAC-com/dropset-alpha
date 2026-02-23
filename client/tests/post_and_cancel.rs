@@ -107,23 +107,29 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .find_seat(&market.seats, &user)
         .expect("User should have a seat");
 
+    // Create helper closures to make the test more readable.
+    let post_order = |price: u32, is_bid: bool| {
+        market_ctx.post_order(
+            user,
+            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(price), is_bid, seat.index),
+        )
+    };
+    let post_bid = |price: u32| post_order(price, true);
+    let post_ask = |price: u32| post_order(price, false);
+    let cancel_order = |price: u32, is_bid: bool| {
+        market_ctx.cancel_order(
+            user,
+            CancelOrderInstructionData::new(price, is_bid, seat.index),
+        )
+    };
+    let cancel_bid = |price: u32| cancel_order(price, true);
+    let cancel_ask = |price: u32| cancel_order(price, false);
+
     // Post 5 asks and 5 bids at known prices.
     let ask_prices: [u32; 5] = [60_000_000, 70_000_000, 80_000_000, 90_000_000, 99_000_000];
     let bid_prices: [u32; 5] = [10_000_000, 20_000_000, 30_000_000, 40_000_000, 50_000_000];
-
-    let post_asks = ask_prices.iter().map(|&p| {
-        market_ctx.post_order(
-            user,
-            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(p), false, seat.index),
-        )
-    });
-    let post_bids = bid_prices.iter().map(|&p| {
-        market_ctx.post_order(
-            user,
-            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(p), true, seat.index),
-        )
-    });
-
+    let post_asks = ask_prices.iter().map(|&p| post_ask(p));
+    let post_bids = bid_prices.iter().map(|&p| post_bid(p));
     assert!(mollusk
         .process_instruction_chain(&post_asks.chain(post_bids).collect_vec())
         .program_result
@@ -132,22 +138,10 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     // Cancel the 2nd and 3rd asks/bids by price, leaving gaps.
     assert!(mollusk
         .process_instruction_chain(&[
-            market_ctx.cancel_order(
-                user,
-                CancelOrderInstructionData::new(70_000_000, false, seat.index)
-            ),
-            market_ctx.cancel_order(
-                user,
-                CancelOrderInstructionData::new(80_000_000, false, seat.index)
-            ),
-            market_ctx.cancel_order(
-                user,
-                CancelOrderInstructionData::new(20_000_000, true, seat.index)
-            ),
-            market_ctx.cancel_order(
-                user,
-                CancelOrderInstructionData::new(40_000_000, true, seat.index)
-            ),
+            cancel_ask(70_000_000),
+            cancel_ask(80_000_000),
+            cancel_bid(20_000_000),
+            cancel_bid(40_000_000),
         ])
         .program_result
         .is_ok());
@@ -155,54 +149,12 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     // Fill the gaps and add one beyond the end of each book side.
     assert!(mollusk
         .process_instruction_chain(&[
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(65_000_000),
-                    false,
-                    seat.index
-                )
-            ),
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(75_000_000),
-                    false,
-                    seat.index
-                )
-            ),
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(95_000_000),
-                    false,
-                    seat.index
-                )
-            ),
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(15_000_000),
-                    true,
-                    seat.index
-                )
-            ),
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(35_000_000),
-                    true,
-                    seat.index
-                )
-            ),
-            market_ctx.post_order(
-                user,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(45_000_000),
-                    true,
-                    seat.index
-                )
-            ),
+            post_ask(65_000_000),
+            post_ask(75_000_000),
+            post_ask(95_000_000),
+            post_bid(15_000_000),
+            post_bid(35_000_000),
+            post_bid(45_000_000),
         ])
         .program_result
         .is_ok());
@@ -211,6 +163,13 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     check.num_asks(6);
     check.num_bids(6);
     let market = mollusk.view_market(market_ctx.market);
+
+    let expected_asks = [
+        60_000_000, 65_000_000, 75_000_000, 90_000_000, 95_000_000, 99_000_000,
+    ];
+    let expected_bids = [
+        50_000_000, 45_000_000, 35_000_000, 30_000_000, 15_000_000, 10_000_000,
+    ];
 
     // Verify sort order is maintained after all the insertions and removals.
     assert!(market
@@ -236,14 +195,8 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .map(|o| o.encoded_price.as_u32())
         .collect();
 
-    assert_eq!(
-        ask_encoded,
-        [60_000_000, 65_000_000, 75_000_000, 90_000_000, 95_000_000, 99_000_000]
-    );
-    assert_eq!(
-        bid_encoded,
-        [50_000_000, 45_000_000, 35_000_000, 30_000_000, 15_000_000, 10_000_000]
-    );
+    assert_eq!(ask_encoded, expected_asks);
+    assert_eq!(bid_encoded, expected_bids);
 
     Ok(())
 }

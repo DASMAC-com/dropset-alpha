@@ -1,6 +1,7 @@
 use client::mollusk_helpers::{
     checks::IntoCheckFailure,
     helper_trait::DropsetTestHelper,
+    market_checker::MarketChecker,
     new_dropset_mollusk_context_with_default_market,
     utils::create_mock_user_account,
 };
@@ -12,6 +13,7 @@ use dropset_interface::{
     },
     state::sector::NIL,
 };
+use itertools::Itertools;
 use mollusk_svm::result::Check;
 use price::{
     to_order_info,
@@ -49,10 +51,7 @@ fn post_only_crossing_check() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(market_ctx.market);
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat after deposit");
+    let seat = mollusk.get_seat(market_ctx.market, user);
 
     let post = |price, is_bid| {
         market_ctx.post_order(
@@ -108,10 +107,7 @@ fn crossing_check_clears_with_cancel() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(market_ctx.market);
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat");
+    let seat = mollusk.get_seat(market_ctx.market, user);
 
     let post = |price, is_bid| {
         let data =
@@ -152,68 +148,91 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
 
     let ask = to_order_info(OrderInfoArgs::order_at_price(50_000_000)).unwrap();
 
+    // Create the base ATA for `user_a`. Mint the intended order size to them and then have them
+    // deposit it to their seat.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_a, &user_a),
             market_ctx.base.mint_to_owner(&user_a, ask.base_atoms)?,
+            market_ctx.deposit_base(user_a, ask.base_atoms, NIL)
         ])
         .program_result
         .is_ok());
 
-    assert!(mollusk
-        .process_instruction_chain(&[market_ctx.deposit_base(user_a, ask.base_atoms, NIL)])
-        .program_result
-        .is_ok());
-
-    let market = mollusk.view_market(market_ctx.market);
-    let seat_a = market_ctx
-        .find_seat(&market.seats, &user_a)
-        .expect("User A should have a seat");
-
+    // Then create `user_b`'s seat by depositing. Thei amounts in `user_b`'s seat are irrelevant,
+    // since ultimately they  doesn't
+    // need more than a single atom per order because size is irrelevant triggering the post only
+    // crossing check failure.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_b, &user_b),
-            market_ctx.base.mint_to_owner(&user_b, 1)?,
+            market_ctx.quote.create_ata_idempotent(&user_b, &user_b),
+            market_ctx.base.mint_to_owner(&user_b, 2)?,
+            market_ctx.quote.mint_to_owner(&user_b, 1)?,
+            market_ctx.deposit_base(user_b, 2, NIL),
+            market_ctx.deposit_quote(user_b, 1, 1), // Seat index 1 since it's the second seat.
         ])
         .program_result
         .is_ok());
 
-    assert!(mollusk
-        .process_instruction_chain(&[market_ctx.deposit_base(user_b, 1, NIL)])
-        .program_result
-        .is_ok());
+    let seat_a = mollusk.get_seat(market_ctx.market, user_a);
+    let seat_b = mollusk.get_seat(market_ctx.market, user_b);
+
+    // Have `user_a` post the ask.
+    mollusk.process_and_validate_instruction(
+        &market_ctx.post_order(
+            user_a,
+            PostOrderInstructionData::new(
+                OrderInfoArgs::order_at_price(50_000_000),
+                false,
+                seat_a.index,
+            ),
+        ),
+        &[Check::success()],
+    );
+
+    let user_b_post = |is_bid: bool, price: u32| {
+        market_ctx.post_order(
+            user_b,
+            PostOrderInstructionData::new(
+                OrderInfoArgs::order_at_price(price),
+                is_bid,
+                seat_b.index,
+            ),
+        )
+    };
+
+    let user_b_post_ask = |price: u32| user_b_post(false, price);
+    let user_b_post_bid = |price: u32| user_b_post(true, price);
+
+    let cross_check_fail = || [DropsetError::PostOnlyWouldImmediatelyFill.into_check_failure()];
+
+    mollusk.process_and_validate_instruction_chain(&[
+        (&user_b_post_bid(50_000_000), &cross_check_fail()),
+        (&user_b_post_bid(50_000_001), &cross_check_fail()),
+    ]);
+    mollusk.process_and_validate_instruction_chain(&[
+        (&user_b_post_bid(49_999_999), &[Check::success()]),
+        (&user_b_post_ask(50_000_000), &[Check::success()]),
+        (&user_b_post_ask(50_000_001), &[Check::success()]),
+    ]);
 
     let market = mollusk.view_market(market_ctx.market);
-    let seat_b = market_ctx
-        .find_seat(&market.seats, &user_b)
-        .expect("User B should have a seat");
+    println!("{market:?}");
 
-    let chain = [
-        (
-            market_ctx.post_order(
-                user_a,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(50_000_000),
-                    false,
-                    seat_a.index,
-                ),
-            ),
-            [Check::success()],
-        ),
-        (
-            market_ctx.post_order(
-                user_b,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::order_at_price(50_000_001),
-                    true,
-                    seat_b.index,
-                ),
-            ),
-            [DropsetError::PostOnlyWouldImmediatelyFill.into_check_failure()],
-        ),
-    ];
-    let chain_refs: Vec<_> = chain.iter().map(|(i, c)| (i, c.as_slice())).collect();
-    mollusk.process_and_validate_instruction_chain(&chain_refs);
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+
+    // check.num_bids(1);
+    check.num_asks(3);
+    check.asks(|asks| {
+        println!("{asks:?}");
+        assert_eq!(
+            asks.iter()
+                .map(|ask| ask.encoded_price.as_u32())
+                .collect_vec(),
+            vec![50_000_000, 50_000_000, 50_000_001]
+        );
+    });
 
     Ok(())
 }
