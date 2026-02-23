@@ -1,3 +1,5 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 use solana_address::Address;
 
 /// A trait for packing structs into little-endian bytes with zero overhead.

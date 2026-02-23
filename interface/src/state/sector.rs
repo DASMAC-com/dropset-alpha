@@ -1,3 +1,5 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 //! Defines the size and sentinel constants for fixed-size storage sectors used to organize
 //! and index market data efficiently in account memory.
 //!
