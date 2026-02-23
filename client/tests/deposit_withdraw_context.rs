@@ -87,7 +87,7 @@ fn deposit_withdraw_account_order_invariant() {
     assert_eq!(dep_system_program.address(), wd_system_program.address());
     assert_eq!(dep_dropset_program.address(), wd_dropset_program.address());
 
-    // Then checkthat the `AccountMeta`s created in the generated client code match for both
+    // Then check that the `AccountMeta`s created in the generated client code match for both
     // deposit and withdraw. This runs extra checks on the signer and writer status for each
     // account that aren't easy to run with the program generated code, since it doesn't expose
     // the intermediate instruction construction (it just immediately invokes the instruction).
