@@ -49,14 +49,13 @@ pub enum DropsetInstruction {
     Deposit,
 
     #[account(0,                   name = "event_authority", desc = "The event authority PDA signer.")]
-    #[account(1, signer, writable, name = "user",            desc = "The user withdrawing.")]
+    #[account(1, signer,           name = "user",            desc = "The user withdrawing.")]
     #[account(2, writable,         name = "market_account",  desc = "The market account PDA.")]
     #[account(3, writable,         name = "user_ata",        desc = "The user's associated token account.")]
     #[account(4, writable,         name = "market_ata",      desc = "The market's associated token account.")]
     #[account(5,                   name = "mint",            desc = "The token mint account.")]
     #[account(6,                   name = "token_program",   desc = "The mint's token program.")]
-    #[account(7,                   name = "system_program",  desc = "The system program.")]
-    #[account(8,                   name = "dropset_program", desc = "The dropset program.")]
+    #[account(7,                   name = "dropset_program", desc = "The dropset program.")]
     #[args(amount: u64, "The amount to withdraw.")]
     #[args(sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
     Withdraw,
@@ -128,8 +127,8 @@ pub enum DropsetInstruction {
     #[account(0, signer,           name = "event_authority",     desc = "The event authority PDA signer.")]
     #[account(1, signer, writable, name = "payer",               desc = "The account paying for the market account expansion.")]
     #[account(2, writable,         name = "market_account",      desc = "The market account PDA.")]
-    #[account(3,                   name = "system_program",      desc = "The system program.")]
-    #[account(4,                   name = "dropset_program",     desc = "The dropset program.")]
+    #[account(3,                   name = "dropset_program",     desc = "The dropset program.")]
+    #[account(4,                   name = "system_program",      desc = "The system program.")]
     #[args(num_sectors: u16, "The number of free sectors to add to the market account.")]
     ExpandMarket,
 }

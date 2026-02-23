@@ -36,7 +36,7 @@ use pinocchio::{
 };
 
 use crate::{
-    context::mutate_orders_context::MutateOrdersContext,
+    context::batch_replace_context::BatchReplaceContext,
     shared::{
         order_operations::{
             insert_order,
@@ -70,7 +70,7 @@ pub unsafe fn process_batch_replace(
     } = BatchReplaceInstructionData::unpack_untagged(instruction_data)?;
 
     // Safety: No account data in `accounts` is currently borrowed.
-    let mut ctx = unsafe { MutateOrdersContext::load(accounts) }?;
+    let mut ctx = unsafe { BatchReplaceContext::load(accounts) }?;
 
     // Safety: Market account data isn't currently borrowed in any capacity.
     let mut market: MarketRefMut = unsafe { ctx.market_account.load_unchecked_mut() };

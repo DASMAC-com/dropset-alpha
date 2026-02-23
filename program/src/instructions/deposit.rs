@@ -18,7 +18,7 @@ use pinocchio::{
 
 use crate::{
     context::{
-        deposit_withdraw_context::DepositWithdrawContext,
+        deposit_context::DepositContext,
         EventBufferContext,
     },
     events::EventBuffer,
@@ -60,7 +60,7 @@ pub unsafe fn process_deposit<'a>(
     } = DepositInstructionData::unpack_untagged(instruction_data)?;
 
     // Safety: No account data in `accounts` is currently borrowed.
-    let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
+    let mut ctx = unsafe { DepositContext::load(accounts) }?;
 
     // Safety: No account data is currently borrowed.
     let amount_deposited = unsafe {
