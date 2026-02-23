@@ -71,11 +71,12 @@ fn post_asks() -> anyhow::Result<()> {
 
     // Ensure that the orders were sorted upon insertion properly by checking that each order has
     // a higher price priority than the next.
-    assert!(market
-        .asks
-        .iter()
-        .tuple_windows()
-        .all(|(a, b)| a.encoded_price.has_higher_ask_priority(&b.encoded_price)));
+    check.asks(|asks| {
+        assert!(asks
+            .iter()
+            .tuple_windows()
+            .all(|(a, b)| a.encoded_price.has_higher_ask_priority(&b.encoded_price)));
+    });
 
     Ok(())
 }
