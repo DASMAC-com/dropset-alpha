@@ -9,7 +9,10 @@ use dropset_interface::{
         CancelOrderInstructionData,
         PostOrderInstructionData,
     },
-    state::sector::NIL,
+    state::sector::{
+        MAX_PERMITTED_SECTOR_INCREASE,
+        NIL,
+    },
 };
 use itertools::Itertools;
 use price::{
@@ -24,6 +27,12 @@ fn post_and_cancel() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
+    // Expand the market to accomodate more orders.
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.expand(user, MAX_PERMITTED_SECTOR_INCREASE as u16)])
+        .program_result
+        .is_ok());
+
     // Mint base tokens and create the user's ATA, then deposit base (and create the user's seat).
     assert!(mollusk
         .process_instruction_chain(&[
@@ -36,8 +45,7 @@ fn post_and_cancel() -> anyhow::Result<()> {
 
     let check = MarketChecker::new(&mollusk, &market_ctx);
     check.has_seat(user);
-    let seat_index = 0;
-    check.seat_index(user, seat_index);
+    let seat_index = mollusk.get_seat(market_ctx.market, user).index;
 
     let order_info_args = OrderInfoArgs::new_unscaled(10_000_000, 500);
     let order_info = to_order_info(order_info_args.clone()).expect("Should be a valid order");
@@ -79,6 +87,12 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     let user_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
+
+    // Expand the market to accomodate more orders.
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.expand(user, MAX_PERMITTED_SECTOR_INCREASE as u16)])
+        .program_result
+        .is_ok());
 
     assert!(mollusk
         .process_instruction_chain(&[

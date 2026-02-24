@@ -15,7 +15,7 @@ futures.workspace = true
 lazy-regex.workspace = true
 mollusk-svm.workspace = true
 mollusk-svm-programs-token.workspace = true
-price = { path = "../price" }
+price = { path = "../price", features = ["client"] }
 regex.workspace = true
 solana-account.workspace = true
 solana-account-view.workspace = true
