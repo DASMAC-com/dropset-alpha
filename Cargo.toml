@@ -4,6 +4,7 @@ members = [
   "bots/crates/market-maker",
   "bots/crates/market-taker",
   "client",
+  "cu-bench/dropset",
   "instruction-macros/crates/instruction-macros",
   "instruction-macros/crates/instruction-macros-derive",
   "instruction-macros/crates/instruction-macros-impl",
