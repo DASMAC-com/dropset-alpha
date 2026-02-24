@@ -3,14 +3,21 @@ use std::{
     path::PathBuf,
 };
 
-use clap::Parser;
+use clap::{
+    command,
+    ArgAction,
+    Parser,
+};
 use client::transactions::CustomRpcClient;
 use solana_address::Address;
 use solana_keypair::Keypair;
 
 use crate::{
     load_env::oanda_auth_token,
-    maker_context::MakerContext,
+    maker_context::{
+        MakerContext,
+        MakerContextInitArgs,
+    },
     oanda::{
         query_price_feed,
         CurrencyPair,
@@ -44,6 +51,10 @@ pub struct CliArgs {
     /// Path to the maker's keypair file.
     #[arg(short = 'k', long)]
     pub keypair: PathBuf,
+
+    /// Use batch replace instead of individual cancel/post instructions.
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub batch_replace: bool,
 }
 
 /// Loads the maker context from passed CLI arguments and a few expected environment variables.
@@ -58,6 +69,7 @@ pub async fn initialize_context_from_cli(
         pair,
         target_base,
         keypair,
+        batch_replace,
     } = CliArgs::parse();
 
     let initial_price_feed_response = query_price_feed(
@@ -74,14 +86,15 @@ pub async fn initialize_context_from_cli(
     let bytes: Vec<u8> = serde_json::from_reader(File::open(&keypair)?)?;
     let maker_keypair = Keypair::try_from(bytes.as_slice())?;
 
-    MakerContext::init(
+    MakerContext::init(MakerContextInitArgs {
         rpc,
-        maker_keypair,
+        maker: maker_keypair,
         base_mint,
         quote_mint,
         pair,
-        target_base,
+        base_target_atoms: target_base,
         initial_price_feed_response,
-    )
+        batch_replace,
+    })
     .await
 }
