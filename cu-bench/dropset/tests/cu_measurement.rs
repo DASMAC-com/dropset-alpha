@@ -6,7 +6,6 @@ use cu_bench_dropset::{
     fmt_subtable,
     measure_cu,
     new_bench_fixture,
-    wc,
     ASK_PRICES,
     BASE_UNIT,
     MAX_ORDERS_USIZE,
@@ -75,30 +74,23 @@ fn cu_withdraw() -> anyhow::Result<()> {
 fn cu_post_order() -> anyhow::Result<()> {
     let mut logs = String::new();
 
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "PostOrder");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]");
-        }
-        let f = new_bench_fixture();
-        if pre_expand {
-            expand_market(&f);
-        }
+    fmt_header(&mut logs, "PostOrder");
+    let f = new_bench_fixture();
+    expand_market(&f);
 
-        let cu = measure_cu(
-            &f,
-            f.market_ctx.post_order(
-                f.maker,
-                PostOrderInstructionData::new(
-                    OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
-                    false,
-                    f.seat_index,
-                ),
+    let cu = measure_cu(
+        &f,
+        f.market_ctx.post_order(
+            f.maker,
+            PostOrderInstructionData::new(
+                OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
+                false,
+                f.seat_index,
             ),
-        );
+        ),
+    );
 
-        fmt_subtable(&mut logs, "Orders", &[(1, cu)]);
-    }
+    fmt_subtable(&mut logs, "Orders", &[(1, cu)]);
 
     eprintln!("{logs}");
     Ok(())
@@ -144,56 +136,39 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     let mut logs = String::new();
 
     // Place: book starts empty, BatchReplace inserts n new asks.
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "BatchReplace (Place)");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]");
-        }
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            rows.push((n, batch_replace_place(n, pre_expand)));
-        }
-        fmt_subtable(&mut logs, "Orders", &rows);
+    fmt_header(&mut logs, "BatchReplace (Place)");
+    let mut rows = Vec::new();
+    for &n in BATCH_AMOUNTS {
+        rows.push((n, batch_replace_place(n)));
     }
+    fmt_subtable(&mut logs, "Orders", &rows);
 
     // Cancel: book has n existing asks, BatchReplace replaces with empty.
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "BatchReplace (Cancel)");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]");
-        }
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            rows.push((n, batch_replace_cancel(n, pre_expand)));
-        }
-        fmt_subtable(&mut logs, "Cancels", &rows);
+    fmt_header(&mut logs, "BatchReplace (Cancel)");
+    let mut rows = Vec::new();
+    for &n in BATCH_AMOUNTS {
+        rows.push((n, batch_replace_cancel(n)));
     }
+    fmt_subtable(&mut logs, "Cancels", &rows);
 
     // Replace: book has n existing asks, BatchReplace cancels them all and
     // inserts n new asks — the actual "replace" workload.
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "BatchReplace (Replace)");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]");
-        }
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            rows.push((n, batch_replace_replace(n, pre_expand)));
-        }
-        // Each row is CU for 1 cancel + 1 place within a single BatchReplace, amortized over n.
-        fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
+    fmt_header(&mut logs, "BatchReplace (Replace)");
+    let mut rows = Vec::new();
+    for &n in BATCH_AMOUNTS {
+        rows.push((n, batch_replace_replace(n)));
     }
+    // Each row is CU for 1 cancel + 1 place within a single BatchReplace, amortized over n.
+    fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
 
     eprintln!("{logs}");
     Ok(())
 }
 
 /// Place `n` asks via a single BatchReplace into an empty book; return amortized CU per order.
-fn batch_replace_place(n: u64, pre_expand: bool) -> u64 {
+fn batch_replace_place(n: u64) -> u64 {
     let f = new_bench_fixture();
-    if pre_expand {
-        expand_market(&f);
-    }
+    expand_market(&f);
 
     let cu = match n as usize {
         1 => {
@@ -247,11 +222,9 @@ fn batch_replace_place(n: u64, pre_expand: bool) -> u64 {
 }
 
 /// Place `n` asks (setup), then BatchReplace with 0 asks; return amortized CU per cancel.
-fn batch_replace_cancel(n: u64, pre_expand: bool) -> u64 {
+fn batch_replace_cancel(n: u64) -> u64 {
     let f = new_bench_fixture();
-    if pre_expand {
-        expand_market(&f);
-    }
+    expand_market(&f);
 
     // Setup: place n asks via PostOrder (not measured).
     for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
@@ -284,11 +257,9 @@ fn batch_replace_cancel(n: u64, pre_expand: bool) -> u64 {
 
 /// Place `n` asks (setup), then BatchReplace with `n` new asks at the same prices; return
 /// amortized CU per cancel+place pair — this is the true "replace" workload.
-fn batch_replace_replace(n: u64, pre_expand: bool) -> u64 {
+fn batch_replace_replace(n: u64) -> u64 {
     let f = new_bench_fixture();
-    if pre_expand {
-        expand_market(&f);
-    }
+    expand_market(&f);
 
     // Setup: place n asks via PostOrder (not measured).
     for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
