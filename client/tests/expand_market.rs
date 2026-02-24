@@ -8,12 +8,14 @@ use dropset_interface::{
     error::DropsetError,
     state::{
         market_header::MarketHeader,
-        sector::Sector,
+        sector::{
+            Sector,
+            MAX_PERMITTED_SECTOR_INCREASE,
+        },
         transmutable::Transmutable,
     },
 };
 use mollusk_svm::result::Check;
-use solana_account_view::MAX_PERMITTED_DATA_INCREASE;
 use solana_address::Address;
 use solana_program_error::ProgramError;
 
@@ -73,20 +75,22 @@ fn expand_market() -> anyhow::Result<()> {
 
     // Expand by the max possible number of sectors according to the max permitted data increase
     // per account + instruction. Then check that the account data increased accordingly.
-    let max_num_sectors_increase = MAX_PERMITTED_DATA_INCREASE / Sector::LEN;
     mollusk.process_and_validate_instruction(
-        &market_ctx.expand(funder, max_num_sectors_increase as u16),
+        &market_ctx.expand(funder, MAX_PERMITTED_SECTOR_INCREASE as u16),
         &[
             Check::success(),
             Check::account(&market_ctx.market)
-                .space(total_market_data_len + ((1 + 17 + max_num_sectors_increase) * Sector::LEN))
+                .space(
+                    total_market_data_len
+                        + ((1 + 17 + MAX_PERMITTED_SECTOR_INCREASE) * Sector::LEN),
+                )
                 .build(),
         ],
     );
 
     // Expect an invalid reallocation error when expanding by the max number of sectors + 1.
     mollusk.process_and_validate_instruction(
-        &market_ctx.expand(funder, (max_num_sectors_increase + 1) as u16),
+        &market_ctx.expand(funder, (MAX_PERMITTED_SECTOR_INCREASE + 1) as u16),
         &[Check::err(ProgramError::InvalidRealloc)],
     );
     Ok(())
