@@ -88,12 +88,12 @@ impl CustomRpcClient {
     }
 
     pub async fn fund_account(&self, address: &Address) -> anyhow::Result<()> {
-        fund(&self.client, address).await
+        airdrop(&self.client, address).await
     }
 
     pub async fn fund_new_account(&self) -> anyhow::Result<Keypair> {
         let kp = Keypair::new();
-        fund(&self.client, &kp.pubkey()).await?;
+        airdrop(&self.client, &kp.pubkey()).await?;
 
         Ok(kp)
     }
@@ -127,7 +127,7 @@ const MAX_TRIES: u8 = 20;
 
 pub const DEFAULT_FUND_AMOUNT: u64 = 10_000_000_000;
 
-async fn fund(rpc: &RpcClient, address: &Address) -> anyhow::Result<()> {
+pub async fn airdrop(rpc: &RpcClient, address: &Address) -> anyhow::Result<()> {
     let airdrop_signature: Signature = rpc
         .request_airdrop(address, DEFAULT_FUND_AMOUNT)
         .await

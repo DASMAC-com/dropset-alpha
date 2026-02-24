@@ -213,8 +213,7 @@ async fn mint_to(
     owner: &Keypair,
     amount: u64,
 ) -> anyhow::Result<()> {
-    let destination = token.get_ata_for(&owner.pubkey());
-    let ix = token.mint_to_owner(&destination, amount)?;
+    let ix = token.mint_to_owner(&owner.pubkey(), amount)?;
     rpc.send_and_confirm_txn(owner, &[mint_authority], &[ix])
         .await?;
     Ok(())
