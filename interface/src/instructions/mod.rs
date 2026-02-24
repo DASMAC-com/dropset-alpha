@@ -50,7 +50,7 @@ pub enum DropsetInstruction {
 
     #[account(0,                   name = "event_authority", desc = "The event authority PDA signer.")]
     #[account(1, signer,           name = "user",            desc = "The user withdrawing.")]
-    #[account(2, writable,         name = "market_account",  desc = "The market account PDA.")]
+    #[account(2, signer, writable, name = "market_account",  desc = "The market account PDA.")]
     #[account(3, writable,         name = "user_ata",        desc = "The user's associated token account.")]
     #[account(4, writable,         name = "market_ata",      desc = "The market's associated token account.")]
     #[account(5,                   name = "mint",            desc = "The token mint account.")]
