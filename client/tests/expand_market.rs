@@ -13,7 +13,9 @@ use dropset_interface::{
     },
 };
 use mollusk_svm::result::Check;
+use solana_account_view::MAX_PERMITTED_DATA_INCREASE;
 use solana_address::Address;
+use solana_program_error::ProgramError;
 
 #[test]
 fn expand_market() -> anyhow::Result<()> {
@@ -41,6 +43,7 @@ fn expand_market() -> anyhow::Result<()> {
         initial_num_free_sectors * Sector::LEN
     );
 
+    // Expand by 1, check that the account data increased by Sector::LEN.
     mollusk.process_and_validate_instruction(
         &market_ctx.expand(funder, 1),
         &[
@@ -51,6 +54,7 @@ fn expand_market() -> anyhow::Result<()> {
         ],
     );
 
+    // Expand by 17, check that the account data increased by (1 + 17) * Sector::LEN.
     mollusk.process_and_validate_instruction(
         &market_ctx.expand(funder, 17),
         &[
@@ -61,10 +65,29 @@ fn expand_market() -> anyhow::Result<()> {
         ],
     );
 
+    // Ensure the instruction fails if the number of sectors to expand by is zero.
     mollusk.process_and_validate_instruction(
         &market_ctx.expand(funder, 0),
         &[DropsetError::NumSectorsCannotBeZero.into_check_failure()],
     );
 
+    // Expand by the max possible number of sectors according to the max permitted data increase
+    // per account + instruction. Then check that the account data increased accordingly.
+    let max_num_sectors_increase = MAX_PERMITTED_DATA_INCREASE / Sector::LEN;
+    mollusk.process_and_validate_instruction(
+        &market_ctx.expand(funder, max_num_sectors_increase as u16),
+        &[
+            Check::success(),
+            Check::account(&market_ctx.market)
+                .space(total_market_data_len + ((1 + 17 + max_num_sectors_increase) * Sector::LEN))
+                .build(),
+        ],
+    );
+
+    // Expect an invalid reallocation error when expanding by the max number of sectors + 1.
+    mollusk.process_and_validate_instruction(
+        &market_ctx.expand(funder, (max_num_sectors_increase + 1) as u16),
+        &[Check::err(ProgramError::InvalidRealloc)],
+    );
     Ok(())
 }
