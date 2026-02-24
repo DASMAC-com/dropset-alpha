@@ -8,6 +8,7 @@ use client::{
     },
     single_signer_instruction::SingleSignerInstruction,
     transactions::{
+        airdrop,
         CustomRpcClient,
         SendTransactionConfig,
     },
@@ -27,6 +28,12 @@ pub struct Info {
     pub maker_seat: MarketSeatView,
 }
 
+#[derive(serde::Serialize)]
+struct MarketInfo {
+    base_mint: String,
+    quote_mint: String,
+}
+
 const MAKER_INITIAL_BASE: u64 = 10_000;
 const MAKER_INITIAL_QUOTE: u64 = 10_000;
 
@@ -43,13 +50,15 @@ async fn main() -> anyhow::Result<()> {
         None,
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(true),
+            debug_logs: Some(false),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
 
     let maker = test_accounts::acc_FFFF();
     let maker_address = maker.pubkey();
+    airdrop(&rpc.client, &test_accounts::default_payer().pubkey()).await?;
+    airdrop(&rpc.client, &maker_address).await?;
 
     let e2e = E2e::new_traders_and_market(
         Some(rpc),
@@ -88,6 +97,16 @@ async fn main() -> anyhow::Result<()> {
             .expect("Should find seat")
             .clone(),
     };
+
+    let keypair_bytes: Vec<u8> = maker.insecure_clone().to_bytes().to_vec();
+    std::fs::write("maker-keypair.json", serde_json::to_string(&keypair_bytes)?)?;
+
+    let market_info = MarketInfo {
+        base_mint: info.base_mint.to_string(),
+        quote_mint: info.quote_mint.to_string(),
+    };
+    std::fs::write("market-info.json", serde_json::to_string(&market_info)?)?;
+
     println!("{info:#?}");
 
     Ok(())

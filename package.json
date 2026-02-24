@@ -5,6 +5,7 @@
     "bench:pack-orders": "bash cu-bench/pack-orders.sh",
     "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
     "bench:to-order-info": "bash cu-bench/to-order-info.sh",
+    "bots:maker": "bash bots/crates/market-maker/market-maker.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
     "build": "pnpm run build:dropset && pnpm run build:pack-orders && pnpm run build:to-order-info",
