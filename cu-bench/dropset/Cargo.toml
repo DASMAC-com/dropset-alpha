@@ -1,0 +1,36 @@
+[package]
+name = "cu-bench-dropset"
+version.workspace = true
+edition.workspace = true
+description = "CU measurement benchmarks for dropset"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+client = { path = "../../client" }
+dropset-interface = { path = "../../interface", features = ["client", "std"], default-features = false }
+mollusk-svm.workspace = true
+price = { path = "../../price", features = ["client"] }
+solana-account.workspace = true
+solana-address.workspace = true
+solana-instruction.workspace = true
+
+# By default, tests will build with release settings so CU usage is accurate.
+[profile.test]
+lto = "fat"
+opt-level = 3
+debug = false
+codegen-units = 1
+overflow-checks = true
+strip = "debuginfo"
+
+# Fast compile time profile for development.
+[profile.fast]
+inherits = "dev"
+opt-level = 0
+debug = true
+lto = "off"
+codegen-units = 256
+incremental = true
+overflow-checks = true
+strip = "none"
