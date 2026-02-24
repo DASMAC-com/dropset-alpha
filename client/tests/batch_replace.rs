@@ -27,7 +27,7 @@ use price::{
 use solana_address::Address;
 
 #[test]
-fn batch_replace() -> anyhow::Result<()> {
+fn batch_replace_add_orders_happy_path() -> anyhow::Result<()> {
     let user_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
