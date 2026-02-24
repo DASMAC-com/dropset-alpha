@@ -3,6 +3,7 @@ use std::{
     fmt::Write,
 };
 
+pub use client::context::market::MarketContext;
 use client::mollusk_helpers::{
     helper_trait::DropsetTestHelper,
     new_dropset_mollusk_context_with_default_market,
@@ -13,7 +14,6 @@ use dropset_interface::state::sector::{
     SectorIndex,
     NIL,
 };
-
 pub use dropset_interface::state::{
     sector::MAX_PERMITTED_SECTOR_INCREASE,
     user_order_sectors::MAX_ORDERS_USIZE,
@@ -23,19 +23,37 @@ use solana_account::Account;
 use solana_address::Address;
 use solana_instruction::Instruction;
 
-pub use client::context::market::MarketContext;
-
 // Token unit sizes — base and quote both use 8 decimal places.
 pub const BASE_UNIT: u64 = 100_000_000;
 pub const QUOTE_UNIT: u64 = 100_000_000;
 
+const fn make_ask_prices<const N: usize>() -> [u32; N] {
+    let mut arr = [0u32; N];
+    let mut i = 0;
+    while i < N {
+        arr[i] = 60_000_000 + i as u32;
+        i += 1;
+    }
+    arr
+}
+
+const fn make_bid_prices<const N: usize>() -> [u32; N] {
+    let mut arr = [0u32; N];
+    let mut i = 0;
+    while i < N {
+        arr[i] = 50_000_000 - i as u32;
+        i += 1;
+    }
+    arr
+}
+
 /// Ask prices in ascending order (lowest ask first = highest ask priority).
 /// These are kept far above bid prices to prevent any accidental crossing.
-pub const ASK_PRICES: [u32; 5] = [60_000_000, 70_000_000, 80_000_000, 90_000_000, 99_000_000];
+pub const ASK_PRICES: [u32; MAX_ORDERS_USIZE] = make_ask_prices();
 
 /// Bid prices in descending order (highest bid first = highest bid priority).
 /// These are kept far below ask prices to prevent any accidental crossing.
-pub const BID_PRICES: [u32; 5] = [50_000_000, 40_000_000, 30_000_000, 20_000_000, 10_000_000];
+pub const BID_PRICES: [u32; MAX_ORDERS_USIZE] = make_bid_prices();
 
 /// Table width for formatted output.
 pub const W: usize = 40;
@@ -49,7 +67,8 @@ pub struct BenchFixture {
 }
 
 /// Creates a benchmark fixture with:
-/// - A default market (base + quote mints, 10 initial sectors).
+/// - A default market (base + quote mints, [client::mollusk_helpers::MOLLUSK_DEFAULT_NUM_SECTORS]
+///   initial sectors).
 /// - A maker with ATAs, minted tokens, a seat, and deposited base + quote.
 ///
 /// The market is NOT pre-expanded; call [`expand_market`] if you want to measure instructions
@@ -64,13 +83,20 @@ pub fn new_bench_fixture() -> BenchFixture {
     let res = ctx.process_instruction_chain(&[
         market_ctx.base.create_ata_idempotent(&maker, &maker),
         market_ctx.quote.create_ata_idempotent(&maker, &maker),
-        market_ctx.base.mint_to_owner(&maker, 1_000 * BASE_UNIT).unwrap(),
-        market_ctx.quote.mint_to_owner(&maker, 1_000_000 * QUOTE_UNIT).unwrap(),
+        market_ctx
+            .base
+            .mint_to_owner(&maker, 1_000 * BASE_UNIT)
+            .unwrap(),
+        market_ctx
+            .quote
+            .mint_to_owner(&maker, 1_000_000 * QUOTE_UNIT)
+            .unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "fixture ATA/mint setup failed");
 
     // First deposit_base with NIL creates the maker's seat.
-    let res = ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL)]);
+    let res =
+        ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL)]);
     assert!(res.program_result.is_ok(), "fixture initial deposit failed");
 
     let seat_index = ctx.get_seat(MOLLUSK_DEFAULT_MARKET.market, maker).index;
@@ -82,7 +108,12 @@ pub fn new_bench_fixture() -> BenchFixture {
     )]);
     assert!(res.program_result.is_ok(), "fixture quote deposit failed");
 
-    BenchFixture { ctx, market_ctx, maker, seat_index }
+    BenchFixture {
+        ctx,
+        market_ctx,
+        maker,
+        seat_index,
+    }
 }
 
 /// Expands the market by [`MAX_PERMITTED_SECTOR_INCREASE`] sectors.
@@ -111,10 +142,17 @@ pub fn add_funded_maker(f: &BenchFixture) -> (Address, SectorIndex) {
     let maker = add_user(f, 10_000_000_000);
     let res = f.ctx.process_instruction_chain(&[
         f.market_ctx.base.create_ata_idempotent(&maker, &maker),
-        f.market_ctx.base.mint_to_owner(&maker, 1_000 * BASE_UNIT).unwrap(),
+        f.market_ctx
+            .base
+            .mint_to_owner(&maker, 1_000 * BASE_UNIT)
+            .unwrap(),
         f.market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL),
     ]);
-    assert!(res.program_result.is_ok(), "add_funded_maker setup failed: {:?}", res.program_result);
+    assert!(
+        res.program_result.is_ok(),
+        "add_funded_maker setup failed: {:?}",
+        res.program_result
+    );
     let seat_index = f.ctx.get_seat(MOLLUSK_DEFAULT_MARKET.market, maker).index;
     (maker, seat_index)
 }

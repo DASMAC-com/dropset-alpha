@@ -24,7 +24,7 @@ use crate::{
 
 /// The max number of orders a single user/address can have for a single market for bids or asks.
 /// That is, each user can have [`MAX_ORDERS`] bids and [`MAX_ORDERS`] asks for a single market.
-pub const MAX_ORDERS: u8 = 5;
+pub const MAX_ORDERS: u8 = 10;
 
 /// Helper const for [`MAX_ORDERS`] as a usize.
 pub const MAX_ORDERS_USIZE: usize = MAX_ORDERS as usize;
@@ -517,11 +517,16 @@ mod tests {
     fn repost_arbitrary_order() {
         let mut order_sectors = UserOrderSectors::default();
         let index_and_mantissa_pairs: [(u32, ValidatedPriceMantissa); MAX_ORDERS_USIZE] = [
-            (1, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
-            (2, ValidatedPriceMantissa::try_from(22_222_222).unwrap()),
-            (3, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),
-            (4, ValidatedPriceMantissa::try_from(44_444_444).unwrap()),
-            (5, ValidatedPriceMantissa::try_from(55_555_555).unwrap()),
+            (1, ValidatedPriceMantissa::try_from(10_000_000).unwrap()),
+            (2, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
+            (3, ValidatedPriceMantissa::try_from(22_222_222).unwrap()),
+            (4, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),
+            (5, ValidatedPriceMantissa::try_from(44_444_444).unwrap()),
+            (6, ValidatedPriceMantissa::try_from(55_555_555).unwrap()),
+            (7, ValidatedPriceMantissa::try_from(66_666_666).unwrap()),
+            (8, ValidatedPriceMantissa::try_from(77_777_777).unwrap()),
+            (9, ValidatedPriceMantissa::try_from(88_888_888).unwrap()),
+            (10, ValidatedPriceMantissa::try_from(99_999_999).unwrap()),
         ];
 
         let index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] =

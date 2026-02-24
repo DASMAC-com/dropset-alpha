@@ -15,7 +15,7 @@ use solana_program_error::ProgramError;
 use static_assertions::const_assert_eq;
 
 use crate::{
-    instructions::orders::private::UpToFive,
+    instructions::orders::private::UpToTen,
     state::user_order_sectors::{
         MAX_ORDERS,
         MAX_ORDERS_USIZE,
@@ -39,7 +39,7 @@ impl UnvalidatedOrders {
     #[inline(always)]
     pub fn new<const N: usize>(orders: [OrderInfoArgs; N]) -> Self
     where
-        [OrderInfoArgs; N]: UpToFive<N>,
+        [OrderInfoArgs; N]: UpToTen<N>,
     {
         let mut res: [MaybeUninit<OrderInfoArgs>; MAX_ORDERS_USIZE] =
             [const { MaybeUninit::uninit() }; MAX_ORDERS_USIZE];
@@ -100,15 +100,20 @@ unsafe impl Pack for UnvalidatedOrders {
     /// destination offset increased by the amount written each time.
     #[inline(always)]
     unsafe fn write_bytes(&self, dst: *mut u8) {
-        // This implementation was written with the expectation that the max number of orders is 5.
+        // This implementation was written with the expectation that the max number of orders is 10.
         // If that changes, the implementation needs to change to account for the different size.
-        const_assert_eq!(MAX_ORDERS, 5);
+        const_assert_eq!(MAX_ORDERS, 10);
 
         self.order_args[0].write_bytes(dst);
         self.order_args[1].write_bytes(dst.add(OrderInfoArgs::LEN));
         self.order_args[2].write_bytes(dst.add(OrderInfoArgs::LEN * 2));
         self.order_args[3].write_bytes(dst.add(OrderInfoArgs::LEN * 3));
         self.order_args[4].write_bytes(dst.add(OrderInfoArgs::LEN * 4));
+        self.order_args[5].write_bytes(dst.add(OrderInfoArgs::LEN * 5));
+        self.order_args[6].write_bytes(dst.add(OrderInfoArgs::LEN * 6));
+        self.order_args[7].write_bytes(dst.add(OrderInfoArgs::LEN * 7));
+        self.order_args[8].write_bytes(dst.add(OrderInfoArgs::LEN * 8));
+        self.order_args[9].write_bytes(dst.add(OrderInfoArgs::LEN * 9));
     }
 
     #[inline(always)]
@@ -134,9 +139,9 @@ unsafe impl Unpack for UnvalidatedOrders {
     /// Caller must guarantee `src` points to at least [Self::LEN] bytes of readable memory.
     #[inline(always)]
     unsafe fn read_bytes(src: *const u8) -> Result<Self, solana_program_error::ProgramError> {
-        // This implementation was written with the expectation that the max number of orders is 5.
+        // This implementation was written with the expectation that the max number of orders is 10.
         // If that changes, the implementation needs to change to account for the different size.
-        const_assert_eq!(MAX_ORDERS, 5);
+        const_assert_eq!(MAX_ORDERS, 10);
 
         Ok(Self {
             order_args: [
@@ -145,6 +150,11 @@ unsafe impl Unpack for UnvalidatedOrders {
                 OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 2))?,
                 OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 3))?,
                 OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 4))?,
+                OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 5))?,
+                OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 6))?,
+                OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 7))?,
+                OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 8))?,
+                OrderInfoArgs::read_bytes(src.add(OrderInfoArgs::LEN * 9))?,
             ],
         })
     }
@@ -165,15 +175,20 @@ mod private {
 
     // This sealed trait was written with the expectation that the max number of orders is 5.
     // If that changes, the trait needs to change to account for the different size.
-    const_assert_eq!(MAX_ORDERS, 5);
+    const_assert_eq!(MAX_ORDERS, 10);
 
     /// Marker trait: implemented only for arrays of length 0..=[MAX_ORDERS].
-    pub trait UpToFive<const N: usize> {}
+    pub trait UpToTen<const N: usize> {}
 
-    impl UpToFive<0> for [OrderInfoArgs; 0] {}
-    impl UpToFive<1> for [OrderInfoArgs; 1] {}
-    impl UpToFive<2> for [OrderInfoArgs; 2] {}
-    impl UpToFive<3> for [OrderInfoArgs; 3] {}
-    impl UpToFive<4> for [OrderInfoArgs; 4] {}
-    impl UpToFive<5> for [OrderInfoArgs; 5] {}
+    impl UpToTen<0> for [OrderInfoArgs; 0] {}
+    impl UpToTen<1> for [OrderInfoArgs; 1] {}
+    impl UpToTen<2> for [OrderInfoArgs; 2] {}
+    impl UpToTen<3> for [OrderInfoArgs; 3] {}
+    impl UpToTen<4> for [OrderInfoArgs; 4] {}
+    impl UpToTen<5> for [OrderInfoArgs; 5] {}
+    impl UpToTen<6> for [OrderInfoArgs; 6] {}
+    impl UpToTen<7> for [OrderInfoArgs; 7] {}
+    impl UpToTen<8> for [OrderInfoArgs; 8] {}
+    impl UpToTen<9> for [OrderInfoArgs; 9] {}
+    impl UpToTen<10> for [OrderInfoArgs; 10] {}
 }
