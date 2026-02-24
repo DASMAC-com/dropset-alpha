@@ -1,5 +1,26 @@
 #!/usr/bin/env bash
+
+################################################################################
+# To run:
+#
+# solana-test-validator -r
+#
+# bash bots/crates/market-maker/market-maker.sh
+#
+#        or...
+#
+# bash bots/crates/market-maker/market-maker.sh --no-batch-replace
+################################################################################
+
 set -euo pipefail
+
+BATCH_REPLACE=true
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --no-batch-replace) BATCH_REPLACE=false; shift ;;
+    *) echo "Unknown arg: $1"; exit 1 ;;
+  esac
+done
 
 ROOT="$(git rev-parse --show-toplevel)"
 MANIFEST_PATH="$ROOT/bots/crates/market-maker/Cargo.toml"
@@ -18,9 +39,13 @@ solana program deploy target/deploy/dropset.so --program-id test-keypair.json
 BASE_MINT=$(jq -r '.base_mint' "$ROOT/bots/crates/market-maker/market-info.json")
 QUOTE_MINT=$(jq -r '.quote_mint' "$ROOT/bots/crates/market-maker/market-info.json")
 
+BATCH_REPLACE_FLAG=""
+if [ "$BATCH_REPLACE" = "true" ]; then BATCH_REPLACE_FLAG="--batch-replace"; fi
+
 cargo run --manifest-path "$MANIFEST_PATH" -- \
   --base-mint "$BASE_MINT" \
   --quote-mint "$QUOTE_MINT" \
   --pair EUR_USD \
   --target-base 8000 \
-  --keypair "$KEYPAIR_FILE"
+  --keypair "$KEYPAIR_FILE" \
+  $BATCH_REPLACE_FLAG

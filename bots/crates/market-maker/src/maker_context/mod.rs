@@ -5,7 +5,12 @@ use client::{
     },
     transactions::CustomRpcClient,
 };
+use dropset_interface::instructions::{
+    BatchReplaceInstructionData,
+    UnvalidatedOrders,
+};
 use itertools::Itertools;
+use price::client_helpers::to_order_info_args;
 use rust_decimal::Decimal;
 use solana_address::Address;
 use solana_keypair::Signer;
@@ -69,19 +74,35 @@ pub struct MakerContext {
     /// Note that the price as quote_atoms / base_atoms may differ from quote / base. Be sure to
     /// express the price as a ratio of atoms.
     mid_price: Decimal,
+
+    /// Whether or not to use batch replace instead of individual instructions.
+    pub batch_replace: bool,
+}
+
+pub struct MakerContextInitArgs<'a> {
+    pub rpc: &'a CustomRpcClient,
+    pub maker: Keypair,
+    pub base_mint: Address,
+    pub quote_mint: Address,
+    pub pair: CurrencyPair,
+    pub base_target_atoms: u64,
+    pub initial_price_feed_response: OandaCandlestickResponse,
+    pub batch_replace: bool,
 }
 
 impl MakerContext {
     /// Creates a new maker context from a token pair.
-    pub async fn init(
-        rpc: &CustomRpcClient,
-        maker: Keypair,
-        base_mint: Address,
-        quote_mint: Address,
-        pair: CurrencyPair,
-        base_target_atoms: u64,
-        initial_price_feed_response: OandaCandlestickResponse,
-    ) -> anyhow::Result<Self> {
+    pub async fn init(args: MakerContextInitArgs<'_>) -> anyhow::Result<Self> {
+        let MakerContextInitArgs {
+            rpc,
+            maker,
+            base_mint,
+            quote_mint,
+            pair,
+            base_target_atoms,
+            initial_price_feed_response,
+            batch_replace,
+        } = args;
         let base_account = rpc.client.get_account(&base_mint).await?;
         let base =
             TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
@@ -107,6 +128,7 @@ impl MakerContext {
             latest_state,
             base_target_atoms,
             mid_price,
+            batch_replace,
         })
     }
 
@@ -148,17 +170,36 @@ impl MakerContext {
 
         log_orders(&posts, &cancels)?;
 
-        let ixns = cancels
-            .into_iter()
-            .map(|cancel| self.market_ctx.cancel_order(self.maker_address, cancel))
-            .chain(
-                posts
-                    .into_iter()
-                    .map(|post| self.market_ctx.post_order(self.maker_address, post)),
-            )
-            .collect_vec();
+        if self.batch_replace {
+            if cancels.len() + posts.len() == 0 {
+                return Ok(vec![]);
+            }
+            let ixn =
+                self.market_ctx.batch_replace(
+                    self.maker_address,
+                    BatchReplaceInstructionData::new(
+                        self.latest_state.seat.index,
+                        UnvalidatedOrders::new([to_order_info_args(bid_price, ORDER_SIZE)
+                            .expect("Should be a valid order")]),
+                        UnvalidatedOrders::new([to_order_info_args(ask_price, ORDER_SIZE)
+                            .expect("Should be a valid order")]),
+                    ),
+                );
 
-        Ok(ixns)
+            Ok(vec![ixn])
+        } else {
+            let ixns = cancels
+                .into_iter()
+                .map(|cancel| self.market_ctx.cancel_order(self.maker_address, cancel))
+                .chain(
+                    posts
+                        .into_iter()
+                        .map(|post| self.market_ctx.post_order(self.maker_address, post)),
+                )
+                .collect_vec();
+
+            Ok(ixns)
+        }
     }
 
     pub fn update_maker_state(&mut self, new_market_state: MarketViewAll) -> anyhow::Result<()> {
