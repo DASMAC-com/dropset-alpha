@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "bench:dropset": "bash cu-bench/dropset/run-bench.sh",
     "bench:manifest": "bash cu-bench/manifest/run-bench.sh",
     "bench:pack-orders": "bash cu-bench/pack-orders.sh",
     "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",

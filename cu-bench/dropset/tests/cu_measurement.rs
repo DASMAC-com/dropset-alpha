@@ -28,8 +28,8 @@ use price::{
     OrderInfoArgs,
 };
 
-/// Max orders per side in a single BatchReplace (sealed by `UpToFive`).
-const BATCH_AMOUNTS: &[u64] = &[1, 3, 5];
+/// Max orders per side in a single BatchReplace.
+const BATCH_AMOUNTS: &[u64] = &[1, 5, MAX_ORDERS_USIZE as u64];
 /// Number of resting asks crossed by a single MarketOrder.
 const SWAP_FILL_AMOUNTS: &[u64] = &[1, 10, 50];
 
@@ -44,7 +44,10 @@ fn cu_deposit() -> anyhow::Result<()> {
 
     // Fixture already deposited base to create the seat; measure a subsequent
     // deposit — the hot path where the seat already exists.
-    let cu = measure_cu(&f, f.market_ctx.deposit_base(f.maker, BASE_UNIT, f.seat_index));
+    let cu = measure_cu(
+        &f,
+        f.market_ctx.deposit_base(f.maker, BASE_UNIT, f.seat_index),
+    );
 
     fmt_subtable(&mut logs, "Deposits", &[(1, cu)]);
     eprintln!("{logs}");
@@ -109,7 +112,10 @@ fn cu_cancel_order() -> anyhow::Result<()> {
     let f = new_bench_fixture();
 
     let order_args = OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1);
-    let encoded_price = to_order_info(order_args.clone()).unwrap().encoded_price.as_u32();
+    let encoded_price = to_order_info(order_args.clone())
+        .unwrap()
+        .encoded_price
+        .as_u32();
 
     // Setup: place the ask (not measured).
     let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
@@ -189,7 +195,7 @@ fn batch_replace_place(n: u64, pre_expand: bool) -> u64 {
         expand_market(&f);
     }
 
-    let cu = match n {
+    let cu = match n as usize {
         1 => {
             let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
             measure_cu(
@@ -204,12 +210,9 @@ fn batch_replace_place(n: u64, pre_expand: bool) -> u64 {
                 ),
             )
         }
-        3 => {
-            let asks = [
-                OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[1], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[2], 1),
-            ];
+        5 => {
+            let asks: [OrderInfoArgs; 5] =
+                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
             measure_cu(
                 &f,
                 f.market_ctx.batch_replace(
@@ -222,14 +225,9 @@ fn batch_replace_place(n: u64, pre_expand: bool) -> u64 {
                 ),
             )
         }
-        5 => {
-            let asks = [
-                OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[1], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[2], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[3], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[4], 1),
-            ];
+        MAX_ORDERS_USIZE => {
+            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
+                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
             measure_cu(
                 &f,
                 f.market_ctx.batch_replace(
@@ -256,11 +254,11 @@ fn batch_replace_cancel(n: u64, pre_expand: bool) -> u64 {
     }
 
     // Setup: place n asks via PostOrder (not measured).
-    for i in 0..n as usize {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
-                OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1),
+                OrderInfoArgs::new_unscaled(price_mantissa, 1),
                 false,
                 f.seat_index,
             ),
@@ -293,11 +291,11 @@ fn batch_replace_replace(n: u64, pre_expand: bool) -> u64 {
     }
 
     // Setup: place n asks via PostOrder (not measured).
-    for i in 0..n as usize {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
-                OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1),
+                OrderInfoArgs::new_unscaled(price_mantissa, 1),
                 false,
                 f.seat_index,
             ),
@@ -306,7 +304,7 @@ fn batch_replace_replace(n: u64, pre_expand: bool) -> u64 {
     }
 
     // Measure: BatchReplace cancels the n existing asks and places n new ones.
-    let cu = match n {
+    let cu = match n as usize {
         1 => {
             let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
             measure_cu(
@@ -321,12 +319,9 @@ fn batch_replace_replace(n: u64, pre_expand: bool) -> u64 {
                 ),
             )
         }
-        3 => {
-            let asks = [
-                OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[1], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[2], 1),
-            ];
+        5 => {
+            let asks: [OrderInfoArgs; 5] =
+                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
             measure_cu(
                 &f,
                 f.market_ctx.batch_replace(
@@ -339,14 +334,9 @@ fn batch_replace_replace(n: u64, pre_expand: bool) -> u64 {
                 ),
             )
         }
-        5 => {
-            let asks = [
-                OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[1], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[2], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[3], 1),
-                OrderInfoArgs::new_unscaled(ASK_PRICES[4], 1),
-            ];
+        MAX_ORDERS_USIZE => {
+            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
+                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
             measure_cu(
                 &f,
                 f.market_ctx.batch_replace(
@@ -440,11 +430,11 @@ fn individual_cancel(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks (not measured).
-    for i in 0..n as usize {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
-                OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1),
+                OrderInfoArgs::new_unscaled(price_mantissa, 1),
                 false,
                 f.seat_index,
             ),
@@ -454,11 +444,10 @@ fn individual_cancel(n: u64) -> u64 {
 
     let total_cu: u64 = (0..n as usize)
         .map(|i| {
-            let encoded_price =
-                to_order_info(OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
-                    .unwrap()
-                    .encoded_price
-                    .as_u32();
+            let encoded_price = to_order_info(OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+                .unwrap()
+                .encoded_price
+                .as_u32();
             measure_cu(
                 &f,
                 f.market_ctx.cancel_order(
@@ -479,11 +468,11 @@ fn individual_cancel_and_place(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks (not measured).
-    for i in 0..n as usize {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
-                OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1),
+                OrderInfoArgs::new_unscaled(price_mantissa, 1),
                 false,
                 f.seat_index,
             ),
@@ -494,11 +483,10 @@ fn individual_cancel_and_place(n: u64) -> u64 {
     // Measure: n individual CancelOrder calls.
     let cancel_cu: u64 = (0..n as usize)
         .map(|i| {
-            let encoded_price =
-                to_order_info(OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
-                    .unwrap()
-                    .encoded_price
-                    .as_u32();
+            let encoded_price = to_order_info(OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+                .unwrap()
+                .encoded_price
+                .as_u32();
             measure_cu(
                 &f,
                 f.market_ctx.cancel_order(
@@ -560,9 +548,10 @@ fn market_order_fill(n: u64) -> u64 {
         expand_market(&f);
     }
 
-    // Prices are distinct, ascending, and within [MANTISSA_DIGITS_LOWER_BOUND, MANTISSA_DIGITS_UPPER_BOUND]
-    // (step of 1_000_000 supports up to 89 distinct prices: 10M..99M).
-    // base_scalar=1 keeps base_atoms tiny so deposited balances are always sufficient.
+    // Prices are distinct, ascending, and within [MANTISSA_DIGITS_LOWER_BOUND,
+    // MANTISSA_DIGITS_UPPER_BOUND] (step of 1_000_000 supports up to 89 distinct prices:
+    // 10M..99M). base_scalar=1 keeps base_atoms tiny so deposited balances are always
+    // sufficient.
     let ask_args: Vec<OrderInfoArgs> = (0..n as usize)
         .map(|i| OrderInfoArgs::new_unscaled(10_000_000 + i as u32 * 1_000_000, 1))
         .collect();
@@ -596,7 +585,10 @@ fn market_order_fill(n: u64) -> u64 {
     let res = f.ctx.process_instruction_chain(&[
         f.market_ctx.base.create_ata_idempotent(&taker, &taker),
         f.market_ctx.quote.create_ata_idempotent(&taker, &taker),
-        f.market_ctx.quote.mint_to_owner(&taker, quote_needed * 10).unwrap(),
+        f.market_ctx
+            .quote
+            .mint_to_owner(&taker, quote_needed * 10)
+            .unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "taker setup failed");
 
