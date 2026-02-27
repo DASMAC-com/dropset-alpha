@@ -200,13 +200,15 @@ unsafe fn add_new_orders_and_update_seat_balance<Side: OrdersCollection>(
         // Safety: `iter_sector_idx` is either the head of the list (initially) or a sector index
         // returned from the previous call to `find_new_order_next_index`, which is guaranteed to be
         // either NIL or a valid sector index in the list.
-        let (next_index, curr_index) =
+        let next_index =
             Side::find_new_order_next_index(unsafe { list.iter_from(iter_sector_index) }, &order);
         let insertion_index = insert_order(next_index, list, order)?;
 
         // Since orders are sorted in descending price priority, it's much more efficient to start
         // each search from the current index rather than from the head.
-        iter_sector_index = curr_index;
+        // Since each order is inserted after one another, the new current index (post insertion) is
+        // the newly inserted index.
+        iter_sector_index = insertion_index;
 
         // Add the order to the user's order sectors mapping with an unchecked add operation where
         // the order isn't checked for duplication within the order sectors mapping.

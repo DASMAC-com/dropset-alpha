@@ -9,10 +9,7 @@ use dropset_interface::{
     },
     state::sector::NIL,
 };
-use price::{
-    to_order_info,
-    OrderInfoArgs,
-};
+use price::OrderInfoArgs;
 use solana_sdk::{
     signature::Keypair,
     signer::Signer,

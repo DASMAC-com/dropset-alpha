@@ -49,18 +49,18 @@ impl OrdersCollection for BidOrders {
     fn find_new_order_next_index(
         mut list_iterator: LinkedListIter<'_>,
         new_order: &Order,
-    ) -> (NextSectorIndex, SectorIndex) {
+    ) -> NextSectorIndex {
         // Find the first price that is less than the new bid.
         for (index, sector) in list_iterator.by_ref() {
             let order = sector.load_payload::<Order>();
             if order.encoded_price() < new_order.encoded_price() {
-                return (NextSectorIndex(index), list_iterator.curr);
+                return NextSectorIndex(index);
             }
         }
 
         // If the sector is to be inserted at the end of the list, the new `next` index is `NIL`,
         // since the new sector is the new tail.
-        (NextSectorIndex(NIL), list_iterator.curr)
+        NextSectorIndex(NIL)
     }
 
     /// A post-only bid order can only be posted if the input price < the lowest ask, because it
