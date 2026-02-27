@@ -2,11 +2,17 @@ use client::e2e_helpers::{
     E2e,
     Trader,
 };
-use dropset_interface::instructions::{
-    BatchReplaceInstructionData,
-    UnvalidatedOrders,
+use dropset_interface::{
+    instructions::{
+        BatchReplaceInstructionData,
+        UnvalidatedOrders,
+    },
+    state::sector::NIL,
 };
-use price::OrderInfoArgs;
+use price::{
+    to_order_info,
+    OrderInfoArgs,
+};
 use solana_sdk::{
     signature::Keypair,
     signer::Signer,
@@ -15,7 +21,22 @@ use solana_sdk::{
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let trader = Keypair::new();
-    let e2e = E2e::new_traders_and_market(None, [Trader::new(&trader, 0, 0)]).await?;
+    let e2e =
+        E2e::new_traders_and_market(None, [Trader::new(&trader, 1_000_000_000, 1_000_000_000)])
+            .await?;
+
+    let base = e2e.get_base_balance(&trader.pubkey()).await?;
+    let quote = e2e.get_quote_balance(&trader.pubkey()).await?;
+    println!("{base} {quote}");
+
+    e2e.market
+        .deposit_base(trader.pubkey(), 1_000_000_000, NIL)
+        .send_single_signer(&e2e.rpc, &trader)
+        .await?;
+    e2e.market
+        .deposit_quote(trader.pubkey(), 1_000_000_000, 0)
+        .send_single_signer(&e2e.rpc, &trader)
+        .await?;
 
     let res = e2e
         .market
