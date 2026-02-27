@@ -32,6 +32,7 @@ pub fn initialize_market_account_data<'a>(
 
     let sector_bytes = account_data_len - MarketHeader::LEN;
 
+    #[allow(clippy::manual_is_multiple_of)] // not on `stable` yet.
     if sector_bytes % SECTOR_SIZE != 0 {
         return Err(DropsetError::UnalignedData);
     }
