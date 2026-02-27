@@ -1,7 +1,4 @@
-use clap::{
-    command,
-    Parser,
-};
+use clap::Parser;
 use client::transactions::CustomRpcClient;
 use solana_address::Address;
 
