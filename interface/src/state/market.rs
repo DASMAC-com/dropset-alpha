@@ -89,24 +89,22 @@ impl<'a> MarketRefMut<'a> {
     }
 
     #[inline(always)]
-    pub fn seats(&mut self) -> SeatsLinkedList {
+    pub fn seats(&'_ mut self) -> SeatsLinkedList<'_> {
         SeatsLinkedList::new_from_parts(self.header, self.sectors)
     }
 
     #[inline(always)]
-    pub fn bids(&mut self) -> BidOrdersLinkedList {
+    pub fn bids(&'_ mut self) -> BidOrdersLinkedList<'_> {
         BidOrdersLinkedList::new_from_parts(self.header, self.sectors)
     }
 
     #[inline(always)]
-    pub fn asks(&mut self) -> AskOrdersLinkedList {
+    pub fn asks(&'_ mut self) -> AskOrdersLinkedList<'_> {
         AskOrdersLinkedList::new_from_parts(self.header, self.sectors)
     }
 
     #[inline(always)]
-    pub fn orders<T: OrdersCollection>(
-        &mut self,
-    ) -> LinkedList<'_, T> {
+    pub fn orders<T: OrdersCollection>(&mut self) -> LinkedList<'_, T> {
         LinkedList::new_from_parts(self.header, self.sectors)
     }
 }
