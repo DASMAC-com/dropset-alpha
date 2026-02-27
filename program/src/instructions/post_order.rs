@@ -132,6 +132,6 @@ fn post_only_check_and_insert_order<T: OrdersCollection>(
     order: Order,
 ) -> Result<SectorIndex, DropsetError> {
     T::post_only_crossing_check(&order, market)?;
-    let (next_index, _hint) = T::find_new_order_next_index(market.orders::<T>().iter(), &order);
+    let next_index = T::find_new_order_next_index(market.orders::<T>().iter(), &order);
     insert_order(next_index, &mut market.orders::<T>(), order)
 }

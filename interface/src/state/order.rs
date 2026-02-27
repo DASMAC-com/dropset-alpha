@@ -67,7 +67,7 @@ pub trait OrdersCollection: LinkedListHeaderOperations {
     fn find_new_order_next_index(
         list_iterator: LinkedListIter<'_>,
         new_order: &Order,
-    ) -> (NextSectorIndex, SectorIndex);
+    ) -> NextSectorIndex;
 
     /// A post-only order must not execute immediately, so it must fail if it would cross the book
     /// and match against resting liquidity.

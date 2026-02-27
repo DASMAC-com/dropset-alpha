@@ -139,7 +139,7 @@ mod tests {
         list: &mut LinkedList<'_, T>,
         order: &Order,
     ) -> SectorIndex {
-        let (next_index, _hint) = T::find_new_order_next_index(list.iter(), order);
+        let next_index = T::find_new_order_next_index(list.iter(), order);
         insert_order(next_index, list, order.clone()).expect("Should insert order")
     }
 
