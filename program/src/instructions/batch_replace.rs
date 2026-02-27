@@ -259,27 +259,3 @@ unsafe fn add_new_orders_and_update_seat_balance<Side: OrdersCollection>(
 
     Ok(())
 }
-
-#[cfg(feature = "debug")]
-fn log_orders(
-    bids: &dropset_interface::instructions::UnvalidatedOrders,
-    asks: &dropset_interface::instructions::UnvalidatedOrders,
-) {
-    use crate::debug;
-
-    debug!("num bids: {}", bids.num_orders);
-    for order in bids
-        .clone()
-        .into_valid_order_infos_iter()
-        .chain(asks.clone().into_valid_order_infos_iter())
-    {
-        debug!("OrderInfoArgs {");
-        debug!("    price_mantissa: {}", order.price_mantissa);
-        debug!("    base_scalar: {}", order.base_scalar);
-        debug!("    base_exponent_biased: {}", order.base_exponent_biased);
-        debug!("    quote_exponent_biased: {}", order.quote_exponent_biased);
-        debug!("}");
-        debug!("");
-        let _ = order;
-    }
-}
