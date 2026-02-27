@@ -105,13 +105,6 @@ fn batch_replace_add_orders_happy_path() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Regression test for the `find_new_order_next_index` hint bug.
-///
-/// The iterator advances `curr` past the matched node before returning, so returning
-/// `list_iterator.curr` as the next-search hint skips the matched node itself. When a batch
-/// order's price falls between the matched node's price and the node after it, the insertion
-/// lands in the wrong position and the book ends up unsorted.
-///
 /// Setup: maker A posts bids at [90M, 70M, 50M], then maker B batch-replaces with bids at
 /// [80M, 71M]. These interleave with A's orders. Correct book: [90M, 80M, 71M, 70M, 50M].
 /// Buggy result: [90M, 80M, 70M, 71M, 50M].
