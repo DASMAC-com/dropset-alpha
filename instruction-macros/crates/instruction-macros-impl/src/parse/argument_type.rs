@@ -21,6 +21,7 @@ use crate::{
     render::pack_struct_fields::fully_qualified_pack_trait,
 };
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
     KnownType(KnownType),
