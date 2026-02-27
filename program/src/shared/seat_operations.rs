@@ -121,8 +121,8 @@ pub unsafe fn load_mut_seat_with_hint<'m>(
     }
 }
 
-/// Loads a market seat given an index hint without checking that the seat belongs to the user
-/// address passed.
+/// Loads a market seat given an index hint without checking that the seat belongs to a specific
+/// user address.
 ///
 /// # Safety
 ///
@@ -141,8 +141,8 @@ where
     sector.load_payload::<MarketSeat>()
 }
 
-/// Loads a mutable market seat given an index hint without checking that the seat belongs to the
-/// user address passed.
+/// Loads a mutable market seat given an index hint without checking that the seat belongs to a
+/// specific user address.
 ///
 /// # Safety
 ///
