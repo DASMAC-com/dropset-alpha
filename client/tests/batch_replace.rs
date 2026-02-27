@@ -15,6 +15,7 @@ use dropset_interface::{
         NIL,
     },
 };
+use itertools::Itertools;
 use mollusk_svm::result::Check;
 use price::{
     client_helpers::{
@@ -99,6 +100,133 @@ fn batch_replace_add_orders_happy_path() -> anyhow::Result<()> {
             assert_eq!(ask.quote_remaining, order.quote_atoms);
             assert_eq!(ask.encoded_price, order.encoded_price);
         }
+    });
+
+    Ok(())
+}
+
+/// Regression test for the `find_new_order_next_index` hint bug.
+///
+/// The iterator advances `curr` past the matched node before returning, so returning
+/// `list_iterator.curr` as the next-search hint skips the matched node itself. When a batch
+/// order's price falls between the matched node's price and the node after it, the insertion
+/// lands in the wrong position and the book ends up unsorted.
+///
+/// Setup: maker A posts bids at [90M, 70M, 50M], then maker B batch-replaces with bids at
+/// [80M, 71M]. These interleave with A's orders. Correct book: [90M, 80M, 71M, 70M, 50M].
+/// Buggy result: [90M, 80M, 70M, 71M, 50M].
+#[test]
+fn batch_replace_interleaved_bids_are_sorted() -> anyhow::Result<()> {
+    let maker_a_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
+    let maker_b_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
+    let maker_a = maker_a_mock.0;
+    let maker_b = maker_b_mock.0;
+    let (mollusk, market_ctx) =
+        new_dropset_mollusk_context_with_default_market(&[maker_a_mock, maker_b_mock]);
+
+    // Bids must be in descending price priority order (highest first).
+    // Maker B's prices (80M, 71M) interleave with maker A's (90M, 70M, 50M).
+    // Valid mantissa range: [10_000_000, 99_999_999].
+    let maker_a_bids = [
+        OrderInfoArgs::order_at_price(90_000_000),
+        OrderInfoArgs::order_at_price(70_000_000),
+        OrderInfoArgs::order_at_price(50_000_000),
+    ];
+    let maker_b_bids = [
+        OrderInfoArgs::order_at_price(80_000_000),
+        OrderInfoArgs::order_at_price(71_000_000),
+    ];
+
+    let maker_a_quote = sum_quote_necessary(&maker_a_bids);
+    let maker_b_quote = sum_quote_necessary(&maker_b_bids);
+
+    // Set up maker A: create ATAs, mint 1 base (to create seat via deposit_base), mint quote.
+    assert!(mollusk
+        .process_instruction_chain(&[
+            market_ctx.base.create_ata_idempotent(&maker_a, &maker_a),
+            market_ctx.quote.create_ata_idempotent(&maker_a, &maker_a),
+            market_ctx.base.mint_to_owner(&maker_a, 1)?,
+            market_ctx.quote.mint_to_owner(&maker_a, maker_a_quote)?,
+        ])
+        .program_result
+        .is_ok());
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.deposit_base(maker_a, 1, NIL)])
+        .program_result
+        .is_ok());
+
+    let maker_a_seat = mollusk.get_seat(market_ctx.market, maker_a).index;
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.deposit_quote(
+            maker_a,
+            maker_a_quote,
+            maker_a_seat,
+        )])
+        .program_result
+        .is_ok());
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.batch_replace(
+            maker_a,
+            BatchReplaceInstructionData::new(
+                maker_a_seat,
+                UnvalidatedOrders::new(maker_a_bids),
+                UnvalidatedOrders::new([]),
+            ),
+        )])
+        .program_result
+        .is_ok());
+
+    // Set up maker B identically.
+    assert!(mollusk
+        .process_instruction_chain(&[
+            market_ctx.base.create_ata_idempotent(&maker_b, &maker_b),
+            market_ctx.quote.create_ata_idempotent(&maker_b, &maker_b),
+            market_ctx.base.mint_to_owner(&maker_b, 1)?,
+            market_ctx.quote.mint_to_owner(&maker_b, maker_b_quote)?,
+        ])
+        .program_result
+        .is_ok());
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.deposit_base(maker_b, 1, NIL)])
+        .program_result
+        .is_ok());
+
+    let maker_b_seat = mollusk.get_seat(market_ctx.market, maker_b).index;
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.deposit_quote(
+            maker_b,
+            maker_b_quote,
+            maker_b_seat,
+        )])
+        .program_result
+        .is_ok());
+
+    assert!(mollusk
+        .process_instruction_chain(&[market_ctx.batch_replace(
+            maker_b,
+            BatchReplaceInstructionData::new(
+                maker_b_seat,
+                UnvalidatedOrders::new(maker_b_bids),
+                UnvalidatedOrders::new([]),
+            ),
+        )])
+        .program_result
+        .is_ok());
+
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_bids(5);
+    check.bids(|bids| {
+        let prices = bids.iter().map(|b| b.encoded_price.as_u32()).collect_vec();
+        assert_eq!(
+            prices,
+            vec![90_000_000, 80_000_000, 71_000_000, 70_000_000, 50_000_000],
+            "bid book is not sorted correctly"
+        );
     });
 
     Ok(())
