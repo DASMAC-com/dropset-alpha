@@ -60,10 +60,6 @@ pub trait OrdersCollection: LinkedListHeaderOperations {
     /// `prev => new => next`
     ///
     /// where this function returns the `next` sector's sector index.
-    ///
-    /// It also returns the current iterator position after searching, which can be used as a hint
-    /// for subsequent searches. This is useful for batch operations since it facilitates inserting
-    /// sorted orders in a single pass, as opposed to searching the whole list for each new order.
     fn find_new_order_next_index(
         list_iterator: LinkedListIter<'_>,
         new_order: &Order,
