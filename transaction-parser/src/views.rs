@@ -89,6 +89,14 @@ pub fn try_market_view_all_from_owner_and_data(
         return Err(anyhow::Error::msg("Account is uninitialized"));
     }
 
+    let bytes_past_header = account_data.len() - MarketHeader::LEN;
+
+    #[allow(clippy::manual_is_multiple_of)] // not on the sbf toolchain yet.
+    if bytes_past_header % Sector::LEN != 0 {
+        let msg = format!("Account has an invalid amount of bytes, got {bytes_past_header}");
+        return Err(anyhow::Error::msg(msg));
+    }
+
     // Safety: Length was just checked.
     let market = unsafe { MarketRef::from_bytes(account_data) };
 
