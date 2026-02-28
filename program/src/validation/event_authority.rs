@@ -1,4 +1,4 @@
-//! See [`EventAuthorityInfo`].
+//! See [`EventAuthorityView`].
 
 use dropset_interface::{
     error::DropsetError,

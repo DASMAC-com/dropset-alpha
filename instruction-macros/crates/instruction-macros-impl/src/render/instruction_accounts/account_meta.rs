@@ -1,4 +1,4 @@
-//! See [`InstructionAccount::render_account_meta`].
+//! See [`InstructionAccount::render_instruction_account_view`].
 
 use proc_macro2::TokenStream;
 use quote::{

@@ -18,7 +18,7 @@ use crate::parse::{
     parsed_enum::ParsedEnum,
 };
 
-/// Renders a TryFrom<u8> for an instruction tag enum type `T`.
+/// Renders a `TryFrom<u8>` implementation for an instruction tag enum type `T`.
 ///
 /// ## Example
 /// ```rust,ignore

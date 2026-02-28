@@ -9,6 +9,7 @@ pub mod mollusk_helpers;
 pub mod pda;
 pub mod pretty;
 pub mod single_signer_instruction;
+pub mod test_helpers;
 pub mod token_instructions;
 pub mod transactions;
 

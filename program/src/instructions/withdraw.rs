@@ -12,7 +12,7 @@ use pinocchio::{
 
 use crate::{
     context::{
-        deposit_withdraw_context::DepositWithdrawContext,
+        withdraw_context::WithdrawContext,
         EventBufferContext,
     },
     events::EventBuffer,
@@ -40,7 +40,7 @@ pub unsafe fn process_withdraw<'a>(
     } = WithdrawInstructionData::unpack_untagged(instruction_data)?;
 
     // Safety: No account data in `accounts` is currently borrowed.
-    let mut ctx = unsafe { DepositWithdrawContext::load(accounts) }?;
+    let mut ctx = unsafe { WithdrawContext::load(accounts) }?;
     unsafe {
         withdraw_non_zero_from_market(
             &ctx.user_ata,

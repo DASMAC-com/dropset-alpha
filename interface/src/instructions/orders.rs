@@ -1,3 +1,5 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 use core::mem::MaybeUninit;
 
 use instruction_macros::{
@@ -22,7 +24,7 @@ use crate::{
 
 /// A static array of unvalidated orders args with up to [MAX_ORDERS] valid [OrderInfoArgs].
 ///
-/// Each element is validated in the [Self::into_order_infos_iter] iterator when passed to
+/// Each element is validated in the [Self::into_valid_order_infos_iter] iterator when passed to
 /// [price::to_order_info].
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]

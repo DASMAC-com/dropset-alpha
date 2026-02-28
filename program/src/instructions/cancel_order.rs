@@ -16,7 +16,7 @@ use pinocchio::{
 
 use crate::{
     context::{
-        mutate_orders_context::MutateOrdersContext,
+        cancel_order_context::CancelOrderContext,
         EventBufferContext,
     },
     events::EventBuffer,
@@ -48,7 +48,7 @@ pub unsafe fn process_cancel_order<'a>(
     } = CancelOrderInstructionData::unpack_untagged(instruction_data)?;
 
     // Safety: No account data in `accounts` is currently borrowed.
-    let mut ctx = unsafe { MutateOrdersContext::load(accounts) }?;
+    let mut ctx = unsafe { CancelOrderContext::load(accounts) }?;
 
     // Safety: The market account is currently not borrowed in any capacity.
     let mut market = unsafe { ctx.market_account.load_unchecked_mut() };
