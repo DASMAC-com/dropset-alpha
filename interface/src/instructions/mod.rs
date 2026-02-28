@@ -93,7 +93,7 @@ pub enum DropsetInstruction {
     CancelOrder,
 
     #[account(0,           name = "event_authority", desc = "The event authority PDA signer.")]
-    #[account(1, signer,   name = "user",            desc = "The user canceling an order.")]
+    #[account(1, signer,   name = "user",            desc = "The user batch replacing orders.")]
     #[account(2, writable, name = "market_account",  desc = "The market account PDA.")]
     #[account(3,           name = "dropset_program", desc = "The dropset program itself, used for the self-CPI.")]
     #[args(user_sector_index_hint: u32, "A hint indicating which sector the user's seat resides in.")]
