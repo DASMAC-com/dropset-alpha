@@ -24,7 +24,7 @@ use crate::{
 
 /// The max number of orders a single user/address can have for a single market for bids or asks.
 /// That is, each user can have [`MAX_ORDERS`] bids and [`MAX_ORDERS`] asks for a single market.
-pub const MAX_ORDERS: u8 = 5;
+pub const MAX_ORDERS: u8 = 10;
 
 /// Helper const for [`MAX_ORDERS`] as a usize.
 pub const MAX_ORDERS_USIZE: usize = MAX_ORDERS as usize;
@@ -321,7 +321,6 @@ mod tests {
     use price::{
         biased_exponent,
         encoded_price,
-        price_mantissa,
         EncodedPrice,
         LeEncodedPrice,
         ValidatedPriceMantissa,
@@ -516,21 +515,14 @@ mod tests {
     #[test]
     fn repost_arbitrary_order() {
         let mut order_sectors = UserOrderSectors::default();
-        let index_and_mantissa_pairs: [(u32, ValidatedPriceMantissa); MAX_ORDERS_USIZE] = [
-            (1, ValidatedPriceMantissa::try_from(11_111_111).unwrap()),
-            (2, ValidatedPriceMantissa::try_from(22_222_222).unwrap()),
-            (3, ValidatedPriceMantissa::try_from(33_333_333).unwrap()),
-            (4, ValidatedPriceMantissa::try_from(44_444_444).unwrap()),
-            (5, ValidatedPriceMantissa::try_from(55_555_555).unwrap()),
-        ];
-
         let index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] =
-            index_and_mantissa_pairs
-                .into_iter()
-                .map(|(i, mantissa)| (i, EncodedPrice::new(mantissa, biased_exponent!(0))))
-                .collect::<std::vec::Vec<_>>()
-                .try_into()
-                .unwrap();
+            core::array::from_fn(|i| {
+                let encoded_price = EncodedPrice::new(
+                    ValidatedPriceMantissa::try_from(10_000_000 + i as u32).unwrap(),
+                    biased_exponent!(0),
+                );
+                (i as u32, encoded_price)
+            });
 
         for (i, encoded_price) in index_and_encoded_price_pairs.iter() {
             order_sectors
@@ -542,10 +534,13 @@ mod tests {
         // All bids should be in use.
         assert!(order_sectors.bids.iter().all(|bid| !bid.is_free()));
 
-        let (old_sector_index, old_price) = *index_and_encoded_price_pairs.get(1).unwrap();
+        const ELEMENT_REMOVED: usize = 1;
+        // Get the sector index and price at the element we are removing.
+        let (old_sector_index, old_price) =
+            *index_and_encoded_price_pairs.get(ELEMENT_REMOVED).unwrap();
 
-        let new_sector_index = 7;
-        let new_price = encoded_price!(77_777_777, 0);
+        let new_sector_index = 50;
+        let new_price = encoded_price!(50_000_000, 0);
 
         // Ensure the new price doesn't exist in the bids yet.
         assert!(order_sectors.bids.get(&new_price.into()).is_none());
@@ -576,18 +571,19 @@ mod tests {
         assert!(order_sectors.bids.iter().all(|bid| !bid.is_free()));
 
         // Check the final result in whole.
-        let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] = [
-            (1, price_mantissa!(11_111_111)),
-            (7, price_mantissa!(77_777_777)),
-            (3, price_mantissa!(33_333_333)),
-            (4, price_mantissa!(44_444_444)),
-            (5, price_mantissa!(55_555_555)),
-        ]
-        .into_iter()
-        .map(|(i, mantissa)| (i, EncodedPrice::new(mantissa, biased_exponent!(0))))
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap();
+        // Check the final result in whole.
+        let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] =
+            core::array::from_fn(|i| {
+                if i == ELEMENT_REMOVED {
+                    (new_sector_index, new_price)
+                } else {
+                    let encoded_price = EncodedPrice::new(
+                        ValidatedPriceMantissa::try_from(10_000_000 + i as u32).unwrap(),
+                        biased_exponent!(0),
+                    );
+                    (i as u32, encoded_price)
+                }
+            });
 
         for (expected, result) in expected_index_and_encoded_price_pairs
             .iter()

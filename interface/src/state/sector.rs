@@ -110,7 +110,7 @@ pub unsafe trait AllBitPatternsValid: Transmutable {}
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for Sector {
-    const LEN: usize = 136;
+    const LEN: usize = 2 * U32_SIZE + PAYLOAD_SIZE;
 
     fn validate_bit_patterns(_bytes: &[u8]) -> DropsetResult {
         // All bit patterns are valid: no enums, bools, or other types with invalid states.

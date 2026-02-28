@@ -78,7 +78,7 @@ pub fn new_dropset_mollusk_context(
 
 pub const MOLLUSK_DEFAULT_MINT_AUTHORITY: Address =
     pubkey!("mint1authority11111111111111111111111111111");
-pub const MOLLUSK_DEFAULT_NUM_SECTORS: u16 = 10;
+pub const MOLLUSK_DEFAULT_NUM_SECTORS: u16 = 20;
 
 pub const MOLLUSK_DEFAULT_BASE_TOKEN: TokenContext = TokenContext::new(
     Some(MOLLUSK_DEFAULT_MINT_AUTHORITY),

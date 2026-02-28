@@ -1,10 +1,13 @@
 use static_assertions::const_assert_eq;
 
+#[cfg(any(feature = "client", debug_assertions))]
 use crate::{
     OrderInfoError,
+    PRICE_MANTISSA_MASK,
+};
+use crate::{
     ValidatedPriceMantissa,
     PRICE_MANTISSA_BITS,
-    PRICE_MANTISSA_MASK,
 };
 
 const U32_SIZE: usize = core::mem::size_of::<u32>();
