@@ -4,7 +4,6 @@ use std::{
 };
 
 use clap::{
-    command,
     ArgAction,
     Parser,
 };
