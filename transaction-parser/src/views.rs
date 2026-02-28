@@ -7,13 +7,16 @@ use dropset_interface::state::{
     market::MarketRef,
     market_header::MarketHeader,
     market_seat::MarketSeat,
-    sector::Sector,
     order::Order,
-    sector::SectorIndex,
+    sector::{
+        Sector,
+        SectorIndex,
+    },
     transmutable::Transmutable,
     user_order_sectors::UserOrderSectors,
 };
 use itertools::Itertools;
+use price::EncodedPrice;
 use solana_address::Address;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -86,6 +89,14 @@ pub fn try_market_view_all_from_owner_and_data(
         return Err(anyhow::Error::msg("Account is uninitialized"));
     }
 
+    let bytes_past_header = account_data.len() - MarketHeader::LEN;
+
+    #[allow(clippy::manual_is_multiple_of)] // not on the sbf toolchain yet.
+    if bytes_past_header % Sector::LEN != 0 {
+        let msg = format!("Account has an invalid amount of bytes, got {bytes_past_header}");
+        return Err(anyhow::Error::msg(msg));
+    }
+
     // Safety: Length was just checked.
     let market = unsafe { MarketRef::from_bytes(account_data) };
 
@@ -108,7 +119,7 @@ pub struct OrderView {
     pub prev_index: SectorIndex,
     pub index: SectorIndex,
     pub next_index: SectorIndex,
-    pub encoded_price: u32,
+    pub encoded_price: EncodedPrice,
     pub user_seat: SectorIndex,
     pub base_remaining: u64,
     pub quote_remaining: u64,
