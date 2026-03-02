@@ -30,8 +30,12 @@ async fn main() -> anyhow::Result<()> {
         .deposit_base(trader.pubkey(), 1_000_000_000, NIL)
         .send_single_signer(&e2e.rpc, &trader)
         .await?;
+    let seat = e2e
+        .fetch_seat(&trader.pubkey())
+        .await?
+        .expect("Trader should have a seat");
     e2e.market
-        .deposit_quote(trader.pubkey(), 1_000_000_000, 0)
+        .deposit_quote(trader.pubkey(), 1_000_000_000, seat.index)
         .send_single_signer(&e2e.rpc, &trader)
         .await?;
 
@@ -40,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         .batch_replace(
             trader.pubkey(),
             BatchReplaceInstructionData::new(
-                0,
+                seat.index,
                 UnvalidatedOrders::new([OrderInfoArgs::new_unscaled(11_000_000, 1)]),
                 UnvalidatedOrders::new([
                     OrderInfoArgs::new_unscaled(12_000_000, 1),
