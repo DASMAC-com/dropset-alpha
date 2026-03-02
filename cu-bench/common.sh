@@ -1,5 +1,7 @@
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
 
 run_bench() {
     local label="$1"
@@ -8,14 +10,10 @@ run_bench() {
     local test_name="$4"
 
     echo "=== $label ==="
-    cd "$ROOT_DIR/cu-bench/programs/$program" && cargo build-sbf --features "$features" --no-default-features 2>/dev/null
+    cd "$ROOT_DIR/cu-bench/programs/$program"
+    build_output=$(cargo build-sbf --features "$features" --no-default-features 2>&1) || { echo "$build_output"; exit 1; }
     cd "$ROOT_DIR"
 
-    output=$(cargo test -p cu-bench-tests --test "$test_name" --quiet -- --nocapture 2>&1) || true
-    if echo "$output" | grep -q "FAILED\|panicked"; then
-        echo "$output"
-        exit 1
-    else
-        echo "$output" | grep "Compute units consumed"
-    fi
+    output=$(cargo test -p cu-bench-tests --test "$test_name" --quiet -- --nocapture 2>&1) || { echo "$output"; exit 1; }
+    echo "$output" | grep "Compute units consumed"
 }
