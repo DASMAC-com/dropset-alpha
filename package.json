@@ -1,26 +1,25 @@
 {
   "scripts": {
+    "bench:manifest": "bash cu-bench/manifest/run-bench.sh",
+    "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
     "build": "cd program && cargo build-sbf",
-    "bench:manifest": "bash cu-bench/manifest/run-bench.sh",
-    "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
     "build:debug": "cd program && cargo build-sbf --features debug",
     "check": "cargo check",
     "clean": "cargo clean",
     "clippy": "cargo clippy --all-targets -- -D warnings",
     "deploy": "solana program deploy target/deploy/dropset.so --program-id test-keypair.json || echo 'Make sure the local validator is running'",
-    "examples:register_market": "cargo run --example register_market",
-    "examples:batch_replace": "cargo run --example batch_replace",
-    "examples:deposit_and_withdraw": "cargo run --example deposit_and_withdraw",
-    "examples:close_seat": "cargo run --example close_seat",
-    "examples:many_instructions": "cargo run --example many_instructions",
-    "examples:market_order": "cargo run --example market_order",
-    "examples:post_asks": "cargo run --example post_asks",
-    "examples:post_and_cancel": "cargo run --example post_and_cancel",
-    "examples:two_seats": "cargo run --example two_seats",
+    "examples:register-market": "cargo run --example register_market",
+    "examples:batch-replace": "cargo run --example batch_replace",
+    "examples:deposit-and-withdraw": "cargo run --example deposit_and_withdraw",
+    "examples:close-seat": "cargo run --example close_seat",
+    "examples:many-instructions": "cargo run --example many_instructions",
+    "examples:market-order": "cargo run --example market_order",
+    "examples:post-asks": "cargo run --example post_asks",
+    "examples:post-and-cancel": "cargo run --example post_and_cancel",
+    "examples:two-seats": "cargo run --example two_seats",
     "format": "cargo +nightly fmt --all",
     "test": "cargo test"
   }
 }
-
