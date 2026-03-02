@@ -1,7 +1,6 @@
 //! See [`process_batch_replace`].
 
 use dropset_interface::{
-    self,
     error::{
         DropsetError,
         DropsetResult,
