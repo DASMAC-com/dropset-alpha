@@ -91,7 +91,8 @@ pub fn try_market_view_all_from_owner_and_data(
 
     let bytes_past_header = account_data.len() - MarketHeader::LEN;
 
-    #[allow(clippy::manual_is_multiple_of)] // not on the sbf toolchain yet.
+    // Suppress +nightly clippy warning since `is_multiple_of` is not on `stable` yet.
+    #[allow(clippy::manual_is_multiple_of)]
     if bytes_past_header % Sector::LEN != 0 {
         let msg = format!("Account has an invalid amount of bytes, got {bytes_past_header}");
         return Err(anyhow::Error::msg(msg));
