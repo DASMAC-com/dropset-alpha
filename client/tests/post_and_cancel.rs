@@ -20,6 +20,7 @@ use price::{
     OrderInfoArgs,
 };
 use solana_address::Address;
+use transaction_parser::views::OrderView;
 
 #[test]
 fn post_and_cancel() -> anyhow::Result<()> {
@@ -94,38 +95,31 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
+    // Create ATAs, mint to owner, then deposit it to the market.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx
-                .base
-                .mint_to_owner(&user, 10_000_000_000_000_000)?,
-            market_ctx.quote.mint_to_owner(&user, 50_000_000)?,
+            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.deposit_base(user, u64::MAX, NIL)
         ])
         .program_result
         .is_ok());
 
-    // Deposit base (creates seat at index 0) then quote.
-    // Peak ask collateral: 5 * 10^15 base. Peak bid collateral: 15_000_000 quote.
+    // Get the registered seat index and deposit the remaining quote collateral.
+    let seat_index = mollusk.get_seat(market_ctx.market, user).index;
     assert!(mollusk
-        .process_instruction_chain(&[
-            market_ctx.deposit_base(user, 6_000_000_000_000_000, NIL),
-            market_ctx.deposit_quote(user, 20_000_000, 0),
-        ])
+        .process_instruction(&market_ctx.deposit_quote(user, u64::MAX, seat_index))
         .program_result
         .is_ok());
 
-    let market = mollusk.view_market(market_ctx.market);
-    let seat = market_ctx
-        .find_seat(&market.seats, &user)
-        .expect("User should have a seat");
-
+    // ---------------------------------------------------------------------------------------------
     // Create helper closures to make the test more readable.
     let post_order = |price: u32, is_bid: bool| {
         market_ctx.post_order(
             user,
-            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(price), is_bid, seat.index),
+            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(price), is_bid, seat_index),
         )
     };
     let post_bid = |price: u32| post_order(price, true);
@@ -133,15 +127,23 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     let cancel_order = |price: u32, is_bid: bool| {
         market_ctx.cancel_order(
             user,
-            CancelOrderInstructionData::new(price, is_bid, seat.index),
+            CancelOrderInstructionData::new(price, is_bid, seat_index),
         )
     };
     let cancel_bid = |price: u32| cancel_order(price, true);
     let cancel_ask = |price: u32| cancel_order(price, false);
 
+    let as_encoded_prices = |orders: Vec<OrderView>| -> Vec<u32> {
+        orders
+            .into_iter()
+            .map(|o| o.encoded_price.as_u32())
+            .collect()
+    };
+    // ---------------------------------------------------------------------------------------------
+
     // Post 5 asks and 5 bids at known prices.
     let ask_prices: [u32; 5] = [60_000_000, 70_000_000, 80_000_000, 90_000_000, 99_000_000];
-    let bid_prices: [u32; 5] = [10_000_000, 20_000_000, 30_000_000, 40_000_000, 50_000_000];
+    let bid_prices: [u32; 5] = [10_000_001, 20_000_000, 30_000_000, 40_000_000, 50_000_000];
     let post_asks = ask_prices.iter().map(|&p| post_ask(p));
     let post_bids = bid_prices.iter().map(|&p| post_bid(p));
     assert!(mollusk
@@ -152,65 +154,68 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     // Cancel the 2nd and 3rd asks/bids by price, leaving gaps.
     assert!(mollusk
         .process_instruction_chain(&[
+            // Asks.
             cancel_ask(70_000_000),
-            cancel_ask(80_000_000),
+            cancel_ask(90_000_000),
+            // Bids.
             cancel_bid(20_000_000),
             cancel_bid(40_000_000),
         ])
         .program_result
         .is_ok());
 
-    // Fill the gaps and add one beyond the end of each book side.
+    // Verify exact price sequence using the order_at_price invariant (encoded_price == mantissa).
+    assert_eq!(
+        as_encoded_prices(mollusk.view_market(market_ctx.market).asks),
+        [60_000_000, 80_000_000, 99_000_000],
+    );
+    assert_eq!(
+        as_encoded_prices(mollusk.view_market(market_ctx.market).bids),
+        [50_000_000, 30_000_000, 10_000_001]
+    );
+
+    // Fill one gaps and add one beyond the end of each book side.
     assert!(mollusk
         .process_instruction_chain(&[
+            // Asks.
             post_ask(65_000_000),
-            post_ask(75_000_000),
-            post_ask(95_000_000),
-            post_bid(15_000_000),
-            post_bid(35_000_000),
+            post_ask(99_999_999),
+            // Bids.
             post_bid(45_000_000),
+            post_bid(10_000_000),
         ])
         .program_result
         .is_ok());
 
     let check = MarketChecker::new(&mollusk, &market_ctx);
-    check.num_asks(6);
-    check.num_bids(6);
-    let market = mollusk.view_market(market_ctx.market);
-
-    let expected_asks = [
-        60_000_000, 65_000_000, 75_000_000, 90_000_000, 95_000_000, 99_000_000,
-    ];
-    let expected_bids = [
-        50_000_000, 45_000_000, 35_000_000, 30_000_000, 15_000_000, 10_000_000,
-    ];
+    check.num_asks(5);
+    check.num_bids(5);
 
     // Verify sort order is maintained after all the insertions and removals.
-    assert!(market
-        .asks
-        .iter()
-        .tuple_windows()
-        .all(|(a, b)| a.encoded_price.has_higher_ask_priority(&b.encoded_price)));
-    assert!(market
-        .bids
-        .iter()
-        .tuple_windows()
-        .all(|(a, b)| a.encoded_price.has_higher_bid_priority(&b.encoded_price)));
+    check.asks(|asks| {
+        assert!(asks
+            .iter()
+            .tuple_windows()
+            .all(|(a, b)| a.encoded_price.has_higher_ask_priority(&b.encoded_price)))
+    });
+    check.bids(|bids| {
+        assert!(bids
+            .iter()
+            .tuple_windows()
+            .all(|(a, b)| a.encoded_price.has_higher_bid_priority(&b.encoded_price)))
+    });
 
     // Verify exact price sequence using the order_at_price invariant (encoded_price == mantissa).
-    let ask_encoded: Vec<u32> = market
-        .asks
-        .iter()
-        .map(|o| o.encoded_price.as_u32())
-        .collect();
-    let bid_encoded: Vec<u32> = market
-        .bids
-        .iter()
-        .map(|o| o.encoded_price.as_u32())
-        .collect();
-
-    assert_eq!(ask_encoded, expected_asks);
-    assert_eq!(bid_encoded, expected_bids);
+    let asks = mollusk.view_market(market_ctx.market).asks;
+    let bids = mollusk.view_market(market_ctx.market).bids;
+    assert_eq!(
+        as_encoded_prices(asks),
+        [60_000_000, 65_000_000, 80_000_000, 99_000_000, 99_999_999]
+    );
+    assert_eq!(
+        as_encoded_prices(bids),
+        [50_000_000, 45_000_000, 30_000_000, 10_000_001, 10_000_000]
+    );
 
     Ok(())
 }
