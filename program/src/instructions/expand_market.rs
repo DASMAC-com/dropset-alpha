@@ -2,6 +2,7 @@
 
 use dropset_interface::{
     error::DropsetError,
+    events::ExpandMarketEventInstructionData,
     instructions::ExpandMarketInstructionData,
 };
 use pinocchio::{
@@ -43,7 +44,7 @@ pub unsafe fn process_expand_market<'a>(
     unsafe { ctx.market_account.resize(ctx.payer, num_sectors) }?;
 
     event_buffer.add_to_buffer(
-        ExpandMarketInstructionData::new(num_sectors),
+        ExpandMarketEventInstructionData::new(num_sectors),
         ctx.event_authority,
         ctx.market_account.clone(),
     )?;

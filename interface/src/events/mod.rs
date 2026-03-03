@@ -58,3 +58,24 @@ pub enum DropsetEventTag {
     #[args(num_sectors: u16, "The number of free sectors added to the market account.")]
     ExpandMarketEvent,
 }
+
+pub use private::TaggedDropsetEvent;
+
+mod private {
+    use instruction_macros::Tagged;
+
+    use super::*;
+
+    /// Marker trait for `dropset` events.
+    pub trait TaggedDropsetEvent: Tagged {}
+
+    impl TaggedDropsetEvent for HeaderEventInstructionData {}
+    impl TaggedDropsetEvent for DepositEventInstructionData {}
+    impl TaggedDropsetEvent for WithdrawEventInstructionData {}
+    impl TaggedDropsetEvent for RegisterMarketEventInstructionData {}
+    impl TaggedDropsetEvent for PostOrderEventInstructionData {}
+    impl TaggedDropsetEvent for CancelOrderEventInstructionData {}
+    impl TaggedDropsetEvent for MarketOrderEventInstructionData {}
+    impl TaggedDropsetEvent for CloseSeatEventInstructionData {}
+    impl TaggedDropsetEvent for ExpandMarketEventInstructionData {}
+}
