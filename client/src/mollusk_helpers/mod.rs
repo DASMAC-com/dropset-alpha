@@ -33,7 +33,7 @@ pub mod utils;
 /// Converts an input deploy file to a program name used by the [`Mollusk::new`] function.
 ///
 /// Requires the full file name; for example, if you passed `dropset.so` it would return something
-/// like `/Users/you/dropset/program/target/deploy/dropset`, which is exactly what [`Mollusk::new`]
+/// like `/Users/you/dropset/target/deploy/dropset`, which is exactly what [`Mollusk::new`]
 /// expects.
 pub fn deploy_file_to_program_name(program_name: &str) -> String {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR"))
