@@ -124,7 +124,7 @@ pub enum DropsetInstruction {
     #[account(0, signer,   name = "event_authority", desc = "The event authority PDA signer.")]
     FlushEvents,
 
-    #[account(0, signer,           name = "event_authority",     desc = "The event authority PDA signer.")]
+    #[account(0,                   name = "event_authority",     desc = "The event authority PDA signer.")]
     #[account(1, signer, writable, name = "payer",               desc = "The account paying for the market account expansion.")]
     #[account(2, writable,         name = "market_account",      desc = "The market account PDA.")]
     #[account(3,                   name = "dropset_program",     desc = "The dropset program.")]
