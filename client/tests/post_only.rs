@@ -163,10 +163,7 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    // Then create `user_b`'s seat by depositing. Thei amounts in `user_b`'s seat are irrelevant,
-    // since ultimately they  doesn't
-    // need more than a single atom per order because size is irrelevant triggering the post only
-    // crossing check failure.
+    // Then create ATAs and mint/deposit base/quote for `user_b`.
     let user_b_seat_index = 1; // Second seat => seat index 1.
     assert!(mollusk
         .process_instruction_chain(&[
