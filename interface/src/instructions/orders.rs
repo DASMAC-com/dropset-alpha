@@ -100,8 +100,8 @@ unsafe impl Pack for UnvalidatedOrders {
     /// destination offset increased by the amount written each time.
     #[inline(always)]
     unsafe fn write_bytes(&self, dst: *mut u8) {
-        // This implementation was written with the expectation that the max number of orders is 10.
-        // If that changes, the implementation needs to change to account for the different size.
+        // This implementation was written according to a specific max number of orders. If that
+        // amount changes, this implementation needs to be updated to account for the new amount.
         const_assert_eq!(MAX_ORDERS, 10);
 
         self.order_args[0].write_bytes(dst);
@@ -139,8 +139,8 @@ unsafe impl Unpack for UnvalidatedOrders {
     /// Caller must guarantee `src` points to at least [Self::LEN] bytes of readable memory.
     #[inline(always)]
     unsafe fn read_bytes(src: *const u8) -> Result<Self, solana_program_error::ProgramError> {
-        // This implementation was written with the expectation that the max number of orders is 10.
-        // If that changes, the implementation needs to change to account for the different size.
+        // This implementation was written according to a specific max number of orders. If that
+        // amount changes, this implementation needs to be updated to account for the new amount.
         const_assert_eq!(MAX_ORDERS, 10);
 
         Ok(Self {
@@ -173,8 +173,8 @@ unsafe impl Unpack for UnvalidatedOrders {
 mod private {
     use super::*;
 
-    // This sealed trait was written with the expectation that the max number of orders is 5.
-    // If that changes, the trait needs to change to account for the different size.
+    // The trait implementations below were written according to a specific max number of orders.
+    // If this number changes, the trait needs to change to account for the different size.
     const_assert_eq!(MAX_ORDERS, 10);
 
     /// Marker trait: implemented only for arrays of length 0..=[MAX_ORDERS].
