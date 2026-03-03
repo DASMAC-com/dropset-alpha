@@ -15,7 +15,6 @@ use crate::validation::market_account_view::MarketAccountView;
 /// [dropset_interface::instructions::generated_program::FlushEvents] self-CPI.
 #[derive(Clone)]
 pub struct BatchReplaceContext<'a> {
-    pub _event_authority: &'a AccountView,
     pub user: &'a AccountView,
     pub market_account: MarketAccountView<'a>,
 }
@@ -29,7 +28,7 @@ impl<'a> BatchReplaceContext<'a> {
         accounts: &'a [AccountView],
     ) -> Result<BatchReplaceContext<'a>, ProgramError> {
         let BatchReplace {
-            event_authority: _event_authority,
+            event_authority: _,
             user,
             market_account,
             dropset_program: _,
@@ -39,7 +38,6 @@ impl<'a> BatchReplaceContext<'a> {
         let market_account = unsafe { MarketAccountView::new(market_account) }?;
 
         Ok(Self {
-            _event_authority,
             user,
             market_account,
         })
