@@ -87,7 +87,7 @@ fn process_instruction(
 
         #[derive(BorshDeserialize)]
         struct BorshUnvalidatedOrders {
-            order_args: [BorshOrderInfoArgs; 5],
+            order_args: [BorshOrderInfoArgs; MAX_ORDERS_USIZE],
         }
 
         #[derive(BorshDeserialize)]

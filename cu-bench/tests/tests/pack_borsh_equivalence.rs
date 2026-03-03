@@ -2,9 +2,12 @@ use borsh::{
     BorshDeserialize,
     BorshSerialize,
 };
-use dropset_interface::instructions::{
-    BatchReplaceInstructionData,
-    UnvalidatedOrders,
+use dropset_interface::{
+    instructions::{
+        BatchReplaceInstructionData,
+        UnvalidatedOrders,
+    },
+    state::user_order_sectors::MAX_ORDERS_USIZE,
 };
 use instruction_macros_traits::{
     Pack,
@@ -22,7 +25,7 @@ struct BorshOrderInfoArgs {
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
 struct BorshUnvalidatedOrders {
-    order_args: [BorshOrderInfoArgs; 5],
+    order_args: [BorshOrderInfoArgs; MAX_ORDERS_USIZE],
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
