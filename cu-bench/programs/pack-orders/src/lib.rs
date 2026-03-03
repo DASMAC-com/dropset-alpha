@@ -29,10 +29,14 @@ fn process_instruction(
     #[cfg(feature = "bench-program-A")]
     {
         use dropset_interface::{
-            instructions::BatchReplaceInstructionData,
+            instructions::{
+                BatchReplaceInstructionData,
+                UnvalidatedOrders,
+            },
             state::user_order_sectors::MAX_ORDERS_USIZE,
         };
         use price::OrderInfoArgs;
+        use static_assertions::const_assert_eq;
 
         let data = BatchReplaceInstructionData::unpack_untagged(instruction_data)?;
 
@@ -40,8 +44,13 @@ fn process_instruction(
             return Err(ProgramError::InvalidInstructionData);
         }
 
-        // Cast UnvalidatedOrders to [OrderInfoArgs; MAX_ORDERS_USIZE] to get
+        // Unsafely cast UnvalidatedOrders to [OrderInfoArgs; MAX_ORDERS_USIZE] to get
         // access to the underlying arrays without having to update the public API.
+        // Const assertion to catch UB if the struct shape ever changes.
+        const_assert_eq!(
+            size_of::<UnvalidatedOrders>(),
+            size_of::<[OrderInfoArgs; MAX_ORDERS_USIZE]>()
+        );
         let bids_ptr = &data.new_bids as *const _ as *const [OrderInfoArgs; MAX_ORDERS_USIZE];
         let new_bids = unsafe { &*bids_ptr };
         let asks_ptr = &data.new_asks as *const _ as *const [OrderInfoArgs; MAX_ORDERS_USIZE];

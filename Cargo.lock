@@ -1270,6 +1270,7 @@ dependencies = [
  "pinocchio 0.10.1",
  "price",
  "solana-address 2.0.0",
+ "static_assertions",
 ]
 
 [[package]]

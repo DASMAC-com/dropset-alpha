@@ -13,6 +13,7 @@ instruction-macros-traits = { path = "../../../instruction-macros/crates/instruc
 pinocchio.workspace = true
 price = { path = "../../../price" }
 solana-address.workspace = true
+static_assertions.workspace = true
 
 [lints]
 workspace = true
