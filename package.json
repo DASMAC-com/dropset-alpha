@@ -30,5 +30,6 @@
     "examples:two-seats": "cargo run --example two_seats",
     "format": "cargo +nightly fmt --all",
     "test": "pnpm run build && cargo test"
-  }
+  },
+  "packageManager": "pnpm@10.30.3"
 }
