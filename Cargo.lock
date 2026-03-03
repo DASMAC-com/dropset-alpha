@@ -1280,6 +1280,7 @@ dependencies = [
  "borsh",
  "client",
  "cu-bench-pack-orders",
+ "cu-bench-to-order-info",
  "dropset-interface",
  "instruction-macros-traits",
  "mollusk-svm",
@@ -1287,6 +1288,16 @@ dependencies = [
  "solana-account",
  "solana-address 2.0.0",
  "solana-instruction",
+ "static_assertions",
+]
+
+[[package]]
+name = "cu-bench-to-order-info"
+version = "0.1.0"
+dependencies = [
+ "pinocchio 0.10.1",
+ "price",
+ "solana-address 2.0.0",
  "static_assertions",
 ]
 

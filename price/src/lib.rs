@@ -257,15 +257,15 @@ pub fn to_order_info(args: OrderInfoArgs) -> Result<OrderInfo, OrderInfoError> {
     } = args;
     let validated_mantissa = ValidatedPriceMantissa::try_from(price_mantissa)?;
 
-    let base_atoms = pow10_u64!(base_scalar, base_exponent_biased)?;
+    let base_atoms = pow10_u64!(base_scalar, base_exponent_biased);
 
     let price_mantissa_times_base_scalar = checked_mul!(
         validated_mantissa.as_u32() as u64,
         base_scalar,
         OrderInfoError::ArithmeticOverflow
-    )?;
+    );
 
-    let quote_atoms = pow10_u64!(price_mantissa_times_base_scalar, quote_exponent_biased)?;
+    let quote_atoms = pow10_u64!(price_mantissa_times_base_scalar, quote_exponent_biased);
 
     // Ultimately, the price mantissa is multiplied by:
     // 10 ^ (quote_exponent_biased - base_exponent_biased)
@@ -279,7 +279,7 @@ pub fn to_order_info(args: OrderInfoArgs) -> Result<OrderInfo, OrderInfoError> {
         unsafe { quote_exponent_biased.unchecked_add(BIAS) },
         base_exponent_biased,
         OrderInfoError::ExponentUnderflow
-    )?;
+    );
 
     Ok(OrderInfo {
         encoded_price: EncodedPrice::new(validated_mantissa, price_exponent_rebiased),
@@ -366,16 +366,13 @@ mod tests {
     }
 
     #[test]
-    fn bias_ranges() {
+    fn bias_ranges() -> Result<(), OrderInfoError> {
         const_assert_eq!(16, BIAS);
 
         let val_156_e_neg_16: u64 = 1_560_000_000_000_000_000;
         let calculated = val_156_e_neg_16 / 10u64.pow(BIAS as u32);
         let expected = 156;
-        assert_eq!(
-            pow10_u64!(val_156_e_neg_16, 0).expect("0 is a valid biased exponent"),
-            calculated,
-        );
+        assert_eq!(pow10_u64!(val_156_e_neg_16, 0), calculated,);
         assert_eq!(calculated, expected);
 
         let val: u64 = 156;
@@ -385,11 +382,10 @@ mod tests {
                 .checked_pow(max_exponent - BIAS as u32)
                 .expect("Shouldn't overflow");
         let expected: u64 = 156_000_000_000_000_000;
-        assert_eq!(
-            pow10_u64!(val, max_exponent).expect("Exponent should be valid"),
-            calculated
-        );
+        assert_eq!(pow10_u64!(val, max_exponent), calculated);
         assert_eq!(calculated, expected);
+
+        Ok(())
     }
 
     #[test]
@@ -453,12 +449,12 @@ mod tests {
     }
 
     #[test]
-    pub(crate) fn ensure_invalid_quote_exponent_fails_early() {
+    pub(crate) fn ensure_invalid_quote_exponent_fails_early() -> Result<(), OrderInfoError> {
         let e_base = biased_exponent!(0);
         let e_quote = MAX_BIASED_EXPONENT + 1;
 
         // Ensure the base exponent is valid so that it can't be the trigger for the error.
-        let _one_to_the_base_exponent = pow10_u64!(1u64, e_base).unwrap();
+        let _one_to_the_base_exponent = pow10_u64!(1u64, e_base);
 
         let all_good = to_order_info((10_000_000, 1, e_base, e_base).into());
         let arithmetic_overflow = to_order_info((10_000_000, 1, e_base, e_quote - 1).into());
@@ -469,15 +465,17 @@ mod tests {
         assert!(matches!(arithmetic_overflow, Err(OrderInfoError::ArithmeticOverflow)));
         #[rustfmt::skip]
         assert!(matches!(invalid_biased_exponent, Err(OrderInfoError::InvalidBiasedExponent)));
+
+        Ok(())
     }
 
     #[test]
-    fn max_and_max_plus_one_base() {
+    fn max_and_max_plus_one_base() -> Result<(), OrderInfoError> {
         let e_base = MAX_BIASED_EXPONENT;
         let e_quote = biased_exponent!(0);
 
         // Ensure the quote exponent is valid so that it can't be the trigger for the error.
-        let _one_to_the_quote_exponent = pow10_u64!(1u64, e_quote).unwrap();
+        let _one_to_the_quote_exponent = pow10_u64!(1u64, e_quote);
 
         let all_good = to_order_info((10_000_000, 1, e_base, e_quote).into());
         let invalid_quote_exponent = to_order_info((10_000_000, 1, e_base + 1, e_quote).into());
@@ -487,6 +485,8 @@ mod tests {
             invalid_quote_exponent,
             Err(OrderInfoError::InvalidBiasedExponent)
         ));
+
+        Ok(())
     }
 
     #[test]

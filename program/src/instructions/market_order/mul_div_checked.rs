@@ -15,7 +15,7 @@ pub fn mul_div_checked(
         multiplicand as u128,
         multiplier as u128,
         DropsetError::ArithmeticOverflow
-    )?;
+    );
 
     let res = intermediate / NonZeroU128::from(divisor);
     if res > u64::MAX as u128 {

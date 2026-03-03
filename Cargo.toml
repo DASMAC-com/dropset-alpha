@@ -5,6 +5,7 @@ members = [
   "bots/crates/market-taker",
   "client",
   "cu-bench/programs/pack-orders",
+  "cu-bench/programs/to-order-info",
   "cu-bench/tests",
   "instruction-macros/crates/instruction-macros",
   "instruction-macros/crates/instruction-macros-derive",
