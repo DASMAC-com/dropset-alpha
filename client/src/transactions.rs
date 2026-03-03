@@ -111,6 +111,7 @@ impl CustomRpcClient {
             .await
     }
 
+    /// Sends and confirms a transaction using [Self::config].
     pub async fn send_and_confirm_txn(
         &self,
         payer: &Keypair,
@@ -205,6 +206,7 @@ async fn send_transaction_with_config(
 
     let msg = Message::new(final_instructions, Some(&payer.pubkey()));
 
+    // The payer must always sign since it is paying, so chain it with the rest of the signers.
     let mut tx = Transaction::new_unsigned(msg);
     tx.try_sign(
         &[std::iter::once(payer)

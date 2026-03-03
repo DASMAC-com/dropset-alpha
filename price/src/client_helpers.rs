@@ -9,6 +9,7 @@ use rust_decimal::{
 };
 
 use crate::{
+    to_order_info,
     DecodedPrice,
     EncodedPrice,
     OrderInfoArgs,
@@ -97,6 +98,26 @@ pub fn try_encoded_u32_to_decoded_decimal(encoded_u32: u32) -> Result<Decimal, O
     let decimal_price: Decimal = decoded_price.try_into()?;
 
     Ok(decimal_price)
+}
+
+/// Sum the total base necessary to post every order in the passed order slice.
+///
+/// Typically used for summing ask collateral.
+pub fn sum_base_necessary(orders: &[OrderInfoArgs]) -> Result<u64, OrderInfoError> {
+    orders
+        .iter()
+        .map(|o| to_order_info(o.clone()).map(|info| info.base_atoms))
+        .sum()
+}
+
+/// Sum the total quote necessary to post every order in the passed order slice.
+///
+/// Typically used for summing bid collateral.
+pub fn sum_quote_necessary(orders: &[OrderInfoArgs]) -> Result<u64, OrderInfoError> {
+    orders
+        .iter()
+        .map(|o| to_order_info(o.clone()).map(|info| info.quote_atoms))
+        .sum()
 }
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 use crate::{
     pack::ByteArray,
     Pack,

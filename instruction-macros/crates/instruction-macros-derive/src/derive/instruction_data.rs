@@ -1,4 +1,4 @@
-//! Derive helper for generating namespaced instruction data types and a TryFrom<u8> for each
+//! Derive helper for generating namespaced instruction data types and a `TryFrom<u8>` for each
 //! instruction enum variant.
 
 use instruction_macros_impl::{

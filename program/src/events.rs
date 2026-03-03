@@ -3,7 +3,10 @@
 use core::mem::MaybeUninit;
 
 use dropset_interface::{
-    events::HeaderEventInstructionData,
+    events::{
+        DropsetEventMarker,
+        HeaderEventInstructionData,
+    },
     instructions::DropsetInstruction,
     program,
     seeds::event_authority,
@@ -160,7 +163,7 @@ impl EventBuffer {
     }
 
     #[inline(always)]
-    pub fn add_to_buffer<'a, T: Tagged>(
+    pub fn add_to_buffer<'a, T: DropsetEventMarker>(
         &mut self,
         packable_event: T,
         event_authority: &'a AccountView,

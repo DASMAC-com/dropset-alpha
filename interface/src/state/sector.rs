@@ -1,9 +1,12 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 //! Defines the size and sentinel constants for fixed-size storage sectors used to organize
 //! and index market data efficiently in account memory.
 //!
 //! Also defines and implements [`Sector`] structs representing the fixed-size storage sector.
 
 use pinocchio::hint::unlikely;
+use solana_account_view::MAX_PERMITTED_DATA_INCREASE;
 use static_assertions::{
     const_assert,
     const_assert_eq,
@@ -21,7 +24,9 @@ use crate::{
     },
 };
 
-pub const SECTOR_SIZE: usize = 136;
+pub const SECTOR_SIZE: usize = Sector::LEN;
+
+pub const MAX_PERMITTED_SECTOR_INCREASE: usize = MAX_PERMITTED_DATA_INCREASE / Sector::LEN;
 
 /// A sentinel value that marks 1-past the last valid sector index of a collection of sectors.
 ///
@@ -105,7 +110,7 @@ pub unsafe trait AllBitPatternsValid: Transmutable {}
 // - `size_of` and `align_of` are checked below.
 // - All bit patterns are valid.
 unsafe impl Transmutable for Sector {
-    const LEN: usize = SECTOR_SIZE;
+    const LEN: usize = 136;
 
     fn validate_bit_patterns(_bytes: &[u8]) -> DropsetResult {
         // All bit patterns are valid: no enums, bools, or other types with invalid states.

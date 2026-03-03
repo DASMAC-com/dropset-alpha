@@ -21,6 +21,7 @@ use crate::{
         market::MarketContext,
         token::TokenContext,
     },
+    single_signer_instruction::SingleSignerInstruction,
     token_instructions::create_and_initialize_token_instructions,
     transactions::{
         account_exists,
@@ -183,7 +184,12 @@ async fn create_token(
     )
     .await?;
 
-    let token = TokenContext::new(mint.pubkey(), token_program, decimals);
+    let token = TokenContext::new(
+        Some(authority.pubkey()),
+        mint.pubkey(),
+        token_program,
+        decimals,
+    );
     Ok((token, authority))
 }
 
@@ -207,8 +213,7 @@ async fn mint_to(
     owner: &Keypair,
     amount: u64,
 ) -> anyhow::Result<()> {
-    let destination = token.get_ata_for(&owner.pubkey());
-    let ix = token.mint_to(&mint_authority.pubkey(), &destination, amount)?;
+    let ix = token.mint_to_owner(&owner.pubkey(), amount)?;
     rpc.send_and_confirm_txn(owner, &[mint_authority], &[ix])
         .await?;
     Ok(())
