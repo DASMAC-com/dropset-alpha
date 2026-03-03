@@ -206,16 +206,15 @@ async fn send_transaction_with_config(
     .concat();
 
     let msg = Message::new(final_instructions, Some(&payer.pubkey()));
-
     let mut tx = Transaction::new_unsigned(msg);
-    tx.try_sign(
-        &[std::iter::once(payer)
-            .chain(signers.iter().cloned())
-            .collect::<Vec<_>>()]
-        .concat(),
-        bh,
-    )
-    .expect("Should sign");
+    let payer_is_in_signers = instructions.iter().any(|ixn| {
+        ixn.accounts
+            .iter()
+            .any(|acc| acc.is_signer && acc.pubkey == payer.pubkey())
+    });
+    let maybe_payer_signer = if payer_is_in_signers { vec![payer] } else { vec![] };
+    tx.try_sign(&[signers, &maybe_payer_signer].concat(), bh)
+        .expect("Should sign");
 
     let res = rpc.send_and_confirm_transaction(&tx).await;
     match res {
