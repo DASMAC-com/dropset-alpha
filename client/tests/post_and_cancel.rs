@@ -28,7 +28,7 @@ fn post_and_cancel() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
-    // Expand the market to accomodate more orders.
+    // Expand the market to accommodate more orders.
     assert!(mollusk
         .process_instruction_chain(&[market_ctx.expand(user, MAX_PERMITTED_SECTOR_INCREASE as u16)])
         .program_result
@@ -89,7 +89,7 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
-    // Expand the market to accomodate more orders.
+    // Expand the market to accommodate more orders.
     assert!(mollusk
         .process_instruction_chain(&[market_ctx.expand(user, MAX_PERMITTED_SECTOR_INCREASE as u16)])
         .program_result
