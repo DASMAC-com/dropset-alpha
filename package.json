@@ -3,6 +3,7 @@
     "bench:manifest": "bash cu-bench/manifest/run-bench.sh",
     "bench:pack-orders": "bash cu-bench/pack-orders.sh",
     "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
+    "bench:to-order-info": "bash cu-bench/to-order-info.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
     "build": "cd program && cargo build-sbf",
