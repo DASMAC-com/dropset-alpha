@@ -5,11 +5,15 @@ use crate::state::{
     asks_dll::AskOrdersLinkedList,
     bids_dll::BidOrdersLinkedList,
     free_stack::Stack,
-    linked_list::LinkedListIter,
+    linked_list::{
+        LinkedList,
+        LinkedListIter,
+    },
     market_header::{
         MarketHeader,
         MARKET_ACCOUNT_DISCRIMINANT,
     },
+    order::OrdersCollection,
     seats_dll::SeatsLinkedList,
     sector::SECTOR_SIZE,
     transmutable::Transmutable,
@@ -85,18 +89,23 @@ impl<'a> MarketRefMut<'a> {
     }
 
     #[inline(always)]
-    pub fn seats(&mut self) -> SeatsLinkedList {
+    pub fn seats(&'_ mut self) -> SeatsLinkedList<'_> {
         SeatsLinkedList::new_from_parts(self.header, self.sectors)
     }
 
     #[inline(always)]
-    pub fn bids(&mut self) -> BidOrdersLinkedList {
+    pub fn bids(&'_ mut self) -> BidOrdersLinkedList<'_> {
         BidOrdersLinkedList::new_from_parts(self.header, self.sectors)
     }
 
     #[inline(always)]
-    pub fn asks(&mut self) -> AskOrdersLinkedList {
+    pub fn asks(&'_ mut self) -> AskOrdersLinkedList<'_> {
         AskOrdersLinkedList::new_from_parts(self.header, self.sectors)
+    }
+
+    #[inline(always)]
+    pub fn orders<T: OrdersCollection>(&mut self) -> LinkedList<'_, T> {
+        LinkedList::new_from_parts(self.header, self.sectors)
     }
 }
 
