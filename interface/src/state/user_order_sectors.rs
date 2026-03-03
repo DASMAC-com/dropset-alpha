@@ -571,7 +571,6 @@ mod tests {
         assert!(order_sectors.bids.iter().all(|bid| !bid.is_free()));
 
         // Check the final result in whole.
-        // Check the final result in whole.
         let expected_index_and_encoded_price_pairs: [(u32, EncodedPrice); MAX_ORDERS_USIZE] =
             core::array::from_fn(|i| {
                 if i == ELEMENT_REMOVED {
