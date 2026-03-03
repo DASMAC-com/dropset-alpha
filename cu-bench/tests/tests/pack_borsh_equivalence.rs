@@ -15,17 +15,24 @@ use price::OrderInfoArgs;
 
 #[test]
 fn pack_borsh_round_trip_equivalence() {
+    let bid = OrderInfoArgs::new_unscaled(10_000_000, 1);
+    let asks = [
+        OrderInfoArgs::new_unscaled(11_000_000, 1),
+        OrderInfoArgs::new_unscaled(12_000_000, 2),
+        OrderInfoArgs::new_unscaled(13_000_000, 3),
+        OrderInfoArgs::new_unscaled(14_000_000, 4),
+        OrderInfoArgs::new_unscaled(15_000_000, 5),
+        OrderInfoArgs::new(0, 0, 0, 0),
+        OrderInfoArgs::new(0, 0, 0, 0),
+        OrderInfoArgs::new(0, 0, 0, 0),
+        OrderInfoArgs::new(0, 0, 0, 0),
+        OrderInfoArgs::new(0, 0, 0, 0),
+    ];
     // Create test data using Pack
     let pack_data = BatchReplaceInstructionData::new(
         42,
-        UnvalidatedOrders::new([OrderInfoArgs::new_unscaled(11_000_000, 1)]),
-        UnvalidatedOrders::new([
-            OrderInfoArgs::new_unscaled(12_000_000, 1),
-            OrderInfoArgs::new_unscaled(13_000_000, 2),
-            OrderInfoArgs::new_unscaled(14_000_000, 3),
-            OrderInfoArgs::new_unscaled(15_000_000, 4),
-            OrderInfoArgs::new_unscaled(16_000_000, 5),
-        ]),
+        UnvalidatedOrders::new([bid.clone()]),
+        UnvalidatedOrders::new(asks.clone()),
     );
 
     // Serialize with Pack
@@ -36,7 +43,12 @@ fn pack_borsh_round_trip_equivalence() {
         user_sector_index_hint: 42,
         new_bids: BorshUnvalidatedOrders {
             order_args: [
-                OrderInfoArgs::new_unscaled(11_000_000, 1).into(),
+                bid.into(),
+                OrderInfoArgs::new(0, 0, 0, 0).into(),
+                OrderInfoArgs::new(0, 0, 0, 0).into(),
+                OrderInfoArgs::new(0, 0, 0, 0).into(),
+                OrderInfoArgs::new(0, 0, 0, 0).into(),
+                OrderInfoArgs::new(0, 0, 0, 0).into(),
                 OrderInfoArgs::new(0, 0, 0, 0).into(),
                 OrderInfoArgs::new(0, 0, 0, 0).into(),
                 OrderInfoArgs::new(0, 0, 0, 0).into(),
@@ -44,13 +56,7 @@ fn pack_borsh_round_trip_equivalence() {
             ],
         },
         new_asks: BorshUnvalidatedOrders {
-            order_args: [
-                OrderInfoArgs::new_unscaled(12_000_000, 1).into(),
-                OrderInfoArgs::new_unscaled(13_000_000, 2).into(),
-                OrderInfoArgs::new_unscaled(14_000_000, 3).into(),
-                OrderInfoArgs::new_unscaled(15_000_000, 4).into(),
-                OrderInfoArgs::new_unscaled(16_000_000, 5).into(),
-            ],
+            order_args: core::array::from_fn(|i| asks[i].clone().into()),
         },
     };
 
