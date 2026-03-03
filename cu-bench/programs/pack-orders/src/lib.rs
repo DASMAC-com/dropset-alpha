@@ -20,6 +20,50 @@ no_allocator!();
 nostd_panic_handler!();
 
 use dropset_interface::state::user_order_sectors::MAX_ORDERS_USIZE;
+use price::OrderInfoArgs;
+
+#[derive(PartialEq, Debug)]
+#[cfg_attr(
+    feature = "borsh-derive",
+    derive(borsh::BorshSerialize, borsh::BorshDeserialize)
+)]
+pub struct BorshOrderInfoArgs {
+    pub price_mantissa: u32,
+    pub base_scalar: u64,
+    pub base_exponent_biased: u8,
+    pub quote_exponent_biased: u8,
+}
+
+#[derive(PartialEq, Debug)]
+#[cfg_attr(
+    feature = "borsh-derive",
+    derive(borsh::BorshSerialize, borsh::BorshDeserialize)
+)]
+pub struct BorshUnvalidatedOrders {
+    pub order_args: [BorshOrderInfoArgs; MAX_ORDERS_USIZE],
+}
+
+#[derive(PartialEq, Debug)]
+#[cfg_attr(
+    feature = "borsh-derive",
+    derive(borsh::BorshSerialize, borsh::BorshDeserialize)
+)]
+pub struct BorshBatchReplaceData {
+    pub user_sector_index_hint: u32,
+    pub new_bids: BorshUnvalidatedOrders,
+    pub new_asks: BorshUnvalidatedOrders,
+}
+
+impl From<OrderInfoArgs> for BorshOrderInfoArgs {
+    fn from(args: OrderInfoArgs) -> Self {
+        Self {
+            price_mantissa: args.price_mantissa,
+            base_scalar: args.base_scalar,
+            base_exponent_biased: args.base_exponent_biased,
+            quote_exponent_biased: args.quote_exponent_biased,
+        }
+    }
+}
 
 #[inline(never)]
 fn process_instruction(
@@ -74,28 +118,6 @@ fn process_instruction(
     // The borsh version.
     #[cfg(feature = "bench-program-B")]
     {
-        use borsh::BorshDeserialize;
-
-        #[derive(BorshDeserialize)]
-        struct BorshOrderInfoArgs {
-            price_mantissa: u32,
-            base_scalar: u64,
-            base_exponent_biased: u8,
-            quote_exponent_biased: u8,
-        }
-
-        #[derive(BorshDeserialize)]
-        struct BorshUnvalidatedOrders {
-            order_args: [BorshOrderInfoArgs; MAX_ORDERS_USIZE],
-        }
-
-        #[derive(BorshDeserialize)]
-        struct BorshBatchReplaceData {
-            user_sector_index_hint: u32,
-            new_bids: BorshUnvalidatedOrders,
-            new_asks: BorshUnvalidatedOrders,
-        }
-
         let data = BorshBatchReplaceData::try_from_slice(instruction_data)
             .map_err(|_| ProgramError::InvalidInstructionData)?;
 

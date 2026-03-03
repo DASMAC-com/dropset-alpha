@@ -1,50 +1,17 @@
-use borsh::{
-    BorshDeserialize,
-    BorshSerialize,
+use borsh::BorshDeserialize;
+use cu_bench_pack_orders::{
+    BorshBatchReplaceData,
+    BorshUnvalidatedOrders,
 };
-use dropset_interface::{
-    instructions::{
-        BatchReplaceInstructionData,
-        UnvalidatedOrders,
-    },
-    state::user_order_sectors::MAX_ORDERS_USIZE,
+use dropset_interface::instructions::{
+    BatchReplaceInstructionData,
+    UnvalidatedOrders,
 };
 use instruction_macros_traits::{
     Pack,
     Unpack,
 };
 use price::OrderInfoArgs;
-
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
-struct BorshOrderInfoArgs {
-    price_mantissa: u32,
-    base_scalar: u64,
-    base_exponent_biased: u8,
-    quote_exponent_biased: u8,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
-struct BorshUnvalidatedOrders {
-    order_args: [BorshOrderInfoArgs; MAX_ORDERS_USIZE],
-}
-
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
-struct BorshBatchReplaceData {
-    user_sector_index_hint: u32,
-    new_bids: BorshUnvalidatedOrders,
-    new_asks: BorshUnvalidatedOrders,
-}
-
-impl From<OrderInfoArgs> for BorshOrderInfoArgs {
-    fn from(args: OrderInfoArgs) -> Self {
-        Self {
-            price_mantissa: args.price_mantissa,
-            base_scalar: args.base_scalar,
-            base_exponent_biased: args.base_exponent_biased,
-            quote_exponent_biased: args.quote_exponent_biased,
-        }
-    }
-}
 
 #[test]
 fn pack_borsh_round_trip_equivalence() {
@@ -110,9 +77,5 @@ fn pack_borsh_round_trip_equivalence() {
     let pack_deserialized = BatchReplaceInstructionData::unpack(&borsh_bytes)
         .expect("Pack deserialization of Borsh bytes failed");
 
-    // Verify the user_sector_index_hint matches
-    assert_eq!(
-        pack_deserialized.user_sector_index_hint, pack_data.user_sector_index_hint,
-        "user_sector_index_hint should match after round-trip"
-    );
+    assert_eq!(pack_deserialized.pack().as_ref(), borsh_bytes.as_slice());
 }
