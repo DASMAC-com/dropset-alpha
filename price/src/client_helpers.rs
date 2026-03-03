@@ -101,6 +101,8 @@ pub fn try_encoded_u32_to_decoded_decimal(encoded_u32: u32) -> Result<Decimal, O
 }
 
 /// Sum the total base necessary to post every order in the passed order slice.
+///
+/// Typically used for summing ask collateral.
 pub fn sum_base_necessary(orders: &[OrderInfoArgs]) -> u64 {
     orders
         .iter()
@@ -109,6 +111,8 @@ pub fn sum_base_necessary(orders: &[OrderInfoArgs]) -> u64 {
 }
 
 /// Sum the total quote necessary to post every order in the passed order slice.
+///
+/// Typically used for summing bid collateral.
 pub fn sum_quote_necessary(orders: &[OrderInfoArgs]) -> u64 {
     orders
         .iter()
