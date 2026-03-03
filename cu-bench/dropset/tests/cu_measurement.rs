@@ -11,12 +11,15 @@ use cu_bench_dropset::{
     MAX_ORDERS_USIZE,
     MAX_PERMITTED_SECTOR_INCREASE,
 };
-use dropset_interface::instructions::{
-    BatchReplaceInstructionData,
-    CancelOrderInstructionData,
-    MarketOrderInstructionData,
-    PostOrderInstructionData,
-    UnvalidatedOrders,
+use dropset_interface::{
+    error::DropsetError,
+    instructions::{
+        BatchReplaceInstructionData,
+        CancelOrderInstructionData,
+        MarketOrderInstructionData,
+        PostOrderInstructionData,
+        UnvalidatedOrders,
+    },
 };
 use price::{
     client_helpers::{
@@ -497,7 +500,7 @@ fn cu_market_order() -> anyhow::Result<()> {
 
     let mut rows = Vec::new();
     for &n in SWAP_FILL_AMOUNTS {
-        rows.push((n, market_order_fill(n)));
+        rows.push((n, market_order_fill(n).map_err(|e| anyhow::anyhow!("{e}"))?));
     }
 
     fmt_subtable(&mut logs, "Fills", &rows);
@@ -509,7 +512,7 @@ fn cu_market_order() -> anyhow::Result<()> {
 /// all of them. Each maker is capped at `MAX_ORDERS_USIZE` open orders; additional makers are
 /// created automatically so this works for any N regardless of the per-user order limit.
 /// Returns amortized CU per fill.
-fn market_order_fill(n: u64) -> u64 {
+fn market_order_fill(n: u64) -> Result<u64, DropsetError> {
     let f = new_bench_fixture();
 
     // Each order and each maker seat occupies one sector.
@@ -551,7 +554,7 @@ fn market_order_fill(n: u64) -> u64 {
     }
 
     // Setup: add a taker with ATAs and enough quote to fill all n asks.
-    let quote_needed = sum_quote_necessary(&ask_args);
+    let quote_needed = sum_quote_necessary(&ask_args)?;
     let taker = add_user(&f, 100_000_000);
     let res = f.ctx.process_instruction_chain(&[
         f.market_ctx.base.create_ata_idempotent(&taker, &taker),
@@ -564,7 +567,7 @@ fn market_order_fill(n: u64) -> u64 {
     assert!(res.program_result.is_ok(), "taker setup failed");
 
     // Measure: market buy for exactly the base that the n asks offer.
-    let base_to_buy = sum_base_necessary(&ask_args);
+    let base_to_buy = sum_base_necessary(&ask_args)?;
     let cu = measure_cu(
         &f,
         f.market_ctx.market_order(
@@ -573,5 +576,5 @@ fn market_order_fill(n: u64) -> u64 {
         ),
     );
 
-    cu / n
+    Ok(cu / n)
 }
