@@ -12,7 +12,7 @@ const ADDR_B: solana_address::Address = pubkey!("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 const ADDR_C: solana_address::Address = pubkey!("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
 
 #[test]
-fn two_seats() -> anyhow::Result<()> {
+fn multiple_seats() -> anyhow::Result<()> {
     let user_a_mock = create_mock_user_account(ADDR_A, 100_000_000);
     let user_b_mock = create_mock_user_account(ADDR_B, 100_000_000);
     let user_c_mock = create_mock_user_account(ADDR_C, 100_000_000);
