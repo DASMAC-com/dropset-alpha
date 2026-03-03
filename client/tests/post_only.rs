@@ -16,6 +16,10 @@ use dropset_interface::{
 use itertools::Itertools;
 use mollusk_svm::result::Check;
 use price::{
+    client_helpers::{
+        sum_base_necessary,
+        sum_quote_necessary,
+    },
     to_order_info,
     OrderInfoArgs,
 };
@@ -30,23 +34,20 @@ fn post_only_crossing_check() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
-    let ask = to_order_info(OrderInfoArgs::order_at_price(50_000_000)).unwrap();
-    let bid = to_order_info(OrderInfoArgs::order_at_price(40_000_000)).unwrap();
-
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, ask.base_atoms)?,
-            market_ctx.quote.mint_to_owner(&user, bid.quote_atoms)?,
+            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
         ])
         .program_result
         .is_ok());
 
     assert!(mollusk
         .process_instruction_chain(&[
-            market_ctx.deposit_base(user, ask.base_atoms, NIL),
-            market_ctx.deposit_quote(user, bid.quote_atoms, 0),
+            market_ctx.deposit_base(user, u64::MAX, NIL),
+            market_ctx.deposit_quote(user, u64::MAX, 0),
         ])
         .program_result
         .is_ok());
@@ -83,26 +84,21 @@ fn crossing_check_clears_with_cancel() -> anyhow::Result<()> {
     let user = user_mock.0;
     let (mollusk, market_ctx) = new_dropset_mollusk_context_with_default_market(&[user_mock]);
 
-    let ask_50 = to_order_info(OrderInfoArgs::order_at_price(50_000_000)).unwrap();
-    let ask_60 = to_order_info(OrderInfoArgs::order_at_price(60_000_000)).unwrap();
-    let bid_55 = to_order_info(OrderInfoArgs::order_at_price(55_000_000)).unwrap();
-
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx
-                .base
-                .mint_to_owner(&user, ask_50.base_atoms + ask_60.base_atoms)?,
-            market_ctx.quote.mint_to_owner(&user, bid_55.quote_atoms)?,
+            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
         ])
         .program_result
         .is_ok());
 
+    let user_a_seat_index = 0; // First seat.
     assert!(mollusk
         .process_instruction_chain(&[
-            market_ctx.deposit_base(user, ask_50.base_atoms + ask_60.base_atoms, NIL),
-            market_ctx.deposit_quote(user, bid_55.quote_atoms, 0),
+            market_ctx.deposit_base(user, u64::MAX, NIL),
+            market_ctx.deposit_quote(user, u64::MAX, user_a_seat_index),
         ])
         .program_result
         .is_ok());
@@ -146,15 +142,23 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
     let (mollusk, market_ctx) =
         new_dropset_mollusk_context_with_default_market(&[user_a_mock, user_b_mock]);
 
-    let ask = to_order_info(OrderInfoArgs::order_at_price(50_000_000)).unwrap();
+    let user_a_base = to_order_info(OrderInfoArgs::order_at_price(50_000_000))
+        .unwrap()
+        .base_atoms;
+
+    let user_b_base = sum_base_necessary(&[
+        OrderInfoArgs::order_at_price(50_000_000),
+        OrderInfoArgs::order_at_price(50_000_001),
+    ]);
+    let user_b_quote = sum_quote_necessary(&[OrderInfoArgs::order_at_price(49_999_999)]);
 
     // Create the base ATA for `user_a`. Mint the intended order size to them and then have them
     // deposit it to their seat.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_a, &user_a),
-            market_ctx.base.mint_to_owner(&user_a, ask.base_atoms)?,
-            market_ctx.deposit_base(user_a, ask.base_atoms, NIL)
+            market_ctx.base.mint_to_owner(&user_a, user_a_base)?,
+            market_ctx.deposit_base(user_a, user_a_base, NIL)
         ])
         .program_result
         .is_ok());
@@ -163,14 +167,15 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
     // since ultimately they  doesn't
     // need more than a single atom per order because size is irrelevant triggering the post only
     // crossing check failure.
+    let user_b_seat_index = 1; // Second seat => seat index 1.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_b, &user_b),
             market_ctx.quote.create_ata_idempotent(&user_b, &user_b),
-            market_ctx.base.mint_to_owner(&user_b, 2)?,
-            market_ctx.quote.mint_to_owner(&user_b, 1)?,
-            market_ctx.deposit_base(user_b, 2, NIL),
-            market_ctx.deposit_quote(user_b, 1, 1), // Seat index 1 since it's the second seat.
+            market_ctx.base.mint_to_owner(&user_b, user_b_base)?,
+            market_ctx.quote.mint_to_owner(&user_b, user_b_quote)?,
+            market_ctx.deposit_base(user_b, user_b_base, NIL),
+            market_ctx.deposit_quote(user_b, user_b_quote, user_b_seat_index),
         ])
         .program_result
         .is_ok());
@@ -211,26 +216,32 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
         (&user_b_post_bid(50_000_000), &cross_check_fail()),
         (&user_b_post_bid(50_000_001), &cross_check_fail()),
     ]);
+
     mollusk.process_and_validate_instruction_chain(&[
         (&user_b_post_bid(49_999_999), &[Check::success()]),
         (&user_b_post_ask(50_000_000), &[Check::success()]),
         (&user_b_post_ask(50_000_001), &[Check::success()]),
     ]);
 
-    let market = mollusk.view_market(market_ctx.market);
-    println!("{market:?}");
-
     let check = MarketChecker::new(&mollusk, &market_ctx);
-
-    // check.num_bids(1);
+    check.num_bids(1);
     check.num_asks(3);
+
+    let user_a_seat_index = 0;
+    check.seat_index(user_a, user_a_seat_index);
+    check.seat_index(user_b, user_b_seat_index);
     check.asks(|asks| {
-        println!("{asks:?}");
+        let user_seat_and_price_pairs = asks
+            .iter()
+            .map(|ask| (ask.user_seat, ask.encoded_price.as_u32()))
+            .collect_vec();
         assert_eq!(
-            asks.iter()
-                .map(|ask| ask.encoded_price.as_u32())
-                .collect_vec(),
-            vec![50_000_000, 50_000_000, 50_000_001]
+            user_seat_and_price_pairs,
+            vec![
+                (user_a_seat_index, 50_000_000),
+                (user_b_seat_index, 50_000_000),
+                (user_b_seat_index, 50_000_001),
+            ]
         );
     });
 
