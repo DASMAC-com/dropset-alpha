@@ -137,13 +137,17 @@ macro_rules! pow10_u64 {
 ///
 /// # Example
 /// ```rust
-/// enum MyError { BadSub }
+/// enum MyError { BadSub1, BadSub2 }
 ///
-/// let res: Result<u8, MyError> = price::checked_sub!(5u8, 4, MyError::BadSub);
-/// assert!(matches!(res, Ok(1)));
+/// fn do_something_with_sub() -> Result<u8, MyError> {
+///     let res_1 = price::checked_sub!(5u8, 4, MyError::BadSub1); // No underflow.
+///     let res_2 = price::checked_sub!(5u8, 6, MyError::BadSub2); // Underflows.
 ///
-/// let res: Result<u8, MyError> = price::checked_sub!(5u8, 6, MyError::BadSub);
-/// assert!(matches!(res, Err(MyError::BadSub)));
+///     // Doesn't get here because `res_2` returns early.
+///     Ok(res_1)
+/// }
+///
+/// assert!(matches!(do_something_with_sub(), Err(MyError::BadSub2)));
 /// ```
 #[macro_export]
 macro_rules! checked_sub {
@@ -167,13 +171,17 @@ macro_rules! checked_sub {
 ///
 /// # Example
 /// ```rust
-/// enum MyError { BadMul }
+/// enum MyError { BadMul1, BadMul2 }
 ///
-/// let res: Result<u8, MyError> = price::checked_mul!(255u8, 1, MyError::BadMul);
-/// assert!(matches!(res, Ok(255)));
+/// fn do_something_with_mul() -> Result<u8, MyError> {
+///     let res_1 = price::checked_mul!(255u8, 1, MyError::BadMul1); // No overflow.
+///     let res_2 = price::checked_mul!(255u8, 2, MyError::BadMul2); // Overflows.
 ///
-/// let res: Result<u8, MyError> = price::checked_mul!(255u8, 2, MyError::BadMul);
-/// assert!(matches!(res, Err(MyError::BadMul)));
+///     // Doesn't get here because `res_2` returns early.
+///     Ok(res_1)
+/// }
+///
+/// assert!(matches!(do_something_with_mul(), Err(MyError::BadMul2)));
 /// ```
 #[macro_export]
 macro_rules! checked_mul {
