@@ -6,8 +6,11 @@
     "bench:to-order-info": "bash cu-bench/to-order-info.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
-    "build": "cd program && cargo build-sbf",
-    "build:debug": "cd program && cargo build-sbf --features debug",
+    "build": "pnpm run build:dropset && pnpm run build:pack-orders && pnpm run build:to-order-info",
+    "build:debug": "cd program && cargo build-sbf --features debug --arch v2",
+    "build:dropset": "cd program && cargo build-sbf --arch v2",
+    "build:pack-orders": "cd cu-bench/programs/pack-orders && cargo build-sbf --arch v2",
+    "build:to-order-info": "cd cu-bench/programs/to-order-info && cargo build-sbf --arch v2",
     "check": "cargo check",
     "check:tests": "cargo check --tests",
     "check:all": "pnpm run check:tests && pnpm run check:bench-manifest && pnpm run check:bench-phoenix",
@@ -26,6 +29,6 @@
     "examples:register-market": "cargo run --example register_market",
     "examples:two-seats": "cargo run --example two_seats",
     "format": "cargo +nightly fmt --all",
-    "test": "cargo test"
+    "test": "pnpm run build && cargo test"
   }
 }
