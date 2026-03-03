@@ -19,6 +19,8 @@ program_entrypoint!(process_instruction);
 no_allocator!();
 nostd_panic_handler!();
 
+use dropset_interface::state::user_order_sectors::MAX_ORDERS_USIZE;
+
 #[inline(never)]
 fn process_instruction(
     _program_id: &Address,
@@ -28,12 +30,9 @@ fn process_instruction(
     // The pack version.
     #[cfg(feature = "bench-program-A")]
     {
-        use dropset_interface::{
-            instructions::{
-                BatchReplaceInstructionData,
-                UnvalidatedOrders,
-            },
-            state::user_order_sectors::MAX_ORDERS_USIZE,
+        use dropset_interface::instructions::{
+            BatchReplaceInstructionData,
+            UnvalidatedOrders,
         };
         use price::OrderInfoArgs;
         use static_assertions::const_assert_eq;
