@@ -125,7 +125,10 @@ pub fn new_dropset_mollusk_context_with_default_market(
     let register_market = MOLLUSK_DEFAULT_MARKET
         .register_market(MOLLUSK_DEFAULT_MINT_AUTHORITY, MOLLUSK_DEFAULT_NUM_SECTORS);
 
-    res.process_instruction_chain(&[create_tokens, vec![register_market]].concat());
+    assert!(res
+        .process_instruction_chain(&[create_tokens, vec![register_market]].concat())
+        .program_result
+        .is_ok());
 
     (res, MOLLUSK_DEFAULT_MARKET)
 }
