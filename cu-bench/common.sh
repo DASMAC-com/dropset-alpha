@@ -8,12 +8,14 @@ run_bench() {
     local program="$2"
     local features="$3"
     local test_name="$4"
+    local arch="$5"
 
     echo "=== $label ==="
     cd "$ROOT_DIR/cu-bench/programs/$program"
-    build_output=$(cargo build-sbf --features "$features" --no-default-features 2>&1) || { echo "$build_output"; exit 1; }
+    build_output=$(cargo build-sbf --arch "$5" --features "$features" --no-default-features 2>&1) || { echo "$build_output"; exit 1; }
     cd "$ROOT_DIR"
 
     output=$(cargo test -p cu-bench-tests --test "$test_name" --quiet -- --nocapture 2>&1) || { echo "$output"; exit 1; }
     echo "$output" | grep "Compute units consumed"
 }
+

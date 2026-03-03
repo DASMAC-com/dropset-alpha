@@ -33,12 +33,9 @@ fn process_instruction(
     // Each field is black_box'd to prevent const-folding.
     macro_rules! call {
         ($m:expr, $s:expr, $b:expr, $q:expr) => {{
-            let args = OrderInfoArgs::new(
-                black_box($m),
-                black_box($s),
-                black_box(biased_exponent!($b)),
-                black_box(biased_exponent!($q)),
-            );
+            let b = biased_exponent!($b);
+            let q = biased_exponent!($q);
+            let args = OrderInfoArgs::new(black_box($m), black_box($s), black_box(b), black_box(q));
             black_box(to_order_info(args).map_err(|_| ProgramError::InvalidInstructionData)?);
         }};
     }
