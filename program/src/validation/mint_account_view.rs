@@ -86,7 +86,7 @@ impl<'a> MintAccountView<'a> {
     #[inline(always)]
     pub unsafe fn get_mint_decimals(&self) -> Result<u8, ProgramError> {
         let data = unsafe { self.account.borrow_unchecked() };
-        // Safety: `self` contains verifiably initialized base and quote mints, since the market
+        // Safety: `self` contains a verifiably initialized base or quote mint, since the market
         // header stores their addresses and they are checked against the values in the header any
         // time `self` is constructed.
         Ok(unsafe { pinocchio_load_unchecked::<Mint>(data) }
