@@ -111,8 +111,7 @@ impl CustomRpcClient {
             .await
     }
 
-    /// Sends and confirms a transaction using [Self::config]. This automatically interpolates the
-    /// payer into the signers array if they're included as a signer in any of the instructions.
+    /// Sends and confirms a transaction using [Self::config].
     pub async fn send_and_confirm_txn(
         &self,
         payer: &Keypair,
@@ -206,15 +205,17 @@ async fn send_transaction_with_config(
     .concat();
 
     let msg = Message::new(final_instructions, Some(&payer.pubkey()));
+
+    // The payer must always sign since it is paying, so chain it with the rest of the signers.
     let mut tx = Transaction::new_unsigned(msg);
-    let payer_is_in_signers = instructions.iter().any(|ixn| {
-        ixn.accounts
-            .iter()
-            .any(|acc| acc.is_signer && acc.pubkey == payer.pubkey())
-    });
-    let maybe_payer_signer = if payer_is_in_signers { vec![payer] } else { vec![] };
-    tx.try_sign(&[signers, &maybe_payer_signer].concat(), bh)
-        .expect("Should sign");
+    tx.try_sign(
+        &[std::iter::once(payer)
+            .chain(signers.iter().cloned())
+            .collect::<Vec<_>>()]
+        .concat(),
+        bh,
+    )
+    .expect("Should sign");
 
     let res = rpc.send_and_confirm_transaction(&tx).await;
     match res {
