@@ -36,7 +36,7 @@ fn market_order() -> anyhow::Result<()> {
     let maker_deposit_base = market_ctx.deposit_base(maker, market_order.base_atoms, NIL);
     let maker_post_ask = market_ctx.post_order(
         maker,
-        PostOrderInstructionData::new(order_info_args, false, 0),
+        PostOrderInstructionData::new(order_info_args, false, 0), // First seat on the market.
     );
     // Set up taker: mint quote for the fill, create both ATAs (base to receive, quote to spend).
     let create_taker_base_ata = market_ctx.base.create_ata_idempotent(&taker, &taker);
@@ -70,16 +70,18 @@ fn market_order() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    // Taker should have sent quote and received base.
-
-    // Taker should have received all the base.
+    // Taker should have sent all their quote to receive all the base directly (ATA, not seat).
     check.base_token_balance(taker, market_order.base_atoms);
+    check.quote_token_balance(taker, 0);
 
-    // Maker's seat should have received the quote.
+    // Maker sent base to create the order. This set their seat's `base_remaining` to zero.
+    // Then, when the order was filled, the seat received the quote.
     check.seat_quote_available(maker, market_order.quote_atoms);
+    check.seat_base_available(maker, 0);
 
     // The ask should be fully filled and removed.
     check.num_asks(0);
+    check.num_bids(0);
 
     Ok(())
 }
