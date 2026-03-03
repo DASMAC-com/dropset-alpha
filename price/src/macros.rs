@@ -100,7 +100,7 @@ macro_rules! pow10_u64 {
                 15 => value / 10,                   /* BIAS - 1  */
                 _  => {
                     ::pinocchio::hint::cold_path();
-                    return Err(OrderInfoError::InvalidBiasedExponent);
+                    return Err($crate::OrderInfoError::InvalidBiasedExponent);
                 }
             }
         } else {
@@ -124,7 +124,7 @@ macro_rules! pow10_u64 {
                 31 => $crate::checked_mul!(value, 1000000000000000,  overflow_err), /* BIAS + 15 */
                 _  => {
                     ::pinocchio::hint::cold_path();
-                    return Err(OrderInfoError::InvalidBiasedExponent);
+                    return Err($crate::OrderInfoError::InvalidBiasedExponent);
                 }
             }
         }
