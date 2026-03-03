@@ -46,11 +46,14 @@ fn register_market() -> anyhow::Result<()> {
     let check = MarketChecker::new(&mollusk, &market_ctx);
 
     // Create the tokens.
-    mollusk.process_instruction_chain(
-        &market_ctx
-            .create_tokens(funder, Rent::default().minimum_balance(Mint::LEN))
-            .expect("Should create token instructions"),
-    );
+    assert!(mollusk
+        .process_instruction_chain(
+            &market_ctx
+                .create_tokens(funder, Rent::default().minimum_balance(Mint::LEN))
+                .expect("Should create token instructions"),
+        )
+        .program_result
+        .is_ok());
 
     // Register the market and run checks on the account post-registration.
     let num_sectors = 23;
