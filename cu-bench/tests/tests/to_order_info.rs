@@ -3,7 +3,7 @@ use solana_address::Address;
 use solana_instruction::Instruction;
 
 #[test]
-fn pow10_cu() {
+fn to_order_info_cu() {
     let program_id = Address::new_unique();
     let mollusk = new_cu_bench_mollusk(&program_id, "cu_bench_to_order_info.so");
 
