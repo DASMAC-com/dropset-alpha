@@ -10,9 +10,6 @@ use crate::validation::market_account_view::MarketAccountView;
 
 /// The account context for the [BatchReplace] instruction. It validates the market account
 /// passed in is a valid dropset account.
-///
-/// Note that the event authority is validated by the inevitable
-/// [dropset_interface::instructions::generated_program::FlushEvents] self-CPI.
 #[derive(Clone)]
 pub struct BatchReplaceContext<'a> {
     pub user: &'a AccountView,
