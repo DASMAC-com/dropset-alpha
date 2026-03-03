@@ -104,23 +104,24 @@ macro_rules! pow10_u64 {
                 }
             }
         } else {
+            let overflow_err = $crate::OrderInfoError::ArithmeticOverflow;
             /* positive unbiased exponent: multiply */
             match biased_exponent {
-                17 => checked_mul!(value, 10,                OrderInfoError::ArithmeticOverflow), /* BIAS + 1  */
-                18 => checked_mul!(value, 100,               OrderInfoError::ArithmeticOverflow), /* BIAS + 2  */
-                19 => checked_mul!(value, 1000,              OrderInfoError::ArithmeticOverflow), /* BIAS + 3  */
-                20 => checked_mul!(value, 10000,             OrderInfoError::ArithmeticOverflow), /* BIAS + 4  */
-                21 => checked_mul!(value, 100000,            OrderInfoError::ArithmeticOverflow), /* BIAS + 5  */
-                22 => checked_mul!(value, 1000000,           OrderInfoError::ArithmeticOverflow), /* BIAS + 6  */
-                23 => checked_mul!(value, 10000000,          OrderInfoError::ArithmeticOverflow), /* BIAS + 7  */
-                24 => checked_mul!(value, 100000000,         OrderInfoError::ArithmeticOverflow), /* BIAS + 8  */
-                25 => checked_mul!(value, 1000000000,        OrderInfoError::ArithmeticOverflow), /* BIAS + 9  */
-                26 => checked_mul!(value, 10000000000,       OrderInfoError::ArithmeticOverflow), /* BIAS + 10 */
-                27 => checked_mul!(value, 100000000000,      OrderInfoError::ArithmeticOverflow), /* BIAS + 11 */
-                28 => checked_mul!(value, 1000000000000,     OrderInfoError::ArithmeticOverflow), /* BIAS + 12 */
-                29 => checked_mul!(value, 10000000000000,    OrderInfoError::ArithmeticOverflow), /* BIAS + 13 */
-                30 => checked_mul!(value, 100000000000000,   OrderInfoError::ArithmeticOverflow), /* BIAS + 14 */
-                31 => checked_mul!(value, 1000000000000000,  OrderInfoError::ArithmeticOverflow), /* BIAS + 15 */
+                17 => $crate::checked_mul!(value, 10,                overflow_err), /* BIAS + 1  */
+                18 => $crate::checked_mul!(value, 100,               overflow_err), /* BIAS + 2  */
+                19 => $crate::checked_mul!(value, 1000,              overflow_err), /* BIAS + 3  */
+                20 => $crate::checked_mul!(value, 10000,             overflow_err), /* BIAS + 4  */
+                21 => $crate::checked_mul!(value, 100000,            overflow_err), /* BIAS + 5  */
+                22 => $crate::checked_mul!(value, 1000000,           overflow_err), /* BIAS + 6  */
+                23 => $crate::checked_mul!(value, 10000000,          overflow_err), /* BIAS + 7  */
+                24 => $crate::checked_mul!(value, 100000000,         overflow_err), /* BIAS + 8  */
+                25 => $crate::checked_mul!(value, 1000000000,        overflow_err), /* BIAS + 9  */
+                26 => $crate::checked_mul!(value, 10000000000,       overflow_err), /* BIAS + 10 */
+                27 => $crate::checked_mul!(value, 100000000000,      overflow_err), /* BIAS + 11 */
+                28 => $crate::checked_mul!(value, 1000000000000,     overflow_err), /* BIAS + 12 */
+                29 => $crate::checked_mul!(value, 10000000000000,    overflow_err), /* BIAS + 13 */
+                30 => $crate::checked_mul!(value, 100000000000000,   overflow_err), /* BIAS + 14 */
+                31 => $crate::checked_mul!(value, 1000000000000000,  overflow_err), /* BIAS + 15 */
                 _  => {
                     ::pinocchio::hint::cold_path();
                     return Err(OrderInfoError::InvalidBiasedExponent);
