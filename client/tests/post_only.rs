@@ -149,8 +149,8 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
     let user_b_base = sum_base_necessary(&[
         OrderInfoArgs::order_at_price(50_000_000),
         OrderInfoArgs::order_at_price(50_000_001),
-    ]);
-    let user_b_quote = sum_quote_necessary(&[OrderInfoArgs::order_at_price(49_999_999)]);
+    ])?;
+    let user_b_quote = sum_quote_necessary(&[OrderInfoArgs::order_at_price(49_999_999)])?;
 
     // Create the base ATA for `user_a`. Mint the intended order size to them and then have them
     // deposit it to their seat.

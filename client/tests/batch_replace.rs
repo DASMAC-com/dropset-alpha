@@ -39,8 +39,8 @@ fn batch_replace_add_orders_happy_path() -> anyhow::Result<()> {
         OrderInfoArgs::new_unscaled(13_000_000, 1),
     ];
 
-    let quote_necessary = sum_quote_necessary(&bid_order_args);
-    let base_necessary = sum_base_necessary(&ask_order_args);
+    let quote_necessary = sum_quote_necessary(&bid_order_args)?;
+    let base_necessary = sum_base_necessary(&ask_order_args)?;
 
     // Set up the user with base (for asks) and quote (for bids).
     assert!(mollusk
@@ -130,8 +130,8 @@ fn batch_replace_interleaved_bids_are_sorted() -> anyhow::Result<()> {
         OrderInfoArgs::order_at_price(71_000_000),
     ];
 
-    let maker_a_quote = sum_quote_necessary(&maker_a_bids);
-    let maker_b_quote = sum_quote_necessary(&maker_b_bids);
+    let maker_a_quote = sum_quote_necessary(&maker_a_bids)?;
+    let maker_b_quote = sum_quote_necessary(&maker_b_bids)?;
 
     // Set up maker A: create ATAs, mint 1 base (to create seat via deposit_base), mint quote.
     assert!(mollusk
@@ -250,12 +250,15 @@ fn batch_replace_unsorted_orders_failure() -> anyhow::Result<()> {
         OrderInfoArgs::new_unscaled(12_000_000, 1),
     ];
 
-    let quote_necessary = 3 * sum_quote_necessary(&ascending_orders);
-    let base_necessary = 3 * sum_base_necessary(&ascending_orders);
-    assert_eq!(quote_necessary, 3 * sum_quote_necessary(&descending_orders));
-    assert_eq!(base_necessary, 3 * sum_base_necessary(&descending_orders));
-    assert_eq!(quote_necessary, 3 * sum_quote_necessary(&equal_orders));
-    assert_eq!(base_necessary, 3 * sum_base_necessary(&equal_orders));
+    let quote_necessary = 3 * sum_quote_necessary(&ascending_orders)?;
+    let base_necessary = 3 * sum_base_necessary(&ascending_orders)?;
+    assert_eq!(
+        quote_necessary,
+        3 * sum_quote_necessary(&descending_orders)?
+    );
+    assert_eq!(base_necessary, 3 * sum_base_necessary(&descending_orders)?);
+    assert_eq!(quote_necessary, 3 * sum_quote_necessary(&equal_orders)?);
+    assert_eq!(base_necessary, 3 * sum_base_necessary(&equal_orders)?);
 
     // Set up the user with base (for asks) and quote (for bids).
     assert!(mollusk
