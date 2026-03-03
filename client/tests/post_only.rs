@@ -247,3 +247,92 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Verifies that canceling and re-posting an order moves it to the back of the time-priority
+/// queue at its price level, even when other users' orders at the same price exist in between.
+#[test]
+fn price_time_priority() -> anyhow::Result<()> {
+    let user_a_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
+    let user_b_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
+    let user_c_mock = create_mock_user_account(Address::new_unique(), 100_000_000);
+    let user_a = user_a_mock.0;
+    let user_b = user_b_mock.0;
+    let user_c = user_c_mock.0;
+    let (mollusk, market_ctx) =
+        new_dropset_mollusk_context_with_default_market(&[user_a_mock, user_b_mock, user_c_mock]);
+
+    assert!(mollusk
+        .process_instruction_chain(&[
+            market_ctx.base.create_ata_idempotent(&user_a, &user_a),
+            market_ctx.base.create_ata_idempotent(&user_b, &user_b),
+            market_ctx.base.create_ata_idempotent(&user_c, &user_c),
+            market_ctx.base.mint_to_owner(&user_a, u64::MAX / 3)?,
+            market_ctx.base.mint_to_owner(&user_b, u64::MAX / 3)?,
+            market_ctx.base.mint_to_owner(&user_c, u64::MAX / 3)?,
+            market_ctx.deposit_base(user_a, u64::MAX / 3, NIL),
+            market_ctx.deposit_base(user_b, u64::MAX / 3, NIL),
+            market_ctx.deposit_base(user_c, u64::MAX / 3, NIL),
+        ])
+        .program_result
+        .is_ok());
+
+    let seat_a = mollusk.get_seat(market_ctx.market, user_a);
+    let seat_b = mollusk.get_seat(market_ctx.market, user_b);
+    let seat_c = mollusk.get_seat(market_ctx.market, user_c);
+
+    // ---------------------------------------------------------------------------------------------
+    // Create helper closures to make the test more readable.
+    let post_ask = |price: u32, user: Address, seat_index: u32| {
+        market_ctx.post_order(
+            user,
+            PostOrderInstructionData::new(OrderInfoArgs::order_at_price(price), false, seat_index),
+        )
+    };
+    let post_ask_a = |price: u32| post_ask(price, user_a, seat_a.index);
+    let post_ask_b = |price: u32| post_ask(price, user_b, seat_b.index);
+    let post_ask_c = |price: u32| post_ask(price, user_c, seat_c.index);
+    let cancel_ask_b = |price: u32| {
+        market_ctx.cancel_order(
+            user_b,
+            CancelOrderInstructionData::new(price, false, seat_b.index),
+        )
+    };
+    // ---------------------------------------------------------------------------------------------
+
+    // Post initial asks. At 50M, time priority is: user_b, user_a, user_c.
+    mollusk.process_and_validate_instruction_chain(&[
+        (&post_ask_a(40_000_000), &[Check::success()]), // A, 40_000_000
+        (&post_ask_b(50_000_000), &[Check::success()]), // B, 50_000_000
+        (&post_ask_a(50_000_000), &[Check::success()]), // A, ..
+        (&post_ask_c(50_000_000), &[Check::success()]), // C, ..
+        (&post_ask_a(60_000_000), &[Check::success()]), // A, 60_000_000
+    ]);
+
+    // user_b cancels and re-posts at 50M. They move to the back of the 50M queue.
+    mollusk.process_and_validate_instruction_chain(&[
+        (&cancel_ask_b(50_000_000), &[Check::success()]),
+        (&post_ask_b(50_000_000), &[Check::success()]),
+    ]);
+
+    // Verify that user b's order has been inserted at the end of the 50_000_000 orders.
+    let check = MarketChecker::new(&mollusk, &market_ctx);
+    check.num_asks(5);
+    check.asks(|asks| {
+        let seat_and_price = asks
+            .iter()
+            .map(|ask| (ask.user_seat, ask.encoded_price.as_u32()))
+            .collect_vec();
+        assert_eq!(
+            seat_and_price,
+            vec![
+                (seat_a.index, 40_000_000), // A, 40_000_000
+                (seat_a.index, 50_000_000), // A, 50_000_000
+                (seat_c.index, 50_000_000), // C, ..
+                (seat_b.index, 50_000_000), // B, ..
+                (seat_a.index, 60_000_000), // A, 60_000_000
+            ],
+        );
+    });
+
+    Ok(())
+}
