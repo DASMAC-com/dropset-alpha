@@ -1,0 +1,20 @@
+[package]
+name = "cu-bench-to-order-info"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+pinocchio.workspace = true
+price = { path = "../../../price" }
+solana-address.workspace = true
+static_assertions.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["bench-program-A"]
+bench-program-A = []

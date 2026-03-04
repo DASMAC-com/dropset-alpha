@@ -72,7 +72,7 @@ impl MarketSeat {
             self.base_available(),
             amount,
             DropsetError::InsufficientUserBalance
-        )?;
+        );
         self.set_base_available(remaining);
 
         Ok(())
@@ -84,7 +84,7 @@ impl MarketSeat {
             self.quote_available(),
             amount,
             DropsetError::InsufficientUserBalance
-        )?;
+        );
         self.set_quote_available(remaining);
 
         Ok(())

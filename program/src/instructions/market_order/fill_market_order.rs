@@ -18,6 +18,7 @@ use dropset_interface::{
     },
 };
 use pinocchio::hint;
+#[cfg(debug_assertions)]
 use price::EncodedPrice;
 
 use crate::{

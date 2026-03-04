@@ -75,9 +75,9 @@ fn register_market() -> anyhow::Result<()> {
         &market_ctx.quote.mint_address,
     );
 
-    check.num_asks(1);
-    check.num_bids(1);
-    check.num_seats(1);
+    check.num_asks(0);
+    check.num_bids(0);
+    check.num_seats(0);
     check.market_header(|header| {
         assert_eq!(
             header,

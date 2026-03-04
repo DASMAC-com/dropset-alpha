@@ -29,7 +29,10 @@ const _: () = {
 /// - `16` → exponent `0`   (multiplication by 1 aka 10^0)
 /// - `31` → exponent `+15` (multiplication by 10^15)
 ///
-/// The code output from the macro will error on an invalid biased exponent or arithmetic overflow.
+/// On an invalid biased exponent, the macro performs an early
+/// `return Err(OrderInfoError::InvalidBiasedExponent)` from the enclosing function.
+/// Overflow in the multiply path propagates via [`crate::checked_mul`], which performs an early
+/// `return Err(OrderInfoError::ArithmeticOverflow)` from the enclosing function.
 ///
 /// # Reasoning behind exponent range
 ///
@@ -72,57 +75,81 @@ const _: () = {
 #[rustfmt::skip]
 macro_rules! pow10_u64 {
     ($value:expr, $biased_exponent:expr) => {{
-        match $biased_exponent {
-            /* BIAS - 16 */  0 => Ok($value / 10000000000000000u64),
-            /* BIAS - 15 */  1 => Ok($value / 1000000000000000),
-            /* BIAS - 14 */  2 => Ok($value / 100000000000000),
-            /* BIAS - 13 */  3 => Ok($value / 10000000000000),
-            /* BIAS - 12 */  4 => Ok($value / 1000000000000),
-            /* BIAS - 11 */  5 => Ok($value / 100000000000),
-            /* BIAS - 10 */  6 => Ok($value / 10000000000),
-            /* BIAS - 9 */   7 => Ok($value / 1000000000),
-            /* BIAS - 8 */   8 => Ok($value / 100000000),
-            /* BIAS - 7 */   9 => Ok($value / 10000000),
-            /* BIAS - 6 */  10 => Ok($value / 1000000),
-            /* BIAS - 5 */  11 => Ok($value / 100000),
-            /* BIAS - 4 */  12 => Ok($value / 10000),
-            /* BIAS - 3 */  13 => Ok($value / 1000),
-            /* BIAS - 2 */  14 => Ok($value / 100),
-            /* BIAS - 1 */  15 => Ok($value / 10),
-            /* BIAS - 0 */  16 => Ok($value),
-            /* BIAS + 1 */  17 => checked_mul!($value, 10, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 2 */  18 => checked_mul!($value, 100, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 3 */  19 => checked_mul!($value, 1000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 4 */  20 => checked_mul!($value, 10000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 5 */  21 => checked_mul!($value, 100000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 6 */  22 => checked_mul!($value, 1000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 7 */  23 => checked_mul!($value, 10000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 8 */  24 => checked_mul!($value, 100000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 9 */  25 => checked_mul!($value, 1000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 10 */ 26 => checked_mul!($value, 10000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 11 */ 27 => checked_mul!($value, 100000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 12 */ 28 => checked_mul!($value, 1000000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 13 */ 29 => checked_mul!($value, 10000000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 14 */ 30 => checked_mul!($value, 100000000000000, OrderInfoError::ArithmeticOverflow),
-            /* BIAS + 15 */ 31 => checked_mul!($value, 1000000000000000, OrderInfoError::ArithmeticOverflow),
-            _ => Err(OrderInfoError::InvalidBiasedExponent),
+        let value = $value;
+        let biased_exponent = $biased_exponent;
+        if biased_exponent == 16 {
+            /* BIAS + 0: identity */
+            value
+        } else if biased_exponent < 16 {
+            /* negative unbiased exponent: divide */
+            match biased_exponent {
+                0  => value / 10000000000000000u64, /* BIAS - 16 */
+                1  => value / 1000000000000000,     /* BIAS - 15 */
+                2  => value / 100000000000000,      /* BIAS - 14 */
+                3  => value / 10000000000000,       /* BIAS - 13 */
+                4  => value / 1000000000000,        /* BIAS - 12 */
+                5  => value / 100000000000,         /* BIAS - 11 */
+                6  => value / 10000000000,          /* BIAS - 10 */
+                7  => value / 1000000000,           /* BIAS - 9  */
+                8  => value / 100000000,            /* BIAS - 8  */
+                9  => value / 10000000,             /* BIAS - 7  */
+                10 => value / 1000000,              /* BIAS - 6  */
+                11 => value / 100000,               /* BIAS - 5  */
+                12 => value / 10000,                /* BIAS - 4  */
+                13 => value / 1000,                 /* BIAS - 3  */
+                14 => value / 100,                  /* BIAS - 2  */
+                15 => value / 10,                   /* BIAS - 1  */
+                _  => {
+                    ::pinocchio::hint::cold_path();
+                    return Err($crate::OrderInfoError::InvalidBiasedExponent);
+                }
+            }
+        } else {
+            let overflow_err = $crate::OrderInfoError::ArithmeticOverflow;
+            /* positive unbiased exponent: multiply */
+            match biased_exponent {
+                17 => $crate::checked_mul!(value, 10,                overflow_err), /* BIAS + 1  */
+                18 => $crate::checked_mul!(value, 100,               overflow_err), /* BIAS + 2  */
+                19 => $crate::checked_mul!(value, 1000,              overflow_err), /* BIAS + 3  */
+                20 => $crate::checked_mul!(value, 10000,             overflow_err), /* BIAS + 4  */
+                21 => $crate::checked_mul!(value, 100000,            overflow_err), /* BIAS + 5  */
+                22 => $crate::checked_mul!(value, 1000000,           overflow_err), /* BIAS + 6  */
+                23 => $crate::checked_mul!(value, 10000000,          overflow_err), /* BIAS + 7  */
+                24 => $crate::checked_mul!(value, 100000000,         overflow_err), /* BIAS + 8  */
+                25 => $crate::checked_mul!(value, 1000000000,        overflow_err), /* BIAS + 9  */
+                26 => $crate::checked_mul!(value, 10000000000,       overflow_err), /* BIAS + 10 */
+                27 => $crate::checked_mul!(value, 100000000000,      overflow_err), /* BIAS + 11 */
+                28 => $crate::checked_mul!(value, 1000000000000,     overflow_err), /* BIAS + 12 */
+                29 => $crate::checked_mul!(value, 10000000000000,    overflow_err), /* BIAS + 13 */
+                30 => $crate::checked_mul!(value, 100000000000000,   overflow_err), /* BIAS + 14 */
+                31 => $crate::checked_mul!(value, 1000000000000000,  overflow_err), /* BIAS + 15 */
+                _  => {
+                    ::pinocchio::hint::cold_path();
+                    return Err($crate::OrderInfoError::InvalidBiasedExponent);
+                }
+            }
         }
     }};
 }
 
-/// A checked subtraction with a custom error return value and the error path marked as cold.
+/// A checked subtraction that performs an early `return Err($err)` from the enclosing function on
+/// underflow. The error path is marked as cold.
 ///
 /// *NOTE: This is only intended for usage with **unsigned** integer types.*
 ///
 /// # Example
 /// ```rust
-/// enum MyError { BadSub }
+/// enum MyError { BadSub1, BadSub2 }
 ///
-/// let res: Result<u8, MyError> = price::checked_sub!(5u8, 4, MyError::BadSub);
-/// assert!(matches!(res, Ok(1)));
+/// fn do_something_with_sub() -> Result<u8, MyError> {
+///     let res_1 = price::checked_sub!(5u8, 4, MyError::BadSub1); // No underflow.
+///     let res_2 = price::checked_sub!(5u8, 6, MyError::BadSub2); // Underflows.
 ///
-/// let res: Result<u8, MyError> = price::checked_sub!(5u8, 6, MyError::BadSub);
-/// assert!(matches!(res, Err(MyError::BadSub)));
+///     // Doesn't get here because `res_2` returns early.
+///     Ok(res_1)
+/// }
+///
+/// assert!(matches!(do_something_with_sub(), Err(MyError::BadSub2)));
 /// ```
 #[macro_export]
 macro_rules! checked_sub {
@@ -131,36 +158,41 @@ macro_rules! checked_sub {
         let rhs = $rhs;
         if lhs >= rhs {
             // SAFETY: Just checked it will not underflow.
-            unsafe { Ok(lhs.unchecked_sub(rhs)) }
+            unsafe { lhs.unchecked_sub(rhs) }
         } else {
             ::pinocchio::hint::cold_path();
-            Err($err)
+            return Err($err);
         }
     }};
 }
 
-/// A checked multiplication with a custom error return value and the error path marked as cold.
+/// A checked multiplication that performs an early `return Err($err)` from the enclosing function
+/// on overflow. The error path is marked as cold.
 ///
 /// *NOTE: This is only intended for usage with **unsigned** integer types.*
 ///
 /// # Example
 /// ```rust
-/// enum MyError { BadMul }
+/// enum MyError { BadMul1, BadMul2 }
 ///
-/// let res: Result<u8, MyError> = price::checked_mul!(255u8, 1, MyError::BadMul);
-/// assert!(matches!(res, Ok(255)));
+/// fn do_something_with_mul() -> Result<u8, MyError> {
+///     let res_1 = price::checked_mul!(255u8, 1, MyError::BadMul1); // No overflow.
+///     let res_2 = price::checked_mul!(255u8, 2, MyError::BadMul2); // Overflows.
 ///
-/// let res: Result<u8, MyError> = price::checked_mul!(255u8, 2, MyError::BadMul);
-/// assert!(matches!(res, Err(MyError::BadMul)));
+///     // Doesn't get here because `res_2` returns early.
+///     Ok(res_1)
+/// }
+///
+/// assert!(matches!(do_something_with_mul(), Err(MyError::BadMul2)));
 /// ```
 #[macro_export]
 macro_rules! checked_mul {
     ($lhs:expr, $rhs:expr, $err:expr $(,)?) => {{
         match $lhs.checked_mul($rhs) {
-            Some(val) => Ok(val),
+            Some(val) => val,
             None => {
                 ::pinocchio::hint::cold_path();
-                Err($err)
+                return Err($err);
             }
         }
     }};
@@ -227,19 +259,24 @@ mod tests {
     };
 
     #[test]
-    fn check_max_biased_exponent() {
+    fn check_max_biased_exponent() -> Result<(), OrderInfoError> {
         // The max biased exponent should be valid.
         assert_eq!(
-            pow10_u64!(2u64, MAX_BIASED_EXPONENT).unwrap(),
+            pow10_u64!(2u64, MAX_BIASED_EXPONENT),
             2 * 10u64
                 .checked_pow(MAX_BIASED_EXPONENT as u32 - BIAS as u32)
                 .unwrap()
         );
         // One past the max biased exponent should result in an error.
+
+        let get_res =
+            || -> Result<_, OrderInfoError> { Ok(pow10_u64!(2u64, MAX_BIASED_EXPONENT + 1)) };
         assert!(matches!(
-            pow10_u64!(2u64, MAX_BIASED_EXPONENT + 1),
+            get_res(),
             Err(OrderInfoError::InvalidBiasedExponent)
         ));
+
+        Ok(())
     }
 
     #[test]
