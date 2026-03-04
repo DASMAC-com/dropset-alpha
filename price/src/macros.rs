@@ -29,9 +29,10 @@ const _: () = {
 /// - `16` → exponent `0`   (multiplication by 1 aka 10^0)
 /// - `31` → exponent `+15` (multiplication by 10^15)
 ///
-/// On an invalid biased exponent, the macro performs an early `return Err(OrderInfoError::InvalidBiasedExponent)`
-/// from the enclosing function. Overflow in the multiply path propagates via [`checked_mul`], which
-/// performs an early `return Err(OrderInfoError::ArithmeticOverflow)` from the enclosing function.
+/// On an invalid biased exponent, the macro performs an early
+/// `return Err(OrderInfoError::InvalidBiasedExponent)` from the enclosing function.
+/// Overflow in the multiply path propagates via [`crate::checked_mul`], which performs an early
+/// `return Err(OrderInfoError::ArithmeticOverflow)` from the enclosing function.
 ///
 /// # Reasoning behind exponent range
 ///
