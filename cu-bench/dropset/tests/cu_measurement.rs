@@ -230,7 +230,7 @@ fn batch_replace_cancel(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks via PostOrder (not measured).
-    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().take(n as usize).enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
@@ -265,7 +265,7 @@ fn batch_replace_replace(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks via PostOrder (not measured).
-    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().take(n as usize).enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
@@ -404,7 +404,7 @@ fn individual_cancel(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks (not measured).
-    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().take(n as usize).enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
@@ -442,7 +442,7 @@ fn individual_cancel_and_place(n: u64) -> u64 {
     expand_market(&f);
 
     // Setup: place n asks (not measured).
-    for (i, price_mantissa) in ASK_PRICES.into_iter().enumerate() {
+    for (i, price_mantissa) in ASK_PRICES.into_iter().take(n as usize).enumerate() {
         let res = f.ctx.process_instruction_chain(&[f.market_ctx.post_order(
             f.maker,
             PostOrderInstructionData::new(
