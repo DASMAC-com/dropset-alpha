@@ -174,17 +174,14 @@ impl MakerContext {
             if cancels.len() + posts.len() == 0 {
                 return Ok(vec![]);
             }
-            let ixn =
-                self.market_ctx.batch_replace(
-                    self.maker_address,
-                    BatchReplaceInstructionData::new(
-                        self.latest_state.seat.index,
-                        UnvalidatedOrders::new([to_order_info_args(bid_price, ORDER_SIZE)
-                            .expect("Should be a valid order")]),
-                        UnvalidatedOrders::new([to_order_info_args(ask_price, ORDER_SIZE)
-                            .expect("Should be a valid order")]),
-                    ),
-                );
+            let ixn = self.market_ctx.batch_replace(
+                self.maker_address,
+                BatchReplaceInstructionData::new(
+                    self.latest_state.seat.index,
+                    UnvalidatedOrders::new([to_order_info_args(bid_price, ORDER_SIZE)?]),
+                    UnvalidatedOrders::new([to_order_info_args(ask_price, ORDER_SIZE)?]),
+                ),
+            );
 
             Ok(vec![ixn])
         } else {
