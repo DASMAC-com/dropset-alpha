@@ -34,6 +34,42 @@ A prototype market-making bot implementing a naive version of the
 
 Intended for experimentation and testing, not production use.
 
+## Running
+
+### Benchmarks
+
+See [cu-bench/README.md](cu-bench/README.md) for details on what is measured and why.
+
+```shell
+bash cu-bench/dropset/run-bench.sh
+bash cu-bench/manifest/run-bench.sh
+bash cu-bench/phoenix/run-bench.sh
+```
+
+### Market Maker *(experimental)*
+
+The market maker is a prototype [Avellaneda-Stoikov model] bot for a Dropset
+market, intended for local testing only.
+
+1. Copy the config template and fill in your OANDA API token:
+
+   ```shell
+   cp bots/crates/market-maker/config.toml.example \
+      bots/crates/market-maker/config.toml
+   ```
+
+   Then edit `config.toml` and set `oanda_auth_token`. Everything else has
+   sensible defaults.
+
+2. Run:
+
+   ```shell
+   bash bots/crates/market-maker/market-maker.sh
+   ```
+
+   The script starts localnet if it is not already running, builds and deploys
+   the program, initializes a market, and starts the bot.
+
 ## 📚 Documentation
 
 You can generate and open the full internal documentation (including private
