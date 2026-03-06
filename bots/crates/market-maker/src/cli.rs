@@ -5,6 +5,7 @@ use std::{
     str::FromStr,
 };
 
+use anyhow::Context;
 use clap::Parser;
 use client::transactions::CustomRpcClient;
 use serde::Deserialize;
@@ -122,8 +123,10 @@ pub async fn initialize_context_from_cli(
     let ctx = MakerContext::init(MakerContextInitArgs {
         rpc,
         maker: maker_keypair,
-        base_mint: Address::from_str(&cfg.base_mint)?,
-        quote_mint: Address::from_str(&cfg.quote_mint)?,
+        base_mint: Address::from_str(&cfg.base_mint)
+            .with_context(|| format!("Failed to parse base mint address in {config_path:#?}"))?,
+        quote_mint: Address::from_str(&cfg.quote_mint)
+            .with_context(|| format!("Failed to parse quote mint address in {config_path:#?}"))?,
         pair: cfg.pair,
         base_target_atoms: cfg.target_base,
         initial_price_feed_response,
