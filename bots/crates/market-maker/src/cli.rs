@@ -1,5 +1,6 @@
 use std::{
     fs,
+    io::ErrorKind,
     path::PathBuf,
     str::FromStr,
 };
@@ -52,14 +53,15 @@ pub struct Config {
 
 impl Config {
     pub fn load(path: &PathBuf) -> anyhow::Result<Self> {
-        let raw = fs::read_to_string(path).map_err(|_| {
-            anyhow::anyhow!(
+        let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
+            ErrorKind::NotFound => anyhow::anyhow!(
                 "Config file not found at '{}'.\n\
                  Copy the template and fill in your OANDA token:\n\n\
                  \tcp bots/crates/market-maker/config.toml.example \\\n\
                  \t   bots/crates/market-maker/config.toml\n",
                 path.display()
-            )
+            ),
+            _ => anyhow::anyhow!("Failed to read config file: '{}': {e}", path.display()),
         })?;
 
         let config: Self = toml::from_str(&raw)
