@@ -14,25 +14,8 @@ use client::{
     },
 };
 use dropset_interface::state::sector::NIL;
-use solana_address::Address;
 use solana_sdk::signer::Signer;
-use transaction_parser::views::MarketSeatView;
-
-#[derive(Debug)]
-pub struct Info {
-    pub base_mint: Address,
-    pub quote_mint: Address,
-    pub maker_address: Address,
-    pub maker_keypair: String,
-    pub market: Address,
-    pub maker_seat: MarketSeatView,
-}
-
-#[derive(serde::Serialize)]
-struct MarketInfo {
-    base_mint: String,
-    quote_mint: String,
-}
+use toml_edit::DocumentMut;
 
 const MAKER_INITIAL_BASE: u64 = 10_000;
 const MAKER_INITIAL_QUOTE: u64 = 10_000;
@@ -40,10 +23,10 @@ const MAKER_INITIAL_QUOTE: u64 = 10_000;
 /// A helper example to bootstrap a market and a market maker. It does the following:
 ///
 /// - Creates a market from two new tokens.
-/// - Mints [`MAKER_INITIAL_BASE`] and sends it to the maker.
-/// - Mints [`MAKER_INITIAL_QUOTE`] and sends it to the maker.
-/// - Prints out all related info, including the generated base/quote token mint keypairs in case
-///   more should be minted later.
+/// - Mints [`MAKER_INITIAL_BASE`] and [`MAKER_INITIAL_QUOTE`] and deposits them into the maker's
+///   seat.
+/// - Writes the maker's keypair to `maker-keypair.json`.
+/// - Patches `base_mint` and `quote_mint` into `config.toml`.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let rpc = CustomRpcClient::new(
@@ -82,32 +65,27 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, maker)
         .await?;
 
-    let info = Info {
-        base_mint: e2e.market.base.mint_address,
-        quote_mint: e2e.market.quote.mint_address,
-        maker_address: maker.pubkey(),
-        maker_keypair: maker.insecure_clone().to_base58_string(),
-        market: e2e.market.market,
-        maker_seat: e2e
-            .view_market()
-            .await?
-            .seats
-            .iter()
-            .find(|s| s.user == maker_address)
-            .expect("Should find seat")
-            .clone(),
-    };
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
 
+    // Write the maker's keypair.
     let keypair_bytes: Vec<u8> = maker.insecure_clone().to_bytes().to_vec();
-    std::fs::write("maker-keypair.json", serde_json::to_string(&keypair_bytes)?)?;
+    std::fs::write(
+        crate_dir.join("maker-keypair.json"),
+        serde_json::to_string(&keypair_bytes)?,
+    )?;
 
-    let market_info = MarketInfo {
-        base_mint: info.base_mint.to_string(),
-        quote_mint: info.quote_mint.to_string(),
-    };
-    std::fs::write("market-info.json", serde_json::to_string(&market_info)?)?;
+    // Patch base_mint and quote_mint into config.toml in-place.
+    let config_path = crate_dir.join("config.toml");
+    let raw = std::fs::read_to_string(&config_path)?;
+    let mut doc: DocumentMut = raw.parse()?;
+    doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
+    doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());
+    std::fs::write(&config_path, doc.to_string())?;
 
-    println!("{info:#?}");
+    println!("Maker address : {maker_address}");
+    println!("Base mint     : {}", e2e.market.base.mint_address);
+    println!("Quote mint    : {}", e2e.market.quote.mint_address);
+    println!("Market        : {}", e2e.market.market);
 
     Ok(())
 }

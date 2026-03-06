@@ -1,0 +1,22 @@
+# OANDA API authentication token.
+# See: https://developer.oanda.com/rest-live-v20/authentication/
+oanda_auth_token = "your-token-here"
+
+# Currency pair to trade (format: BASE_QUOTE).
+pair = "EUR_USD"
+
+# Target base inventory in atoms. The model gravitates toward this amount.
+# The initialization helper deposits a constant amount of atoms (MAKER_INITIAL_BASE) by default.
+# The bot's bias is determined by target_base relative to the maker's current balance: when the
+# balance exceeds target_base, the model pushes toward aggressive asks; when below, aggressive bids.
+target_base = 8000
+
+# Use the BatchReplace instruction instead of individual cancel/post instructions.
+# This is mostly useful for profiling the compute usage of batched vs non-batched instructions.
+batch_replace = true
+
+# Token mint addresses for the market.
+# These are populated automatically by market-maker.sh after market initialization.
+# You can also fill them in manually if you already have a market deployed.
+base_mint  = ""
+quote_mint = ""

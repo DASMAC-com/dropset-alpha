@@ -3,49 +3,87 @@
 ################################################################################
 # To run:
 #
-# solana-test-validator -r
+#   bash bots/crates/market-maker/market-maker.sh
 #
-# bash bots/crates/market-maker/market-maker.sh
+# Prerequisites:
+#   1. Copy the config template and fill in your OANDA API token:
 #
-#        or...
+#        cp bots/crates/market-maker/config.toml.example \
+#           bots/crates/market-maker/config.toml
 #
-# bash bots/crates/market-maker/market-maker.sh --no-batch-replace
+#      Then edit config.toml and set oanda_auth_token.
+#
+#   2. That's it. The script starts localnet if it isn't already running.
 ################################################################################
 
 set -euo pipefail
 
-BATCH_REPLACE=true
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --no-batch-replace) BATCH_REPLACE=false; shift ;;
-    *) echo "Unknown arg: $1"; exit 1 ;;
-  esac
-done
-
 ROOT="$(git rev-parse --show-toplevel)"
 MANIFEST_PATH="$ROOT/bots/crates/market-maker/Cargo.toml"
 KEYPAIR_FILE="$ROOT/bots/crates/market-maker/maker-keypair.json"
+CONFIG_FILE="$ROOT/bots/crates/market-maker/config.toml"
+CONFIG_EXAMPLE="$ROOT/bots/crates/market-maker/config.toml.example"
 
 cd "$ROOT"
 
+# ── Config check ────────────────────────────────────────────────────────────
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: config.toml not found."
+    echo ""
+    echo "Copy the template and fill in your OANDA API token:"
+    echo ""
+    echo "  cp $CONFIG_EXAMPLE \\"
+    echo "     $CONFIG_FILE"
+    echo ""
+    exit 1
+fi
+
+if grep -Eq 'oanda_auth_token[[:space:]]*=[[:space:]]*"your-token-here"' "$CONFIG_FILE"; then
+    echo "Error: oanda_auth_token in config.toml is still set to the placeholder."
+    echo "Edit $CONFIG_FILE and replace it with your OANDA API token."
+    echo ""
+    exit 1
+fi
+
+# ── Localnet ─────────────────────────────────────────────────────────────────
+
+if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
+    echo "Localnet not running. Starting solana-test-validator..."
+    nohup solana-test-validator -r >/tmp/test-validator.log 2>&1 &
+
+    for i in $(seq 1 6); do
+        sleep 5
+        if solana cluster-version --url localhost &>/dev/null 2>&1; then
+            echo "Validator is up."
+            break
+        fi
+        if [ "$i" -eq 6 ]; then
+            echo "Error: validator failed to start after 30 seconds."
+            echo "Check /tmp/test-validator.log for details."
+            exit 1
+        fi
+    done
+else
+    echo "Localnet already running."
+fi
+
+# ── Build and deploy ─────────────────────────────────────────────────────────
+
 cargo build-sbf --manifest-path program/Cargo.toml
-solana program deploy target/deploy/dropset.so --program-id test-keypair.json
+solana program deploy target/deploy/dropset.so \
+    --program-id test-keypair.json \
+    --url localhost
 
-# The example file outputs local market-info.json and maker-keypair.json files.
-# They will be stored in the root lest the shell `cd`s to the market-maker crate
-# prior to running the example.
-(cd "$ROOT/bots/crates/market-maker" && cargo run --manifest-path "$MANIFEST_PATH" --example initialization_helper)
+# ── Market initialization ────────────────────────────────────────────────────
 
-BASE_MINT=$(jq -r '.base_mint' "$ROOT/bots/crates/market-maker/market-info.json")
-QUOTE_MINT=$(jq -r '.quote_mint' "$ROOT/bots/crates/market-maker/market-info.json")
+# Creates a market, writes maker-keypair.json, and patches base_mint/quote_mint
+# into config.toml.
+(cd "$ROOT/bots/crates/market-maker" && \
+    cargo run --manifest-path "$MANIFEST_PATH" --example initialization_helper)
 
-BATCH_REPLACE_FLAG=""
-if [ "$BATCH_REPLACE" = "true" ]; then BATCH_REPLACE_FLAG="--batch-replace"; fi
+# ── Run the bot ───────────────────────────────────────────────────────────────
 
 cargo run --manifest-path "$MANIFEST_PATH" -- \
-  --base-mint "$BASE_MINT" \
-  --quote-mint "$QUOTE_MINT" \
-  --pair EUR_USD \
-  --target-base 8000 \
-  --keypair "$KEYPAIR_FILE" \
-  $BATCH_REPLACE_FLAG
+    --keypair "$KEYPAIR_FILE" \
+    --config "$CONFIG_FILE"

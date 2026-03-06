@@ -51,7 +51,6 @@ pub mod model_parameters;
 pub mod oanda;
 
 pub mod cli;
-pub mod load_env;
 
 const WS_URL: &str = "ws://localhost:8900";
 pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
@@ -66,8 +65,26 @@ pub enum TaskUpdate {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    // Initialize the maker context from the cli args.
     let reqwest_client = reqwest::Client::new();
+
+    // Verify localnet is reachable and healthy before doing anything else.
+    reqwest_client
+        .get("http://localhost:8899/health")
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "Cannot connect to localnet at localhost:8899.\n\
+                 Start a test validator first:\n\n\
+                 \tsolana-test-validator -r\n\n\
+                 Or use the provided script, which handles this automatically:\n\n\
+                 \tbash bots/crates/market-maker/market-maker.sh\n"
+            )
+        })?
+        .error_for_status()
+        .map_err(|e| anyhow::anyhow!("Localnet is reachable but unhealthy: {e}"))?;
+
     let rpc = CustomRpcClient::new(
         None,
         Some(SendTransactionConfig {
@@ -76,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
-    let ctx = initialize_context_from_cli(&rpc, &reqwest_client).await?;
+    let (ctx, auth_token) = initialize_context_from_cli(&rpc, &reqwest_client).await?;
     let pair = ctx.pair;
     let maker_ctx = Rc::new(RefCell::new(ctx));
 
@@ -85,7 +102,7 @@ async fn main() -> anyhow::Result<()> {
     let (sender, receiver) = watch::channel(TaskUpdate::MakerState);
 
     let oanda_args = OandaArgs {
-        auth_token: load_env::oanda_auth_token(),
+        auth_token,
         pair,
         granularity: GRANULARITY,
         num_candles: NUM_CANDLES,
