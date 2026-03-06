@@ -70,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     // Verify localnet is reachable and healthy before doing anything else.
     reqwest_client
         .get("http://localhost:8899/health")
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .map_err(|_| {
