@@ -77,23 +77,10 @@ solana program deploy target/deploy/dropset.so \
 
 # ── Market initialization ────────────────────────────────────────────────────
 
-# Runs the initialization helper, which creates a market and writes:
-#   maker-keypair.json  — the maker's keypair
-#   market-info.json    — the base and quote mint addresses
+# Creates a market, writes maker-keypair.json, and patches base_mint/quote_mint
+# into config.toml.
 (cd "$ROOT/bots/crates/market-maker" && \
     cargo run --manifest-path "$MANIFEST_PATH" --example initialization_helper)
-
-BASE_MINT=$(jq -r '.base_mint'  "$ROOT/bots/crates/market-maker/market-info.json")
-QUOTE_MINT=$(jq -r '.quote_mint' "$ROOT/bots/crates/market-maker/market-info.json")
-
-# Inject the mint addresses into config.toml.
-python3 -c "
-import re
-txt = open('$CONFIG_FILE').read()
-txt = re.sub(r'^base_mint\s*=.*',  'base_mint  = \"$BASE_MINT\"',  txt, flags=re.MULTILINE)
-txt = re.sub(r'^quote_mint\s*=.*', 'quote_mint = \"$QUOTE_MINT\"', txt, flags=re.MULTILINE)
-open('$CONFIG_FILE', 'w').write(txt)
-"
 
 # ── Run the bot ───────────────────────────────────────────────────────────────
 
