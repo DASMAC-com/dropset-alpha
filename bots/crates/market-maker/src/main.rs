@@ -67,7 +67,7 @@ pub enum TaskUpdate {
 async fn main() -> anyhow::Result<()> {
     let reqwest_client = reqwest::Client::new();
 
-    // Verify localnet is reachable before doing anything else.
+    // Verify localnet is reachable and healthy before doing anything else.
     reqwest_client
         .get("http://localhost:8899/health")
         .send()
@@ -80,7 +80,9 @@ async fn main() -> anyhow::Result<()> {
                  Or use the provided script, which handles this automatically:\n\n\
                  \tbash bots/crates/market-maker/market-maker.sh\n"
             )
-        })?;
+        })?
+        .error_for_status()
+        .map_err(|e| anyhow::anyhow!("Localnet is reachable but unhealthy: {e}"))?;
 
     let rpc = CustomRpcClient::new(
         None,

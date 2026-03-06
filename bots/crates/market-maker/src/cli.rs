@@ -65,9 +65,7 @@ impl Config {
         let config: Self = toml::from_str(&raw)
             .map_err(|e| anyhow::anyhow!("Failed to parse '{}': {e}", path.display()))?;
 
-        if config.oanda_auth_token.is_empty()
-            || config.oanda_auth_token == "your-token-here"
-        {
+        if config.oanda_auth_token.is_empty() || config.oanda_auth_token == "your-token-here" {
             anyhow::bail!(
                 "oanda_auth_token in '{}' is not set.\n\
                  Edit the file and replace the placeholder with your OANDA API token.",
@@ -101,6 +99,20 @@ pub async fn initialize_context_from_cli(
         reqwest_client,
     )
     .await?;
+
+    for (field, val) in [
+        ("base_mint", &cfg.base_mint),
+        ("quote_mint", &cfg.quote_mint),
+    ] {
+        if val.is_empty() {
+            anyhow::bail!(
+                "'{field}' in config.toml is not set.\n\
+                 Run the script to initialize a market automatically:\n\n\
+                 \tbash bots/crates/market-maker/market-maker.sh\n\n\
+                 Or run initialization_helper manually and fill in the value."
+            );
+        }
+    }
 
     let bytes: Vec<u8> = serde_json::from_reader(fs::File::open(&keypair)?)?;
     let maker_keypair = Keypair::try_from(bytes.as_slice())?;
