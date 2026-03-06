@@ -65,16 +65,22 @@ async fn main() -> anyhow::Result<()> {
         .send_single_signer(&e2e.rpc, maker)
         .await?;
 
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+
     // Write the maker's keypair.
     let keypair_bytes: Vec<u8> = maker.insecure_clone().to_bytes().to_vec();
-    std::fs::write("maker-keypair.json", serde_json::to_string(&keypair_bytes)?)?;
+    std::fs::write(
+        crate_dir.join("maker-keypair.json"),
+        serde_json::to_string(&keypair_bytes)?,
+    )?;
 
     // Patch base_mint and quote_mint into config.toml in-place.
-    let raw = std::fs::read_to_string("config.toml")?;
+    let config_path = crate_dir.join("config.toml");
+    let raw = std::fs::read_to_string(&config_path)?;
     let mut doc: DocumentMut = raw.parse()?;
-    doc["base_mint"]  = toml_edit::value(e2e.market.base.mint_address.to_string());
+    doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
     doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());
-    std::fs::write("config.toml", doc.to_string())?;
+    std::fs::write(&config_path, doc.to_string())?;
 
     println!("Maker address : {maker_address}");
     println!("Base mint     : {}", e2e.market.base.mint_address);
