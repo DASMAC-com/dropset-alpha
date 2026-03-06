@@ -43,6 +43,7 @@ fn cu_deposit() -> anyhow::Result<()> {
     fmt_header(&mut logs, "Deposit");
 
     let f = new_bench_fixture();
+    expand_market(&f);
 
     // Fixture already deposited base to create the seat; measure a subsequent
     // deposit — the hot path where the seat already exists.
