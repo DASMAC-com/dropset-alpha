@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::PathBuf,
+    str::FromStr,
 };
 
 use clap::Parser;
@@ -30,9 +31,13 @@ pub struct CliArgs {
     #[arg(short = 'k', long)]
     pub keypair: PathBuf,
 
-    /// Path to the config file.
-    #[arg(short = 'c', long, default_value = "config.toml")]
-    pub config: PathBuf,
+    /// Path to the config file (defaults to <crate-dir>/config.toml).
+    #[arg(short = 'c', long)]
+    pub config: Option<PathBuf>,
+}
+
+fn default_config_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config.toml")
 }
 
 #[derive(Deserialize)]
@@ -41,8 +46,8 @@ pub struct Config {
     pub pair: CurrencyPair,
     pub target_base: u64,
     pub batch_replace: bool,
-    pub base_mint: Address,
-    pub quote_mint: Address,
+    pub base_mint: String,
+    pub quote_mint: String,
 }
 
 impl Config {
@@ -82,7 +87,8 @@ pub async fn initialize_context_from_cli(
 ) -> anyhow::Result<(MakerContext, String)> {
     let CliArgs { keypair, config } = CliArgs::parse();
 
-    let cfg = Config::load(&config)?;
+    let config_path = config.unwrap_or_else(default_config_path);
+    let cfg = Config::load(&config_path)?;
     let auth_token = cfg.oanda_auth_token;
 
     let initial_price_feed_response = query_price_feed(
@@ -102,8 +108,8 @@ pub async fn initialize_context_from_cli(
     let ctx = MakerContext::init(MakerContextInitArgs {
         rpc,
         maker: maker_keypair,
-        base_mint: cfg.base_mint,
-        quote_mint: cfg.quote_mint,
+        base_mint: Address::from_str(&cfg.base_mint)?,
+        quote_mint: Address::from_str(&cfg.quote_mint)?,
         pair: cfg.pair,
         base_target_atoms: cfg.target_base,
         initial_price_feed_response,

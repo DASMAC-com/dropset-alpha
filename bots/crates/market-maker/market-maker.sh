@@ -85,4 +85,5 @@ solana program deploy target/deploy/dropset.so \
 # ── Run the bot ───────────────────────────────────────────────────────────────
 
 cargo run --manifest-path "$MANIFEST_PATH" -- \
-    --keypair "$KEYPAIR_FILE"
+    --keypair "$KEYPAIR_FILE" \
+    --config "$CONFIG_FILE"
