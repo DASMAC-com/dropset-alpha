@@ -12,7 +12,7 @@ pair = "EUR_USD"
 target_base = 8000
 
 # Use the BatchReplace instruction instead of individual cancel/post instructions.
-# There is generally no reason to disable this except for CU profiling.
+# This is mostly useful for profiling the compute usage of batched vs non-batched instructions.
 batch_replace = true
 
 # Token mint addresses for the market.
