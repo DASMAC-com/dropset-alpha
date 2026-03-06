@@ -39,7 +39,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-if grep -q 'oanda_auth_token\s*=\s*"your-token-here"' "$CONFIG_FILE"; then
+if grep -Eq 'oanda_auth_token[[:space:]]*=[[:space:]]*"your-token-here"' "$CONFIG_FILE"; then
     echo "Error: oanda_auth_token in config.toml is still set to the placeholder."
     echo "Edit $CONFIG_FILE and replace it with your OANDA API token."
     echo ""
