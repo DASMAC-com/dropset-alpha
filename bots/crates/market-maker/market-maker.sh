@@ -54,7 +54,7 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     VALIDATOR_PID=$!
     echo "  Note: validator is running in the background (PID $VALIDATOR_PID)."
     echo "  It will survive terminal close. To stop it: kill $VALIDATOR_PID"
-    echo "  Or to stop any validator: pkill -f solana-test-validator"
+    echo "  Or to stop any validator: pkill -x solana-test-validator"
 
     for i in $(seq 1 6); do
         sleep 5
