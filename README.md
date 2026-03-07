@@ -33,6 +33,23 @@ A prototype market-making bot implementing a naive version of the
 [Avellaneda-Stoikov model] for a `dropset` market.
 
 Intended for experimentation and testing, not production use.
+See [bots/README.md](bots/README.md) for setup and usage.
+
+## ▶️ Running
+
+### ⚡ Benchmarks
+
+See [cu-bench/README.md](cu-bench/README.md) for details on what is measured and why.
+
+```shell
+bash cu-bench/dropset/run-bench.sh
+bash cu-bench/manifest/run-bench.sh
+bash cu-bench/phoenix/run-bench.sh
+```
+
+### 🤖 Market Maker/Taker Bots *(experimental)*
+
+See [bots/README.md](bots/README.md).
 
 ## 📚 Documentation
 

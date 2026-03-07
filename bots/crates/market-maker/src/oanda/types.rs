@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn deserialize_candlestick_decimals() {
         let path = PathBuf::from(env!("CARGO_WORKSPACE_DIR"))
-            .join("bots/crates/market-maker/test_oanda_response.json");
+            .join("bots/crates/market-maker/test-oanda-response.json");
         let file = File::open(path).expect("Should find test oanda response json file");
         let reader = BufReader::new(file);
         let res: OandaCandlestickResponse =

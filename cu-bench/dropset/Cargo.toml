@@ -1,0 +1,16 @@
+[package]
+name = "cu-bench-dropset"
+version.workspace = true
+edition.workspace = true
+description = "CU measurement benchmarks for dropset"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+client = { path = "../../client" }
+dropset-interface = { path = "../../interface", features = ["client", "std"], default-features = false }
+mollusk-svm.workspace = true
+price = { path = "../../price", features = ["client"] }
+solana-account.workspace = true
+solana-address.workspace = true
+solana-instruction.workspace = true

@@ -126,31 +126,24 @@ async fn cu_withdraw() -> anyhow::Result<()> {
 #[tokio::test]
 async fn cu_batch_update_place() -> anyhow::Result<()> {
     let mut logs = String::new();
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "BatchUpdate (Place)");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]")
-        };
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            rows.push((n, batch_place(n, pre_expand).await?));
-        }
-        fmt_subtable(&mut logs, "Orders", &rows);
+    fmt_header(&mut logs, "BatchUpdate (Place)");
+    let mut rows = Vec::new();
+    for &n in BATCH_AMOUNTS {
+        rows.push((n, batch_place(n).await?));
     }
+    fmt_subtable(&mut logs, "Orders", &rows);
     eprintln!("{logs}");
     Ok(())
 }
 
-async fn batch_place(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
+async fn batch_place(n: u64) -> anyhow::Result<u64> {
     let (test_fixture, trader_index) = new_fixture().await?;
 
-    if pre_expand {
-        expand_market_max(
-            Rc::clone(&test_fixture.context),
-            &test_fixture.market_fixture.key,
-        )
-        .await?;
-    }
+    expand_market_max(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.market_fixture.key,
+    )
+    .await?;
 
     let payer = test_fixture.payer();
     let payer_keypair = test_fixture.payer_keypair();
@@ -174,31 +167,24 @@ async fn batch_place(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
 #[tokio::test]
 async fn cu_batch_update_cancel() -> anyhow::Result<()> {
     let mut logs = String::new();
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "BatchUpdate (Cancel)");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]")
-        };
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            rows.push((n, batch_cancel(n, pre_expand).await?));
-        }
-        fmt_subtable(&mut logs, "Cancels", &rows);
+    fmt_header(&mut logs, "BatchUpdate (Cancel)");
+    let mut rows = Vec::new();
+    for &n in BATCH_AMOUNTS {
+        rows.push((n, batch_cancel(n).await?));
     }
+    fmt_subtable(&mut logs, "Cancels", &rows);
     eprintln!("{logs}");
     Ok(())
 }
 
-async fn batch_cancel(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
+async fn batch_cancel(n: u64) -> anyhow::Result<u64> {
     let (mut test_fixture, trader_index) = new_fixture().await?;
 
-    if pre_expand {
-        expand_market_max(
-            Rc::clone(&test_fixture.context),
-            &test_fixture.market_fixture.key,
-        )
-        .await?;
-    }
+    expand_market_max(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.market_fixture.key,
+    )
+    .await?;
 
     let payer = test_fixture.payer();
     let payer_keypair = test_fixture.payer_keypair();
@@ -240,31 +226,24 @@ async fn batch_cancel(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
 #[tokio::test]
 async fn cu_swap() -> anyhow::Result<()> {
     let mut logs = String::new();
-    for pre_expand in [false, true] {
-        fmt_header(&mut logs, "Swap");
-        if pre_expand {
-            wc(&mut logs, "[pre-expanded]")
-        };
-        let mut rows = Vec::new();
-        for &n in SWAP_FILL_AMOUNTS {
-            rows.push((n, swap_fill(n, pre_expand).await?));
-        }
-        fmt_subtable(&mut logs, "Fills", &rows);
+    fmt_header(&mut logs, "Swap");
+    let mut rows = Vec::new();
+    for &n in SWAP_FILL_AMOUNTS {
+        rows.push((n, swap_fill(n).await?));
     }
+    fmt_subtable(&mut logs, "Fills", &rows);
     eprintln!("{logs}");
     Ok(())
 }
 
-async fn swap_fill(n: u64, pre_expand: bool) -> anyhow::Result<u64> {
+async fn swap_fill(n: u64) -> anyhow::Result<u64> {
     let (mut test_fixture, trader_index) = new_fixture().await?;
 
-    if pre_expand {
-        expand_market_max(
-            Rc::clone(&test_fixture.context),
-            &test_fixture.market_fixture.key,
-        )
-        .await?;
-    }
+    expand_market_max(
+        Rc::clone(&test_fixture.context),
+        &test_fixture.market_fixture.key,
+    )
+    .await?;
 
     let payer_keypair = test_fixture.payer_keypair();
 

@@ -4,6 +4,7 @@ members = [
   "bots/crates/market-maker",
   "bots/crates/market-taker",
   "client",
+  "cu-bench/dropset",
   "cu-bench/programs/pack-orders",
   "cu-bench/programs/to-order-info",
   "cu-bench/tests",
@@ -74,6 +75,8 @@ spl-token-2022-interface = "2.1.0"
 static_assertions = "1.1.0"
 strum = "0.27.2"
 strum_macros = "0.27.2"
+toml = "0.8"
+toml_edit = "0.22"
 tokio = "1.49.0"
 tokio-stream = "0.1.17"
 yellowstone-grpc-client = "10.2.0"

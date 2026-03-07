@@ -1,9 +1,11 @@
 {
   "scripts": {
+    "bench:dropset": "bash cu-bench/dropset/run-bench.sh",
     "bench:manifest": "bash cu-bench/manifest/run-bench.sh",
     "bench:pack-orders": "bash cu-bench/pack-orders.sh",
     "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
     "bench:to-order-info": "bash cu-bench/to-order-info.sh",
+    "bots:maker": "bash bots/crates/market-maker/market-maker.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
     "build": "pnpm run build:dropset && pnpm run build:pack-orders && pnpm run build:to-order-info",
@@ -19,15 +21,6 @@
     "clean": "cargo clean",
     "clippy": "cargo clippy --all-targets -- -D warnings",
     "deploy": "solana program deploy target/deploy/dropset.so --program-id test-keypair.json || echo 'Make sure the local validator is running'",
-    "examples:batch-replace": "cargo run --example batch_replace",
-    "examples:close-seat": "cargo run --example close_seat",
-    "examples:deposit-and-withdraw": "cargo run --example deposit_and_withdraw",
-    "examples:many-instructions": "cargo run --example many_instructions",
-    "examples:market-order": "cargo run --example market_order",
-    "examples:post-and-cancel": "cargo run --example post_and_cancel",
-    "examples:post-asks": "cargo run --example post_asks",
-    "examples:register-market": "cargo run --example register_market",
-    "examples:two-seats": "cargo run --example two_seats",
     "format": "cargo +nightly fmt --all",
     "test": "pnpm run build && cargo test"
   },
