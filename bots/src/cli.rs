@@ -13,7 +13,7 @@ use solana_address::Address;
 use solana_keypair::Keypair;
 
 use crate::{
-    maker_context::{
+    maker::{
         MakerContext,
         MakerContextInitArgs,
     },
@@ -58,8 +58,8 @@ impl Config {
             ErrorKind::NotFound => anyhow::anyhow!(
                 "Config file not found at '{}'.\n\
                  Copy the template and fill in your OANDA token:\n\n\
-                 \tcp bots/crates/market-maker/config.toml.example \\\n\
-                 \t   bots/crates/market-maker/config.toml\n",
+                 \tcp bots/config.toml.example \\\n\
+                 \t   bots/config.toml\n",
                 path.display()
             ),
             _ => anyhow::anyhow!("Failed to read config file: '{}': {e}", path.display()),
@@ -111,7 +111,7 @@ pub async fn initialize_context_from_cli(
             anyhow::bail!(
                 "'{field}' in config.toml is not set.\n\
                  Run the script to initialize a market automatically:\n\n\
-                 \tbash bots/crates/market-maker/market-maker.sh\n\n\
+                 \tbash bots/market-maker.sh\n\n\
                  Or run initialization_helper manually and fill in the value."
             );
         }

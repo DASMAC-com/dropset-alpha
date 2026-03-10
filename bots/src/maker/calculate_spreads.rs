@@ -12,7 +12,7 @@ use rust_decimal::{
     Decimal,
 };
 
-use crate::model_parameters::*;
+use crate::maker::model_parameters::*;
 
 /// Calculates the reservation price, also known as the indifference price and the central price.
 ///

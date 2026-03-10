@@ -24,13 +24,15 @@ use transaction_parser::views::{
 };
 
 use crate::{
-    calculate_spreads::{
-        half_spread,
-        reservation_price,
-    },
-    maker_context::utils::{
-        get_normalized_mid_price,
-        log_orders,
+    maker::{
+        calculate_spreads::{
+            half_spread,
+            reservation_price,
+        },
+        utils::{
+            get_normalized_mid_price,
+            log_orders,
+        },
     },
     oanda::{
         CurrencyPair,
@@ -38,7 +40,9 @@ use crate::{
     },
 };
 
+pub mod calculate_spreads;
 pub mod maker_state;
+pub mod model_parameters;
 pub mod order_as_key;
 pub mod order_flow;
 pub mod utils;

@@ -1,8 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-  "bots/crates/market-maker",
-  "bots/crates/market-taker",
+  "bots",
   "client",
   "cu-bench/dropset",
   "cu-bench/programs/pack-orders",

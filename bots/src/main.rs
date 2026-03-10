@@ -1,5 +1,9 @@
 //! Creates a market making bot that utilizes the strategy defined in [`crate::calculate_spreads`].
 
+pub mod cli;
+pub mod maker;
+pub mod oanda;
+
 use std::{
     cell::RefCell,
     collections::HashSet,
@@ -37,20 +41,13 @@ use transaction_parser::views::try_market_view_all_from_owner_and_data;
 
 use crate::{
     cli::initialize_context_from_cli,
-    maker_context::MakerContext,
+    maker::MakerContext,
     oanda::{
         query_price_feed,
         CandlestickGranularity,
         OandaArgs,
     },
 };
-
-pub mod calculate_spreads;
-pub mod maker_context;
-pub mod model_parameters;
-pub mod oanda;
-
-pub mod cli;
 
 const WS_URL: &str = "ws://localhost:8900";
 pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
@@ -79,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
                  Start a test validator first:\n\n\
                  \tsolana-test-validator -r\n\n\
                  Or use the provided script, which handles this automatically:\n\n\
-                 \tbash bots/crates/market-maker/market-maker.sh\n"
+                 \tbash bots/market-maker.sh\n"
             )
         })?
         .error_for_status()

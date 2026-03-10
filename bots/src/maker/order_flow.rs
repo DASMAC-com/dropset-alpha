@@ -16,7 +16,7 @@ use price::{
 use rust_decimal::Decimal;
 use transaction_parser::views::OrderView;
 
-use crate::maker_context::{
+use crate::maker::{
     order_as_key::OrderAsKey,
     utils::split_symmetric_difference,
 };
