@@ -8,14 +8,14 @@ experimentation and local testing, not production use.
 
 ### Running
 
-1. Copy the config template and fill in your OANDA API token:
+1. Copy the maker config template and fill in your OANDA API token:
 
    ```shell
-   cp services/config.toml.example \
-      services/config.toml
+   cp services/maker.toml.example \
+      services/maker.toml
    ```
 
-   Then edit `config.toml` and set `oanda_auth_token`. Everything else has
+   Then edit `maker.toml` and set `oanda_auth_token`. Everything else has
    sensible defaults.
 
 2. Run:

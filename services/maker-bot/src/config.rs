@@ -16,11 +16,15 @@ use solana_address::Address;
 use solana_keypair::Keypair;
 
 pub fn config_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml")
+    std::env::var("MAKER_CONFIG_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml"))
 }
 
 pub fn example_config_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml.example")
+    std::env::var("MAKER_CONFIG_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml.example"))
 }
 
 pub struct ValidMakerConfig {

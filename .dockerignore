@@ -1,0 +1,15 @@
+# Build artifacts
+target/
+
+# Secrets — never bake into the image; mount these as volumes at runtime
+services/maker.toml
+services/taker.toml
+services/faucet.toml
+services/*-keypair.json
+
+# macOS noise
+.DS_Store
+**/.DS_Store
+
+node_modules
+test-ledger

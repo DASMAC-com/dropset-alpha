@@ -23,6 +23,10 @@ use client::transactions::{
 use dropset_services_shared::oanda_types::CandlestickGranularity;
 use maker_state::*;
 use order_flow::*;
+use solana_client::{
+    nonblocking::rpc_client::RpcClient,
+    rpc_config::CommitmentConfig,
+};
 use strum_macros::Display;
 use tokio::sync::watch;
 
@@ -32,7 +36,6 @@ use crate::{
     oanda_price_feed::OandaArgs,
 };
 
-const WS_URL: &str = "ws://localhost:8900";
 pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
 pub const NUM_CANDLES: u64 = 1;
 
@@ -44,8 +47,16 @@ pub enum TaskUpdate {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
+    let cfg = load_config_and_validate()?;
+    let poll_interval = cfg.price_feed_poll_interval;
+    let throttle_window = cfg.order_update_throttle_window;
+    let ws_url = cfg.ws_url.clone();
+
     let rpc = CustomRpcClient::new(
-        None,
+        Some(RpcClient::new_with_commitment(
+            cfg.rpc_url.clone().to_string(),
+            CommitmentConfig::confirmed(),
+        )),
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
             debug_logs: Some(true),
@@ -55,10 +66,6 @@ async fn main() -> anyhow::Result<()> {
 
     rpc.validate_endpoint().await?;
     let reqwest_client = reqwest::Client::new();
-
-    let cfg = load_config_and_validate()?;
-    let poll_interval = cfg.price_feed_poll_interval;
-    let throttle_window = cfg.order_update_throttle_window;
 
     let oanda_args = OandaArgs {
         auth_token: cfg.oanda_auth_token.clone(),
@@ -75,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
     let (sender, receiver) = watch::channel(TaskUpdate::MakerState);
 
     tokio::select! {
-        r1 = tasks::program_subscribe(maker_ctx.clone(), sender.clone(), WS_URL) => {
+        r1 = tasks::program_subscribe(maker_ctx.clone(), sender.clone(), ws_url.as_str()) => {
             println!("Program subscription terminated: {r1:#?}");
         },
         r2 = tasks::poll_price_feed(maker_ctx.clone(), sender.clone(), reqwest_client, &oanda_args, poll_interval) => {
