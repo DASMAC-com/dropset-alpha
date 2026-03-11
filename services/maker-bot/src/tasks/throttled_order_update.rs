@@ -1,0 +1,55 @@
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::Duration,
+};
+
+use client::{
+    print_kv,
+    transactions::CustomRpcClient,
+};
+use tokio::sync::watch;
+
+use crate::{
+    maker_context::MakerContext,
+    TaskUpdate,
+};
+
+/// The indefinite task loop to update orders whenever the [`watch::Receiver`] receives a message
+/// from another task that indicates a [`TaskUpdate`] has occurred. Order submissions are
+/// throttled so that they're updated at most one time per interval window.
+///
+/// It cancels old orders and posts new orders whenever the maker's orders would change due to a new
+/// price from the price feed response or new market state.
+pub async fn throttled_order_update(
+    maker_ctx: Rc<RefCell<MakerContext>>,
+    mut rx: watch::Receiver<TaskUpdate>,
+    rpc: &CustomRpcClient,
+    throttle_window_ms: u64,
+) -> anyhow::Result<()> {
+    loop {
+        // Wait until the value has changed. Not equality wise, but a sender posting a new value.
+        rx.changed().await?;
+
+        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
+        let msg = format!("[{timestamp}]");
+        print_kv!(msg, *rx.borrow());
+
+        // Then cancel all orders and post new ones.
+        let (maker_keypair, instructions) = {
+            let ctx = maker_ctx.try_borrow()?;
+            let maker_keypair = ctx.keypair.insecure_clone();
+            let instructions = ctx.create_cancel_and_post_instructions()?;
+            (maker_keypair, instructions)
+        };
+
+        if !instructions.is_empty() {
+            rpc.send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
+                .await?;
+        }
+
+        // Sleep for the throttle window in milliseconds before doing work again.
+        // This effectively means the loop only does the cancel/post work once every window of time.
+        tokio::time::sleep(Duration::from_millis(throttle_window_ms)).await;
+    }
+}

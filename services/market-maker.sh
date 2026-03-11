@@ -3,13 +3,13 @@
 ################################################################################
 # To run:
 #
-#   bash bots/market-maker.sh
+#   bash services/market-maker.sh
 #
 # Prerequisites:
 #   1. Copy the config template and fill in your OANDA API token:
 #
-#        cp bots/config.toml.example \
-#           bots/config.toml
+#        cp services/config.toml.example \
+#           services/config.toml
 #
 #      Then edit config.toml and set oanda_auth_token.
 #
@@ -19,10 +19,10 @@
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-MANIFEST_PATH="$ROOT/bots/Cargo.toml"
-KEYPAIR_FILE="$ROOT/bots/maker-keypair.json"
-CONFIG_FILE="$ROOT/bots/config.toml"
-CONFIG_EXAMPLE="$ROOT/bots/config.toml.example"
+MANIFEST_PATH="$ROOT/services/Cargo.toml"
+KEYPAIR_FILE="$ROOT/services/maker-keypair.json"
+CONFIG_FILE="$ROOT/services/config.toml"
+CONFIG_EXAMPLE="$ROOT/services/config.toml.example"
 
 cd "$ROOT"
 
@@ -83,7 +83,7 @@ solana program deploy target/deploy/dropset.so \
 
 # Creates a market, writes maker-keypair.json, and patches base_mint/quote_mint
 # into config.toml.
-(cd "$ROOT/bots" && \
+(cd "$ROOT/services" && \
     cargo run --manifest-path "$MANIFEST_PATH" --example initialization_helper)
 
 # ── Run the bot ───────────────────────────────────────────────────────────────

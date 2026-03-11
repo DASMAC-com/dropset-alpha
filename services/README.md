@@ -11,8 +11,8 @@ experimentation and local testing, not production use.
 1. Copy the config template and fill in your OANDA API token:
 
    ```shell
-   cp bots/config.toml.example \
-      bots/config.toml
+   cp services/config.toml.example \
+      services/config.toml
    ```
 
    Then edit `config.toml` and set `oanda_auth_token`. Everything else has
@@ -21,7 +21,7 @@ experimentation and local testing, not production use.
 2. Run:
 
    ```shell
-   bash bots/market-maker.sh
+   bash services/market-maker.sh
    ```
 
    The script starts localnet if it is not already running, builds and deploys

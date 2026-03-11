@@ -9,6 +9,10 @@ use dropset_interface::instructions::{
     BatchReplaceInstructionData,
     UnvalidatedOrders,
 };
+use dropset_services_shared::oanda_types::{
+    CurrencyPair,
+    OandaCandlestickResponse,
+};
 use itertools::Itertools;
 use price::client_helpers::to_order_info_args;
 use rust_decimal::Decimal;
@@ -24,32 +28,22 @@ use transaction_parser::views::{
 };
 
 use crate::{
-    maker::{
-        calculate_spreads::{
-            half_spread,
-            reservation_price,
-        },
-        utils::{
-            get_normalized_mid_price,
-            log_orders,
-        },
+    config::ValidMakerConfig,
+    get_non_redundant_order_flow,
+    model::calculate_spreads::{
+        half_spread,
+        reservation_price,
     },
-    oanda::{
-        CurrencyPair,
-        OandaCandlestickResponse,
+    oanda_price_feed::{
+        query_price_feed,
+        OandaArgs,
     },
+    utils::{
+        get_normalized_mid_price,
+        log_orders,
+    },
+    MakerState,
 };
-
-pub mod calculate_spreads;
-pub mod maker_state;
-pub mod model_parameters;
-pub mod order_as_key;
-pub mod order_flow;
-pub mod utils;
-
-pub use maker_state::*;
-pub use order_as_key::*;
-pub use order_flow::*;
 
 const ORDER_SIZE: u64 = 1_000;
 
@@ -81,32 +75,30 @@ pub struct MakerContext {
 
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
-}
 
-pub struct MakerContextInitArgs<'a> {
-    pub rpc: &'a CustomRpcClient,
-    pub maker: Keypair,
-    pub base_mint: Address,
-    pub quote_mint: Address,
-    pub pair: CurrencyPair,
-    pub base_target_atoms: u64,
-    pub initial_price_feed_response: OandaCandlestickResponse,
-    pub batch_replace: bool,
+    /// The order size for each order in atoms.
+    pub order_size: u64,
 }
 
 impl MakerContext {
     /// Creates a new maker context from a token pair.
-    pub async fn init(args: MakerContextInitArgs<'_>) -> anyhow::Result<Self> {
-        let MakerContextInitArgs {
-            rpc,
-            maker,
+    pub async fn init(
+        rpc: &CustomRpcClient,
+        oanda_args: &OandaArgs,
+        reqwest_client: &reqwest::Client,
+        ValidMakerConfig {
+            maker_keypair: maker,
             base_mint,
             quote_mint,
             pair,
-            base_target_atoms,
-            initial_price_feed_response,
+            target_base: base_target_atoms,
             batch_replace,
-        } = args;
+            order_size,
+            ..
+        }: ValidMakerConfig,
+    ) -> anyhow::Result<Self> {
+        let initial_price_feed_response = query_price_feed(oanda_args, reqwest_client).await?;
+
         let base_account = rpc.client.get_account(&base_mint).await?;
         let base =
             TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
@@ -133,6 +125,7 @@ impl MakerContext {
             base_target_atoms,
             mid_price,
             batch_replace,
+            order_size,
         })
     }
 
@@ -167,8 +160,8 @@ impl MakerContext {
         let (cancels, posts) = get_non_redundant_order_flow(
             self.latest_state.bids.clone(),
             self.latest_state.asks.clone(),
-            vec![(bid_price, ORDER_SIZE)],
-            vec![(ask_price, ORDER_SIZE)],
+            vec![(bid_price, self.order_size)],
+            vec![(ask_price, self.order_size)],
             self.latest_state.seat.index,
         )?;
 

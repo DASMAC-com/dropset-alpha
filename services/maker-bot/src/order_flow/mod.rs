@@ -1,3 +1,5 @@
+mod order_as_key;
+
 use std::collections::HashMap;
 
 use dropset_interface::{
@@ -8,6 +10,7 @@ use dropset_interface::{
     state::sector::SectorIndex,
 };
 use itertools::Itertools;
+use order_as_key::OrderAsKey;
 use price::{
     client_helpers::to_order_info_args,
     to_order_info,
@@ -16,10 +19,7 @@ use price::{
 use rust_decimal::Decimal;
 use transaction_parser::views::OrderView;
 
-use crate::maker::{
-    order_as_key::OrderAsKey,
-    utils::split_symmetric_difference,
-};
+use crate::utils::split_symmetric_difference;
 
 /// Given the collections of bids/asks to cancel and bids/asks to post, determine which orders would
 /// be redundant and then filter them out from the set of resulting instructions.

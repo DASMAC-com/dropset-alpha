@@ -87,6 +87,15 @@ impl CustomRpcClient {
         }
     }
 
+    pub async fn validate_endpoint(&self) -> anyhow::Result<()> {
+        self.client
+            .get_version()
+            .await
+            .with_context(|| format!("Failed to connect to Solana RPC at {}", self.client.url()))?;
+
+        Ok(())
+    }
+
     pub async fn fund_account(&self, address: &Address) -> anyhow::Result<()> {
         airdrop(&self.client, address).await
     }

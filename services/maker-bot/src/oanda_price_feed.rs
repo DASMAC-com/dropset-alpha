@@ -1,4 +1,4 @@
-use crate::oanda::{
+use dropset_services_shared::oanda_types::{
     CandlestickGranularity,
     CurrencyPair,
     OandaCandlestickResponse,
@@ -6,6 +6,7 @@ use crate::oanda::{
 
 const OANDA_BASE_URL: &str = "https://api-fxpractice.oanda.com/v3";
 
+#[derive(Clone)]
 pub struct OandaArgs {
     pub auth_token: String,
     pub pair: CurrencyPair,

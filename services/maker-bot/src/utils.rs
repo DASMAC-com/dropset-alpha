@@ -11,6 +11,10 @@ use dropset_interface::instructions::{
     CancelOrderInstructionData,
     PostOrderInstructionData,
 };
+use dropset_services_shared::oanda_types::{
+    CurrencyPair,
+    OandaCandlestickResponse,
+};
 use price::{
     client_helpers::{
         decimal_pow10_i16,
@@ -19,11 +23,6 @@ use price::{
     to_order_info,
 };
 use rust_decimal::Decimal;
-
-use crate::oanda::{
-    CurrencyPair,
-    OandaCandlestickResponse,
-};
 
 pub fn get_normalized_mid_price(
     candlestick_response: OandaCandlestickResponse,
