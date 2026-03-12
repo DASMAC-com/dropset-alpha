@@ -32,8 +32,8 @@ use crate::utils::split_symmetric_difference;
 pub fn get_non_redundant_order_flow(
     bids_to_cancel: Vec<OrderView>,
     asks_to_cancel: Vec<OrderView>,
-    bids_to_post: Vec<(Decimal, u64)>, // (price, size) tuples.
-    asks_to_post: Vec<(Decimal, u64)>, // (price, size) tuples.
+    bids_to_post: Vec<(Decimal, u64)>, // (price, base atom size) tuples.
+    asks_to_post: Vec<(Decimal, u64)>, // (price, base atom size) tuples.
     maker_seat_index: SectorIndex,
 ) -> anyhow::Result<(
     Vec<CancelOrderInstructionData>,

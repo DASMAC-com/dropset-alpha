@@ -19,7 +19,10 @@ use dropset_services_shared::{
 };
 use itertools::Itertools;
 use price::client_helpers::to_order_info_args;
-use rust_decimal::Decimal;
+use rust_decimal::{
+    prelude::ToPrimitive,
+    Decimal,
+};
 use solana_address::Address;
 use solana_keypair::Signer;
 use solana_sdk::{
@@ -187,10 +190,19 @@ impl MakerContext {
     pub fn create_cancel_and_post_instructions(&self) -> anyhow::Result<Vec<Instruction>> {
         let (bid_price, ask_price) = self.get_bid_and_ask_prices();
 
+        let quote_size_in_base = (Decimal::from(self.quote_order_size) / bid_price)
+            .to_u64()
+            .with_context(|| {
+                format!(
+                    "Couldn't denominate quote size in base as a u64: Decimal::from({} / {})",
+                    self.quote_order_size, bid_price
+                )
+            })?;
+
         let (cancels, posts) = get_non_redundant_order_flow(
             self.latest_state.bids.clone(),
             self.latest_state.asks.clone(),
-            vec![(bid_price, self.quote_order_size)],
+            vec![(bid_price, quote_size_in_base)],
             vec![(ask_price, self.base_order_size)],
             self.latest_state.seat.index,
         )?;
@@ -205,7 +217,7 @@ impl MakerContext {
                 self.maker_address,
                 BatchReplaceInstructionData::new(
                     self.latest_state.seat.index,
-                    UnvalidatedOrders::new([to_order_info_args(bid_price, self.quote_order_size)?]),
+                    UnvalidatedOrders::new([to_order_info_args(bid_price, quote_size_in_base)?]),
                     UnvalidatedOrders::new([to_order_info_args(ask_price, self.base_order_size)?]),
                 ),
             );
