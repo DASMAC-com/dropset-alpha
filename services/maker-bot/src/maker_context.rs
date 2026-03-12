@@ -86,11 +86,7 @@ pub struct MakerContext {
 
 impl MakerContext {
     /// Creates a new maker context from a token pair.
-    pub async fn init(
-        rpc: &CustomRpcClient,
-        cfg: ValidMakerConfig,
-        initial_price_feed_response: OandaCandlestickResponse,
-    ) -> anyhow::Result<Self> {
+    pub async fn init(rpc: &CustomRpcClient, cfg: ValidMakerConfig) -> anyhow::Result<Self> {
         let ValidMakerConfig {
             shared,
             target_base: base_target_atoms,
@@ -98,6 +94,7 @@ impl MakerContext {
             ask_order_size,
             bid_order_size,
             oanda_args,
+            initial_price_feed_response,
             ..
         } = cfg;
         let ValidSharedConfig {
