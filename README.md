@@ -64,9 +64,13 @@ bash cu-bench/manifest/run-bench.sh
 bash cu-bench/phoenix/run-bench.sh
 ```
 
-### 🤖 Market Maker/Taker Bots *(experimental)*
+### 🧪 Faucet Service and Market Maker/Taker Bots *(experimental)*
 
-See [services/README.md](services/README.md).
+See each service's `README.md` for how to run it:
+
+- [faucet/README.md](services/faucet/README.md)
+- [maker-bot/README.md](services/maker-bot/README.md)
+- [taker-bot/README.md](services/taker-bot/README.md)
 
 ## 📚 Documentation
 
