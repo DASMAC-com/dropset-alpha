@@ -18,7 +18,7 @@
     "check:bench-manifest": "cd cu-bench/manifest && cargo check --tests",
     "check:bench-phoenix": "cd cu-bench/phoenix && cargo check --tests",
     "clean": "cargo clean",
-    "clippy": "cargo clippy --all-targets -- -D warnings",
+    "clippy": "cargo +nightly clippy --all-targets -- -D warnings",
     "deploy": "solana program deploy -u localhost target/deploy/dropset.so --program-id test-keypair.json",
     "format": "cargo +nightly fmt --all",
     "services:maker": "cargo run -p dropset-maker-bot",
