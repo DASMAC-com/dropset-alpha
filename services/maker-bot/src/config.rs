@@ -1,37 +1,19 @@
 use std::{
     fs,
     io::ErrorKind,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::Path,
 };
 
 use anyhow::Context;
 use dropset_services_shared::{
-    config::ValidSharedConfig,
+    config::{
+        Service,
+        ValidSharedConfig,
+    },
     oanda_types::CurrencyPair,
 };
 use reqwest::Url;
 use serde::Deserialize;
-
-pub fn maker_config_dir() -> PathBuf {
-    std::env::var("MAKER_CONFIG_DIR")
-        .unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").to_string())
-        .into()
-}
-
-pub fn maker_keypair_path() -> PathBuf {
-    maker_config_dir().join("maker-keypair.json")
-}
-
-pub fn maker_config_path() -> PathBuf {
-    maker_config_dir().join("maker.toml")
-}
-
-pub fn maker_example_config_path() -> PathBuf {
-    maker_config_dir().join("maker.toml.example")
-}
 
 pub struct ValidMakerConfig {
     pub oanda_auth_token: String,
@@ -90,7 +72,7 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
         .context(format!("Invalid WS url: {}", ws_url_input))?;
 
     let shared = ValidSharedConfig::new(
-        maker_keypair_path(),
+        Service::Maker.keypair_path(),
         base_mint_input,
         quote_mint_input,
         rpc_url_input,
@@ -111,16 +93,16 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
 }
 
 pub fn load_config_and_validate() -> anyhow::Result<ValidMakerConfig> {
-    let path = &maker_config_path();
+    let path = &Service::Maker.toml_config_path();
     let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
         ErrorKind::NotFound => anyhow::anyhow!(
-            "Config file not found at '{}'.\n\
+            "Config file not found at '{:#?}'.\n\
                  Copy the template and fill in your OANDA token:\n\n\
                  \tcp {:#?} \\\n\
                  \t   {:#?}\n",
-            path.display(),
-            maker_example_config_path(),
-            maker_config_path(),
+            path,
+            Service::Maker.toml_config_example_path(),
+            path,
         ),
         _ => anyhow::anyhow!("Failed to read config file: '{}': {e}", path.display()),
     })?;

@@ -9,13 +9,11 @@ services:
     container_name: maker-bot
     restart: unless-stopped
     network_mode: host
-    environment:
-      - MAKER_CONFIG_DIR=/app
     volumes:
       - ./maker.toml:/app/maker.toml:ro
       - ./maker-keypair.json:/app/maker-keypair.json:ro
     healthcheck:
-      test: ["CMD", "/app/dropset-maker-bot", "--health-check"]
+      test: ["CMD", "/app/service", "--health-check"]
       interval: 30s
       timeout: 5s
       retries: 3

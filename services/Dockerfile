@@ -36,6 +36,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /build/target/release/dropset-${SERVICE} /app/dropset-maker-bot
+COPY --from=builder /build/target/release/dropset-${SERVICE} /app/service
 
-ENTRYPOINT ["/app/dropset-maker-bot"]
+ENTRYPOINT ["/app/service"]
