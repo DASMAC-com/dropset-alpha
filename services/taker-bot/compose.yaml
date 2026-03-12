@@ -10,8 +10,8 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./taker.toml:/app/taker.toml:ro
-      - ./taker-keypair.json:/app/taker-keypair.json:ro
+      - ./config.toml:/app/services/taker-bot/config.toml:ro
+      - ./keypair.json:/app/services/taker-bot/keypair.json:ro
     healthcheck:
       test: ["CMD", "/app/service", "--health-check"]
       interval: 30s

@@ -29,27 +29,15 @@ impl Service {
     }
 
     pub fn keypair_path(&self) -> PathBuf {
-        match self {
-            Self::Maker => self.config_dir().join("maker-keypair.json"),
-            Self::Taker => self.config_dir().join("taker-keypair.json"),
-            Self::Faucet => self.config_dir().join("faucet-keypair.json"),
-        }
+        self.config_dir().join("keypair.json")
     }
 
     pub fn toml_config_path(&self) -> PathBuf {
-        match self {
-            Self::Maker => self.config_dir().join("maker.toml"),
-            Self::Taker => self.config_dir().join("taker.toml"),
-            Self::Faucet => self.config_dir().join("faucet.toml"),
-        }
+        self.config_dir().join("config.toml")
     }
 
     pub fn toml_config_example_path(&self) -> PathBuf {
-        match self {
-            Self::Maker => self.config_dir().join("maker.toml.example"),
-            Self::Taker => self.config_dir().join("taker.toml.example"),
-            Self::Faucet => self.config_dir().join("faucet.toml.example"),
-        }
+        self.config_dir().join("config.toml.example")
     }
 }
 

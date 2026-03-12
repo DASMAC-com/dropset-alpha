@@ -11,11 +11,11 @@ experimentation and local testing, not production use.
 1. Copy the maker config template and fill in your OANDA API token:
 
    ```shell
-   cp services/maker-bot/maker.toml.example \
-      services/maker-bot/maker.toml
+   cp services/maker-bot/config.toml.example \
+      services/maker-bot/config.toml
    ```
 
-   Then edit `maker.toml` and set `oanda_auth_token`.
+   Then edit `config.toml` and set `oanda_auth_token`.
 
    Update config values if desired. The default Solana network is the local
    validator network.

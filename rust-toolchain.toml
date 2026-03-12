@@ -1,2 +1,3 @@
 [toolchain]
+# When bumping this, also update the FROM image tag in services/Dockerfile.
 channel = "1.86.0"
