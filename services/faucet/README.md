@@ -1,20 +1,21 @@
-# Market maker bot *(experimental)*
+# Faucet service *(experimental)*
 
-A prototype market-making bot implementing a naive version of the
-[Avellaneda-Stoikov model] for a `dropset` market. Intended for
-experimentation and local testing, not production use.
+A `faucet` service intended to send `base` and `quote` mint tokens associated
+with a `dropset` market to an address upon request.
+
+It's only intended to run on a Solana test network like `localhost`, `devnet`,
+or `testnet`.
 
 ## Running
 
 1. Copy the config template:
 
    ```shell
-   cp services/maker-bot/config.toml.example \
-      services/maker-bot/config.toml
+   cp services/faucet/config.toml.example \
+      services/faucet/config.toml
    ```
 
-   Then update any empty fields in the new `services/maker-bot/config.toml`:
-      - `oanda_auth_token`
+   Then update any empty fields in the new `services/faucet/config.toml`:
       - `base_mint`
       - `quote_mint`
 
@@ -22,14 +23,14 @@ experimentation and local testing, not production use.
 
    By default, the service is configured to run on a local test validator.
 
-2. Ensure there is a keypair file at `services/maker-bot/keypair.json`.
+2. Ensure there is a keypair file at `services/faucet/keypair.json`.
 
 3. Either run the binary or start the `Docker` container.
 
    ```shell
-   cargo run -p dropset-maker-bot
+   cargo run -p dropset-faucet
    # or, from the root directory:
-   docker compose -f services/maker-bot/compose.yaml up --build
+   docker compose -f services/faucet/compose.yaml up --build
    ```
 
 To get started on a local network, make sure that a local validator is running
@@ -43,6 +44,3 @@ script.
 It creates the base and token mints, creates a `dropset` market from them,
 starts a local solana test validator if one isn't already running, then deploys
 all services with properly updated `config.toml` files.
-
-
-[Avellaneda-Stoikov model]: https://people.orie.cornell.edu/sfs33/LimitOrderBook.pdf
