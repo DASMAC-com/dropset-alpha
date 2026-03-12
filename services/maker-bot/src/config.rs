@@ -1,12 +1,9 @@
-use std::{
-    fs,
-    io::ErrorKind,
-    path::Path,
-};
+use std::path::Path;
 
 use anyhow::Context;
 use dropset_services_shared::{
     config::{
+        deserialize_service_config,
         Service,
         ValidSharedConfig,
     },
@@ -93,22 +90,8 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
 }
 
 pub fn load_config_and_validate() -> anyhow::Result<ValidMakerConfig> {
+    let cfg: MakerConfigInput = deserialize_service_config(Service::Maker)?;
     let path = &Service::Maker.toml_config_path();
-    let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
-        ErrorKind::NotFound => anyhow::anyhow!(
-            "Config file not found at '{:#?}'.\n\
-                 Copy the template and fill in your OANDA token:\n\n\
-                 \tcp {:#?} \\\n\
-                 \t   {:#?}\n",
-            path,
-            Service::Maker.toml_config_example_path(),
-            path,
-        ),
-        _ => anyhow::anyhow!("Failed to read config file: '{}': {e}", path.display()),
-    })?;
 
-    let config: MakerConfigInput = toml::from_str(&raw)
-        .map_err(|e| anyhow::anyhow!("Failed to parse '{}': {e}", path.display()))?;
-
-    validate_config(path, config)
+    validate_config(path, cfg)
 }

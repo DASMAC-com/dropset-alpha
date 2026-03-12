@@ -1,11 +1,13 @@
 use std::{
     fs,
+    io::ErrorKind,
     path::PathBuf,
     str::FromStr,
 };
 
 use anyhow::Context;
 use reqwest::Url;
+use serde::de::DeserializeOwned;
 use solana_address::Address;
 use solana_keypair::Keypair;
 
@@ -80,4 +82,35 @@ impl ValidSharedConfig {
             rpc_url,
         })
     }
+}
+
+/// Loads the raw toml config file for a service, printing helpful messages upon error.
+pub fn deserialize_service_config<T: DeserializeOwned>(service: Service) -> anyhow::Result<T> {
+    let path = &service.toml_config_path();
+    let example_path = &service.toml_config_example_path();
+    let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
+        ErrorKind::NotFound => anyhow::anyhow!(
+            "Config file not found at '{}'.\n\
+                 Copy the template and fill in empty fields:\n\n\
+                 \tcp {} \\\n\
+                 \t   {}\n",
+            path.display(),
+            example_path.display(),
+            path.display(),
+        ),
+        ErrorKind::IsADirectory => anyhow::anyhow!(
+            "Expected a config file at '{}' but found a directory.\n\
+                 If running via Docker, this means the host-side config file does not exist — \
+                 Docker created a directory at the volume mount target.\n\
+                 Copy the template and fill in empty fields:\n\n\
+                 \tcp {} \\\n\
+                 \t   {}\n",
+            path.display(),
+            example_path.display(),
+            path.display(),
+        ),
+        _ => anyhow::anyhow!("Failed to read config file: '{path:#?}': {e}"),
+    })?;
+
+    toml::from_str(&raw).map_err(|e| anyhow::anyhow!("Failed to parse '{path:#?}': {e}"))
 }
