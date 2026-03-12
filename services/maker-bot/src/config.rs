@@ -7,16 +7,26 @@ use dropset_services_shared::{
         Service,
         ValidSharedConfig,
     },
-    oanda_types::CurrencyPair,
+    oanda_types::{
+        CurrencyPair,
+        OandaCandlestickResponse,
+    },
 };
 use reqwest::Url;
 use serde::Deserialize;
 
+use crate::{
+    oanda_price_feed::{
+        query_price_feed,
+        OandaArgs,
+    },
+    GRANULARITY,
+    NUM_CANDLES,
+};
+
 const SERVICE: Service = Service::Maker;
 
 pub struct ValidMakerConfig {
-    pub oanda_auth_token: String,
-    pub pair: CurrencyPair,
     pub shared: ValidSharedConfig,
     pub target_base: u64,
     pub batch_replace: bool,
@@ -25,6 +35,8 @@ pub struct ValidMakerConfig {
     pub ws_url: Url,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
+    pub oanda_args: OandaArgs,
+    pub initial_price_feed_response: OandaCandlestickResponse,
 }
 
 #[derive(Deserialize)]
@@ -70,6 +82,17 @@ pub async fn validate_config_and_endpoint(
         );
     }
 
+    let oanda_args = OandaArgs {
+        auth_token: oanda_auth_token,
+        pair,
+        granularity: GRANULARITY,
+        num_candles: NUM_CANDLES,
+    };
+
+    let initial_price_feed_response = query_price_feed(&oanda_args, &reqwest::Client::new())
+        .await
+        .with_context(|| anyhow::anyhow!("Couldn't query OANDA price feed."))?;
+
     let ws_url = Url::try_from(ws_url_input.as_str())
         .context(format!("Invalid WS url: {}", ws_url_input))?;
 
@@ -83,8 +106,6 @@ pub async fn validate_config_and_endpoint(
 
     Ok(ValidMakerConfig {
         shared,
-        oanda_auth_token,
-        pair,
         target_base,
         batch_replace,
         base_order_size,
@@ -92,6 +113,8 @@ pub async fn validate_config_and_endpoint(
         ws_url,
         price_feed_poll_interval,
         order_update_throttle_window,
+        oanda_args,
+        initial_price_feed_response,
     })
 }
 

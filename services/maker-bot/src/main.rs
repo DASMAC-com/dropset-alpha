@@ -16,6 +16,7 @@ use std::{
     rc::Rc,
 };
 
+use anyhow::Context;
 use client::transactions::{
     CustomRpcClient,
     SendTransactionConfig,
@@ -33,7 +34,7 @@ use tokio::sync::watch;
 use crate::{
     config::get_validated_config,
     maker_context::MakerContext,
-    oanda_price_feed::OandaArgs,
+    oanda_price_feed::query_price_feed,
 };
 
 pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
@@ -49,6 +50,10 @@ pub enum TaskUpdate {
 async fn main() -> anyhow::Result<()> {
     let health_check = std::env::args().any(|a| a == "--health-check");
     let cfg = get_validated_config().await?;
+    let reqwest_client = reqwest::Client::new();
+    let initial_price_feed_response = query_price_feed(&cfg.oanda_args, &reqwest_client)
+        .await
+        .context("Couldn't query OANDA price feed")?;
     if health_check {
         return Ok(());
     }
@@ -69,16 +74,8 @@ async fn main() -> anyhow::Result<()> {
         }),
     );
 
-    let reqwest_client = reqwest::Client::new();
-
-    let oanda_args = OandaArgs {
-        auth_token: cfg.oanda_auth_token.clone(),
-        pair: cfg.pair,
-        granularity: GRANULARITY,
-        num_candles: NUM_CANDLES,
-    };
-
-    let ctx = MakerContext::init(&rpc, &oanda_args, &reqwest_client, cfg).await?;
+    let oanda_args = cfg.oanda_args.clone();
+    let ctx = MakerContext::init(&rpc, cfg, initial_price_feed_response).await?;
     let maker_ctx = Rc::new(RefCell::new(ctx));
 
     // Create the sender/receiver to facilitate notifications of mutations from the program

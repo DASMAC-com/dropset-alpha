@@ -41,10 +41,6 @@ use crate::{
         half_spread,
         reservation_price,
     },
-    oanda_price_feed::{
-        query_price_feed,
-        OandaArgs,
-    },
     utils::{
         get_normalized_mid_price,
         log_orders,
@@ -92,17 +88,16 @@ impl MakerContext {
     /// Creates a new maker context from a token pair.
     pub async fn init(
         rpc: &CustomRpcClient,
-        oanda_args: &OandaArgs,
-        reqwest_client: &reqwest::Client,
         cfg: ValidMakerConfig,
+        initial_price_feed_response: OandaCandlestickResponse,
     ) -> anyhow::Result<Self> {
         let ValidMakerConfig {
             shared,
-            pair,
             target_base: base_target_atoms,
             batch_replace,
             base_order_size,
             quote_order_size,
+            oanda_args,
             ..
         } = cfg;
         let ValidSharedConfig {
@@ -111,8 +106,6 @@ impl MakerContext {
             quote_mint,
             ..
         } = shared;
-
-        let initial_price_feed_response = query_price_feed(oanda_args, reqwest_client).await?;
 
         let base_account = rpc
             .client
@@ -145,14 +138,15 @@ impl MakerContext {
         let market =
             try_market_view_all_from_owner_and_data(market_account.owner, &market_account.data)?;
         let latest_state = MakerState::new_from_market(keypair.pubkey(), market)?;
-        let mid_price = get_normalized_mid_price(initial_price_feed_response, &pair, &market_ctx)?;
+        let mid_price =
+            get_normalized_mid_price(initial_price_feed_response, &oanda_args.pair, &market_ctx)?;
         let maker_address = keypair.pubkey();
 
         Ok(Self {
             keypair,
             market_ctx,
             maker_address,
-            pair,
+            pair: oanda_args.pair,
             latest_state,
             base_target_atoms,
             mid_price,
