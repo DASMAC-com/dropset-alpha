@@ -8,6 +8,13 @@ f ! command -v pnpm &>/dev/null; then
   exit 1
 fi
 
+# Check if `--force` was passed to overwrite existing `maker-keypair.json`,
+# `taker-keypair.json`, and `faucet-keypair.json` files.
+FORCE_FLAG=""
+if [[ "${1:-}" == "--force" ]]; then
+  FORCE_FLAG="--force"
+fi
+
 ROOT="$(git rev-parse --show-toplevel)"
 MANIFEST_PATH="$ROOT/services/Cargo.toml"
 
@@ -42,10 +49,9 @@ fi
 pnpm run build:dropset
 pnpm run deploy
 
-# Creates a market, writes maker-keypair.json, and patches base_mint/quote_mint
-# into config.toml.
-(cd "$ROOT/services" && \
-    cargo run --manifest-path "$MANIFEST_PATH" --example initialization_helper)
+# Creates a market, writes to the faucet, taker, and maker keypair files, and
+# patches the base and quote mints into their respective toml config files.
+cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_FLAG
 
 pnpm run services:maker:docker
 pnpm run services:taker:docker

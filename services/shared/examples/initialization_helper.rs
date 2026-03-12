@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use anyhow::Context;
 use client::{
     e2e_helpers::{
         test_accounts,
@@ -60,17 +61,17 @@ async fn main() -> anyhow::Result<()> {
     let e2e = E2e::new_traders_and_market(
         Some(rpc),
         [
-            Trader::new(maker, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
+            Trader::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
             Trader::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
             Trader::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
         ],
     )
     .await?;
 
-    deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
-    deposit_base_and_quote_to_market(taker, &e2e, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE).await?;
     deposit_base_and_quote_to_market(faucet, &e2e, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE)
         .await?;
+    deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
+    deposit_base_and_quote_to_market(taker, &e2e, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE).await?;
 
     // Write each keypair to the appropriate file.
     write_keypair_to_file(Service::Faucet, faucet)?;
@@ -82,7 +83,9 @@ async fn main() -> anyhow::Result<()> {
     update_base_and_quote_mints(Service::Maker, &e2e)?;
     update_base_and_quote_mints(Service::Taker, &e2e)?;
 
+    println!("Faucet address : {}", faucet.pubkey());
     println!("Maker address : {}", maker.pubkey());
+    println!("Taker address : {}", taker.pubkey());
     println!("Base mint     : {}", e2e.market.base.mint_address);
     println!("Quote mint    : {}", e2e.market.quote.mint_address);
     println!("Market        : {}", e2e.market.market);
@@ -91,6 +94,12 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn write_keypair_to_file(service: Service, kp: &Keypair) -> anyhow::Result<()> {
+    if std::fs::exists(service.keypair_path())? && !should_force_overwrite() {
+        anyhow::bail!(
+            "{:#?} already exists. Pass `--force` to overwrite it.",
+            service.keypair_path(),
+        );
+    }
     Ok(std::fs::write(
         service.keypair_path(),
         serde_json::to_string(&kp.to_bytes().to_vec())?,
@@ -124,11 +133,27 @@ async fn deposit_base_and_quote_to_market(
 
 fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()> {
     let config = service.toml_config_path();
+    if !config.exists() {
+        std::fs::copy(service.toml_config_example_path(), config.clone()).context(
+            anyhow::anyhow!(
+                "Failed to copy {:#?} to {:#?}",
+                service.toml_config_example_path(),
+                config,
+            ),
+        )?;
+    }
+
     let raw = std::fs::read_to_string(&config)?;
     let mut doc: DocumentMut = raw.parse()?;
     doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
     doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());
+    println!("{:#?}", doc);
     std::fs::write(&config, doc.to_string())?;
 
     Ok(())
+}
+
+/// A simple CLI argument to indicate that rewriting keypair files is intentional.
+fn should_force_overwrite() -> bool {
+    std::env::args().any(|a| a == "--force")
 }
