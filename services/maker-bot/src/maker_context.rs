@@ -49,8 +49,6 @@ use crate::{
     MakerState,
 };
 
-const ORDER_SIZE: u64 = 1_000;
-
 pub struct MakerContext {
     /// The maker's keypair.
     pub keypair: Keypair,
@@ -207,8 +205,8 @@ impl MakerContext {
                 self.maker_address,
                 BatchReplaceInstructionData::new(
                     self.latest_state.seat.index,
-                    UnvalidatedOrders::new([to_order_info_args(bid_price, ORDER_SIZE)?]),
-                    UnvalidatedOrders::new([to_order_info_args(ask_price, ORDER_SIZE)?]),
+                    UnvalidatedOrders::new([to_order_info_args(bid_price, self.quote_order_size)?]),
+                    UnvalidatedOrders::new([to_order_info_args(ask_price, self.base_order_size)?]),
                 ),
             );
 
