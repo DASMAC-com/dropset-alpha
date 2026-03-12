@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-f ! command -v pnpm &>/dev/null; then
+if ! command -v pnpm &>/dev/null; then
   echo "pnpm is not installed. Please install it: https://pnpm.io/installation"
   exit 1
 fi

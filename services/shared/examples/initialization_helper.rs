@@ -147,7 +147,6 @@ fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()
     let mut doc: DocumentMut = raw.parse()?;
     doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
     doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());
-    println!("{:#?}", doc);
     std::fs::write(&config, doc.to_string())?;
 
     Ok(())
