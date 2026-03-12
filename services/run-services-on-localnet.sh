@@ -8,8 +8,7 @@ if ! command -v pnpm &>/dev/null; then
   exit 1
 fi
 
-# Check if `--force` was passed to overwrite existing `maker-keypair.json`,
-# `taker-keypair.json`, and `faucet-keypair.json` files.
+# Check if `--force` was passed to overwrite existing keypair files.
 FORCE_FLAG=""
 if [[ "${1:-}" == "--force" ]]; then
   FORCE_FLAG="--force"
