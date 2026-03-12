@@ -31,7 +31,7 @@ use strum_macros::Display;
 use tokio::sync::watch;
 
 use crate::{
-    config::load_config_and_validate,
+    config::get_validated_config,
     maker_context::MakerContext,
     oanda_price_feed::OandaArgs,
 };
@@ -48,8 +48,11 @@ pub enum TaskUpdate {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     let health_check = std::env::args().any(|a| a == "--health-check");
+    let cfg = get_validated_config().await?;
+    if health_check {
+        return Ok(());
+    }
 
-    let cfg = load_config_and_validate()?;
     let poll_interval = cfg.price_feed_poll_interval;
     let throttle_window = cfg.order_update_throttle_window;
     let ws_url = cfg.ws_url.clone();
@@ -65,12 +68,6 @@ async fn main() -> anyhow::Result<()> {
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
-
-    rpc.validate_endpoint().await?;
-
-    if health_check {
-        return Ok(());
-    }
 
     let reqwest_client = reqwest::Client::new();
 

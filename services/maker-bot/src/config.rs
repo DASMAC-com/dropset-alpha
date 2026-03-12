@@ -12,6 +12,8 @@ use dropset_services_shared::{
 use reqwest::Url;
 use serde::Deserialize;
 
+const SERVICE: Service = Service::Maker;
+
 pub struct ValidMakerConfig {
     pub oanda_auth_token: String,
     pub pair: CurrencyPair,
@@ -41,7 +43,10 @@ pub struct MakerConfigInput {
     pub order_update_throttle_window: u64,
 }
 
-pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<ValidMakerConfig> {
+pub async fn validate_config_and_endpoint(
+    path: &Path,
+    input: MakerConfigInput,
+) -> anyhow::Result<ValidMakerConfig> {
     let MakerConfigInput {
         oanda_auth_token,
         pair,
@@ -69,11 +74,12 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
         .context(format!("Invalid WS url: {}", ws_url_input))?;
 
     let shared = ValidSharedConfig::new(
-        Service::Maker.keypair_path(),
+        SERVICE.keypair_path(),
         base_mint_input,
         quote_mint_input,
         rpc_url_input,
-    )?;
+    )
+    .await?;
 
     Ok(ValidMakerConfig {
         shared,
@@ -89,9 +95,9 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
     })
 }
 
-pub fn load_config_and_validate() -> anyhow::Result<ValidMakerConfig> {
-    let cfg: MakerConfigInput = deserialize_service_config(Service::Maker)?;
-    let path = &Service::Maker.toml_config_path();
+pub async fn get_validated_config() -> anyhow::Result<ValidMakerConfig> {
+    let cfg: MakerConfigInput = deserialize_service_config(SERVICE)?;
+    let path = &SERVICE.toml_config_path();
 
-    validate_config(path, cfg)
+    validate_config_and_endpoint(path, cfg).await
 }

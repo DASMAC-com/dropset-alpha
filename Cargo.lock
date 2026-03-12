@@ -1515,6 +1515,15 @@ dependencies = [
 [[package]]
 name = "dropset-faucet"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "client",
+ "dropset-interface",
+ "dropset-services-shared",
+ "serde",
+ "solana-client",
+ "tokio",
+]
 
 [[package]]
 name = "dropset-interface"
@@ -1593,6 +1602,15 @@ dependencies = [
 [[package]]
 name = "dropset-taker-bot"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "client",
+ "dropset-interface",
+ "dropset-services-shared",
+ "serde",
+ "solana-client",
+ "tokio",
+]
 
 [[package]]
 name = "dunce"

@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::Context;
+use client::transactions::CustomRpcClient;
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use solana_address::Address;
@@ -52,7 +53,7 @@ pub struct ValidSharedConfig {
 }
 
 impl ValidSharedConfig {
-    pub fn new(
+    pub async fn new(
         keypair_path: PathBuf,
         base_mint: String,
         quote_mint: String,
@@ -74,6 +75,10 @@ impl ValidSharedConfig {
 
         let rpc_url =
             Url::try_from(rpc_url.as_str()).context(format!("Invalid RPC url: {}", rpc_url))?;
+
+        CustomRpcClient::new_from_url(rpc_url.as_str(), Default::default())
+            .validate_endpoint()
+            .await?;
 
         Ok(Self {
             keypair,

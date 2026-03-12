@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
+client = { path = "../../client" }
 serde.workspace = true
 serde_json.workspace = true
 solana-address.workspace = true
@@ -17,7 +18,6 @@ rust_decimal = { workspace = true, features = ["macros", "serde-with-arbitrary-p
 toml.workspace = true
 
 [dev-dependencies]
-client = { path = "../../client" }
 dropset-interface = { path = "../../interface" }
 solana-sdk.workspace = true
 tokio.workspace = true
