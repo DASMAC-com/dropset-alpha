@@ -38,7 +38,7 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
             exit 1
         fi
     done
-else
+fi
 
 # Creates a market, writes to the faucet, taker, and maker keypair files, and
 # patches the base and quote mints into their respective toml config files.
