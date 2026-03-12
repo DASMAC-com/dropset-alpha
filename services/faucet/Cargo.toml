@@ -1,5 +1,5 @@
 [package]
-name = "faucet"
+name = "dropset-faucet"
 version = "0.1.0"
 edition = "2024"
 
