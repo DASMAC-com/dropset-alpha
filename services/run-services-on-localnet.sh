@@ -15,8 +15,6 @@ if [[ "${1:-}" == "--force" ]]; then
 fi
 
 ROOT="$(git rev-parse --show-toplevel)"
-MANIFEST_PATH="$ROOT/services/Cargo.toml"
-
 cd "$ROOT"
 
 # Start the Solana test validator.
@@ -32,7 +30,6 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     for i in $(seq 1 6); do
         sleep 5
         if solana cluster-version --url localhost &>/dev/null 2>&1; then
-            echo "Validator is up."
             break
         fi
         if [ "$i" -eq 6 ]; then
