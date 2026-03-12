@@ -21,7 +21,7 @@ MANIFEST_PATH="$ROOT/services/Cargo.toml"
 cd "$ROOT"
 
 # Start the Solana test validator.
-# Note this doesn't doesn't reset an existing localnet.
+# Note that this doesn't reset an existing localnet.
 if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     echo "Localnet not running. Starting solana-test-validator..."
     nohup solana-test-validator >/tmp/test-validator.log 2>&1 &
@@ -43,11 +43,6 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
         fi
     done
 else
-    echo "Localnet already running."
-fi
-
-pnpm run build:dropset
-pnpm run deploy
 
 # Creates a market, writes to the faucet, taker, and maker keypair files, and
 # patches the base and quote mints into their respective toml config files.
