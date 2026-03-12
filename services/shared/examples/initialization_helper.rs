@@ -58,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &maker.pubkey()).await?;
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
+    // Mint the initial amounts to each account.
     let e2e = E2e::new_traders_and_market(
         Some(rpc),
         [
@@ -68,8 +69,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    deposit_base_and_quote_to_market(faucet, &e2e, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE)
-        .await?;
+    // Create the maker and taker's market seats by depositing their base and quote.
     deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
     deposit_base_and_quote_to_market(taker, &e2e, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE).await?;
 
