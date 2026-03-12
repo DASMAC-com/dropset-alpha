@@ -19,11 +19,11 @@ batch_replace = true
 base_mint  = ""
 quote_mint = ""
 
-# Each order's size in atoms when denominated in base.
-base_order_size = 1000
+# Each ask order's size, denominated in base atoms.
+ask_order_size = 1000
 
-# Each order's size in atoms when denominated in quote.
-quote_order_size = 1000
+# Each bid order's size, denominated in quote atoms.
+bid_order_size = 1000
 
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"

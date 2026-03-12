@@ -9,16 +9,16 @@ const SERVICE: Service = Service::Taker;
 
 pub struct ValidTakerConfig {
     pub shared: ValidSharedConfig,
-    pub base_order_size: u64,
-    pub quote_order_size: u64,
+    pub sell_order_size: u64,
+    pub buy_order_size: u64,
 }
 
 #[derive(Deserialize)]
 pub struct TakerConfigInput {
     pub base_mint: String,
     pub quote_mint: String,
-    pub base_order_size: u64,
-    pub quote_order_size: u64,
+    pub sell_order_size: u64,
+    pub buy_order_size: u64,
     pub rpc_url: String,
 }
 
@@ -28,8 +28,8 @@ pub async fn validate_config_and_endpoint(
     let TakerConfigInput {
         base_mint: base_mint_input,
         quote_mint: quote_mint_input,
-        base_order_size,
-        quote_order_size,
+        sell_order_size,
+        buy_order_size,
         rpc_url: rpc_url_input,
     } = input;
 
@@ -43,8 +43,8 @@ pub async fn validate_config_and_endpoint(
 
     Ok(ValidTakerConfig {
         shared,
-        base_order_size,
-        quote_order_size,
+        sell_order_size,
+        buy_order_size,
     })
 }
 

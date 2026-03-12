@@ -78,10 +78,10 @@ pub struct MakerContext {
     pub batch_replace: bool,
 
     /// The order size in atoms for each order denominated in base.
-    pub base_order_size: u64,
+    pub ask_order_size: u64,
 
     /// The order size in atoms for each order denominated in quote.
-    pub quote_order_size: u64,
+    pub bid_order_size: u64,
 }
 
 impl MakerContext {
@@ -95,8 +95,8 @@ impl MakerContext {
             shared,
             target_base: base_target_atoms,
             batch_replace,
-            base_order_size,
-            quote_order_size,
+            ask_order_size,
+            bid_order_size,
             oanda_args,
             ..
         } = cfg;
@@ -151,8 +151,8 @@ impl MakerContext {
             base_target_atoms,
             mid_price,
             batch_replace,
-            base_order_size,
-            quote_order_size,
+            ask_order_size,
+            bid_order_size,
         })
     }
 
@@ -184,20 +184,21 @@ impl MakerContext {
     pub fn create_cancel_and_post_instructions(&self) -> anyhow::Result<Vec<Instruction>> {
         let (bid_price, ask_price) = self.get_bid_and_ask_prices();
 
-        let quote_size_in_base = (Decimal::from(self.quote_order_size) / bid_price)
+        // Denominate the bid order size in base.
+        let bid_size = (Decimal::from(self.bid_order_size) / bid_price)
             .to_u64()
             .with_context(|| {
                 format!(
                     "Couldn't denominate quote size in base as a u64: Decimal::from({} / {})",
-                    self.quote_order_size, bid_price
+                    self.bid_order_size, bid_price
                 )
             })?;
 
         let (cancels, posts) = get_non_redundant_order_flow(
             self.latest_state.bids.clone(),
             self.latest_state.asks.clone(),
-            vec![(bid_price, quote_size_in_base)],
-            vec![(ask_price, self.base_order_size)],
+            vec![(bid_price, bid_size)],
+            vec![(ask_price, self.ask_order_size)],
             self.latest_state.seat.index,
         )?;
 
@@ -211,8 +212,8 @@ impl MakerContext {
                 self.maker_address,
                 BatchReplaceInstructionData::new(
                     self.latest_state.seat.index,
-                    UnvalidatedOrders::new([to_order_info_args(bid_price, quote_size_in_base)?]),
-                    UnvalidatedOrders::new([to_order_info_args(ask_price, self.base_order_size)?]),
+                    UnvalidatedOrders::new([to_order_info_args(bid_price, bid_size)?]),
+                    UnvalidatedOrders::new([to_order_info_args(ask_price, self.ask_order_size)?]),
                 ),
             );
 
