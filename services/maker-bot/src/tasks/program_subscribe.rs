@@ -31,7 +31,7 @@ use crate::{
 /// The indefinite task loop for the event-driven program subscription.
 ///
 /// It updates the maker state any time the market account state changes per the RPC client's
-/// websocket subcription and subsequently notifies the [`throttled_order_update`] task of a
+/// websocket subscription and subsequently notifies the [`throttled_order_update`] task of a
 /// [`TaskUpdate::MakerState`] update.
 pub async fn program_subscribe(
     maker_ctx: Rc<RefCell<MakerContext>>,

@@ -61,7 +61,7 @@ impl ValidSharedConfig {
             &base_mint
         ))?;
         let quote_mint = Address::from_str(&quote_mint).context(anyhow::anyhow!(
-            "Couldn't convert quote_mint `{}` to address",
+            "Couldn't convert quote mint `{}` to address",
             &quote_mint
         ))?;
 
