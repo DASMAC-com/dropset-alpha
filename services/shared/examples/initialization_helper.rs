@@ -94,14 +94,15 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn write_keypair_to_file(service: Service, kp: &Keypair) -> anyhow::Result<()> {
-    if std::fs::exists(service.keypair_path())? && !should_force_overwrite() {
+    let kp_path = service.keypair_path();
+    if std::fs::exists(kp_path.clone())? && !should_force_overwrite() {
         anyhow::bail!(
             "{:#?} already exists. Pass `--force` to overwrite it.",
-            service.keypair_path(),
+            kp_path.clone(),
         );
     }
     Ok(std::fs::write(
-        service.keypair_path(),
+        kp_path,
         serde_json::to_string(&kp.to_bytes().to_vec())?,
     )?)
 }
