@@ -12,11 +12,30 @@ pair = "EUR_USD"
 target_base = 8000
 
 # Use the BatchReplace instruction instead of individual cancel/post instructions.
-# This is mostly useful for profiling the compute usage of batched vs non-batched instructions.
+# There is generally no reason to disable this except for CU profiling.
 batch_replace = true
 
 # Token mint addresses for the market.
-# These are populated automatically by market-maker.sh after market initialization.
-# You can also fill them in manually if you already have a market deployed.
 base_mint  = ""
 quote_mint = ""
+
+# Each order's size in atoms when denominated in base.
+base_order_size = 1000
+
+# Each order's size in atoms when denominated in quote.
+quote_order_size = 1000
+
+# The Solana RPC endpoint.
+rpc_url = "http://localhost:8899"
+
+# The Solana WebSocket endpoint.
+ws_url = "http://localhost:8900"
+
+# The polling interval for the OANDA price feed endpoint.
+#
+# Oanda recommends limiting to twice per second (no less than a 500ms interval).
+# See: <https://developer.oanda.com/rest-live-v20/best-practices/>
+price_feed_poll_interval = 5000
+
+# The minimum amount of time the maker will wait before posting new orders.
+order_update_throttle_window = 500

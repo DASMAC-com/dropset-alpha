@@ -47,6 +47,8 @@ pub enum TaskUpdate {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
+    let health_check = std::env::args().any(|a| a == "--health-check");
+
     let cfg = load_config_and_validate()?;
     let poll_interval = cfg.price_feed_poll_interval;
     let throttle_window = cfg.order_update_throttle_window;
@@ -54,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
 
     let rpc = CustomRpcClient::new(
         Some(RpcClient::new_with_commitment(
-            cfg.rpc_url.clone().to_string(),
+            cfg.shared.rpc_url.clone().to_string(),
             CommitmentConfig::confirmed(),
         )),
         Some(SendTransactionConfig {
@@ -65,6 +67,11 @@ async fn main() -> anyhow::Result<()> {
     );
 
     rpc.validate_endpoint().await?;
+
+    if health_check {
+        return Ok(());
+    }
+
     let reqwest_client = reqwest::Client::new();
 
     let oanda_args = OandaArgs {

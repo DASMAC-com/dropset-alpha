@@ -1570,11 +1570,19 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "client",
+ "dropset-interface",
+ "reqwest 0.13.2",
  "rust_decimal",
  "serde",
  "serde_json",
+ "solana-address 2.0.0",
+ "solana-keypair",
+ "solana-sdk",
  "strum",
  "strum_macros",
+ "tokio",
+ "toml_edit 0.22.27",
 ]
 
 [[package]]

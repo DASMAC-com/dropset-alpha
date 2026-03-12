@@ -1,3 +1,4 @@
+use anyhow::Context;
 use client::{
     context::{
         market::MarketContext,
@@ -9,9 +10,12 @@ use dropset_interface::instructions::{
     BatchReplaceInstructionData,
     UnvalidatedOrders,
 };
-use dropset_services_shared::oanda_types::{
-    CurrencyPair,
-    OandaCandlestickResponse,
+use dropset_services_shared::{
+    config::ValidSharedConfig,
+    oanda_types::{
+        CurrencyPair,
+        OandaCandlestickResponse,
+    },
 };
 use itertools::Itertools;
 use price::client_helpers::to_order_info_args;
@@ -76,8 +80,11 @@ pub struct MakerContext {
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
 
-    /// The order size for each order in atoms.
-    pub order_size: u64,
+    /// The order size in atoms for each order denominated in base.
+    pub base_order_size: u64,
+
+    /// The order size in atoms for each order denominated in quote.
+    pub quote_order_size: u64,
 }
 
 impl MakerContext {
@@ -86,38 +93,62 @@ impl MakerContext {
         rpc: &CustomRpcClient,
         oanda_args: &OandaArgs,
         reqwest_client: &reqwest::Client,
-        ValidMakerConfig {
-            maker_keypair: maker,
-            base_mint,
-            quote_mint,
+        cfg: ValidMakerConfig,
+    ) -> anyhow::Result<Self> {
+        let ValidMakerConfig {
+            shared,
             pair,
             target_base: base_target_atoms,
             batch_replace,
-            order_size,
+            base_order_size,
+            quote_order_size,
             ..
-        }: ValidMakerConfig,
-    ) -> anyhow::Result<Self> {
+        } = cfg;
+        let ValidSharedConfig {
+            keypair,
+            base_mint,
+            quote_mint,
+            ..
+        } = shared;
+
         let initial_price_feed_response = query_price_feed(oanda_args, reqwest_client).await?;
 
-        let base_account = rpc.client.get_account(&base_mint).await?;
+        let base_account = rpc
+            .client
+            .get_account(&base_mint)
+            .await
+            .context("Couldn't find base mint account on-chain")?;
         let base =
             TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
 
-        let quote_account = rpc.client.get_account(&quote_mint).await?;
+        let quote_account = rpc
+            .client
+            .get_account(&quote_mint)
+            .await
+            .context("Couldn't find quote mint account on-chain")?;
         let quote =
             TokenContext::from_account_data(quote_mint, quote_account.owner, &quote_account.data)?;
 
         let market_ctx = MarketContext::new(base, quote);
 
-        let market_account = rpc.client.get_account(&market_ctx.market).await?;
+        let market_account = rpc
+            .client
+            .get_account(&market_ctx.market)
+            .await
+            .with_context(|| {
+                anyhow::anyhow!(
+                    "Couldn't find market account {} on-chain",
+                    market_ctx.market
+                )
+            })?;
         let market =
             try_market_view_all_from_owner_and_data(market_account.owner, &market_account.data)?;
-        let latest_state = MakerState::new_from_market(maker.pubkey(), market)?;
+        let latest_state = MakerState::new_from_market(keypair.pubkey(), market)?;
         let mid_price = get_normalized_mid_price(initial_price_feed_response, &pair, &market_ctx)?;
-        let maker_address = maker.pubkey();
+        let maker_address = keypair.pubkey();
 
         Ok(Self {
-            keypair: maker,
+            keypair,
             market_ctx,
             maker_address,
             pair,
@@ -125,7 +156,8 @@ impl MakerContext {
             base_target_atoms,
             mid_price,
             batch_replace,
-            order_size,
+            base_order_size,
+            quote_order_size,
         })
     }
 
@@ -160,8 +192,8 @@ impl MakerContext {
         let (cancels, posts) = get_non_redundant_order_flow(
             self.latest_state.bids.clone(),
             self.latest_state.asks.clone(),
-            vec![(bid_price, self.order_size)],
-            vec![(ask_price, self.order_size)],
+            vec![(bid_price, self.quote_order_size)],
+            vec![(ask_price, self.base_order_size)],
             self.latest_state.seat.index,
         )?;
 

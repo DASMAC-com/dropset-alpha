@@ -5,39 +5,43 @@ use std::{
         Path,
         PathBuf,
     },
-    str::FromStr,
 };
 
 use anyhow::Context;
-use dropset_services_shared::oanda_types::CurrencyPair;
+use dropset_services_shared::{
+    config::ValidSharedConfig,
+    oanda_types::CurrencyPair,
+};
 use reqwest::Url;
 use serde::Deserialize;
-use solana_address::Address;
-use solana_keypair::Keypair;
 
-pub fn config_path() -> PathBuf {
-    std::env::var("MAKER_CONFIG_PATH")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml"))
+pub fn maker_config_dir() -> PathBuf {
+    std::env::var("MAKER_CONFIG_DIR")
+        .unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").to_string())
+        .into()
 }
 
-pub fn example_config_path() -> PathBuf {
-    std::env::var("MAKER_CONFIG_PATH")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("maker.toml.example"))
+pub fn maker_keypair_path() -> PathBuf {
+    maker_config_dir().join("maker-keypair.json")
+}
+
+pub fn maker_config_path() -> PathBuf {
+    maker_config_dir().join("maker.toml")
+}
+
+pub fn maker_example_config_path() -> PathBuf {
+    maker_config_dir().join("maker.toml.example")
 }
 
 pub struct ValidMakerConfig {
     pub oanda_auth_token: String,
     pub pair: CurrencyPair,
+    pub shared: ValidSharedConfig,
     pub target_base: u64,
     pub batch_replace: bool,
-    pub base_mint: Address,
-    pub quote_mint: Address,
-    pub order_size: u64,
-    pub rpc_url: Url,
+    pub base_order_size: u64,
+    pub quote_order_size: u64,
     pub ws_url: Url,
-    pub maker_keypair: Keypair,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
 }
@@ -50,16 +54,31 @@ pub struct MakerConfigInput {
     pub batch_replace: bool,
     pub base_mint: String,
     pub quote_mint: String,
-    pub order_size: u64,
+    pub base_order_size: u64,
+    pub quote_order_size: u64,
     pub rpc_url: String,
     pub ws_url: String,
-    pub maker_kp_file_path: String,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
 }
 
 pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<ValidMakerConfig> {
-    if input.oanda_auth_token.is_empty() || input.oanda_auth_token == "your-token-here" {
+    let MakerConfigInput {
+        oanda_auth_token,
+        pair,
+        target_base,
+        batch_replace,
+        base_mint: base_mint_input,
+        quote_mint: quote_mint_input,
+        base_order_size,
+        quote_order_size,
+        rpc_url: rpc_url_input,
+        ws_url: ws_url_input,
+        price_feed_poll_interval,
+        order_update_throttle_window,
+    } = input;
+
+    if oanda_auth_token.is_empty() || oanda_auth_token == "your-token-here" {
         anyhow::bail!(
             "oanda_auth_token in '{}' is not set.\n\
                  Edit the file and replace the placeholder with your OANDA API token.",
@@ -67,43 +86,32 @@ pub fn validate_config(path: &Path, input: MakerConfigInput) -> anyhow::Result<V
         );
     }
 
-    let (base_mint_str, quote_mint_str) = (&input.base_mint, &input.quote_mint);
-    let base_mint = Address::from_str(&input.base_mint).with_context(|| {
-        anyhow::anyhow!("Couldn't convert base_mint `{base_mint_str}` to address")
-    })?;
-    let quote_mint = Address::from_str(&input.quote_mint).with_context(|| {
-        anyhow::anyhow!("Couldn't convert quote_mint `{quote_mint_str}` to address")
-    })?;
+    let ws_url = Url::try_from(ws_url_input.as_str())
+        .context(format!("Invalid WS url: {}", ws_url_input))?;
 
-    let maker_kp_fp = &input.maker_kp_file_path;
-    let maker_kp_file = fs::File::open(&input.maker_kp_file_path)
-        .with_context(|| anyhow::anyhow!("Couldn't open maker keypair file: {maker_kp_fp}"))?;
-    let maker_keypair_bytes: Vec<u8> = serde_json::from_reader(maker_kp_file)?;
-    let maker_keypair = Keypair::try_from(maker_keypair_bytes.as_slice())?;
-
-    let rpc_url = Url::try_from(input.rpc_url.as_str())
-        .context(format!("Invalid RPC url: {}", input.rpc_url))?;
-    let ws_url = Url::try_from(input.ws_url.as_str())
-        .context(format!("Invalid WS url: {}", input.ws_url))?;
+    let shared = ValidSharedConfig::new(
+        maker_keypair_path(),
+        base_mint_input,
+        quote_mint_input,
+        rpc_url_input,
+    )?;
 
     Ok(ValidMakerConfig {
-        oanda_auth_token: input.oanda_auth_token,
-        pair: input.pair,
-        target_base: input.target_base,
-        batch_replace: input.batch_replace,
-        base_mint,
-        quote_mint,
-        order_size: input.order_size,
-        rpc_url,
+        shared,
+        oanda_auth_token,
+        pair,
+        target_base,
+        batch_replace,
+        base_order_size,
+        quote_order_size,
         ws_url,
-        maker_keypair,
-        price_feed_poll_interval: input.price_feed_poll_interval,
-        order_update_throttle_window: input.order_update_throttle_window,
+        price_feed_poll_interval,
+        order_update_throttle_window,
     })
 }
 
 pub fn load_config_and_validate() -> anyhow::Result<ValidMakerConfig> {
-    let path = &config_path();
+    let path = &maker_config_path();
     let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
         ErrorKind::NotFound => anyhow::anyhow!(
             "Config file not found at '{}'.\n\
@@ -111,8 +119,8 @@ pub fn load_config_and_validate() -> anyhow::Result<ValidMakerConfig> {
                  \tcp {:#?} \\\n\
                  \t   {:#?}\n",
             path.display(),
-            example_config_path(),
-            config_path(),
+            maker_example_config_path(),
+            maker_config_path(),
         ),
         _ => anyhow::anyhow!("Failed to read config file: '{}': {e}", path.display()),
     })?;

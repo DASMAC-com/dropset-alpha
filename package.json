@@ -5,7 +5,6 @@
     "bench:pack-orders": "bash cu-bench/pack-orders.sh",
     "bench:phoenix": "bash cu-bench/phoenix/run-bench.sh",
     "bench:to-order-info": "bash cu-bench/to-order-info.sh",
-    "services:maker": "bash services/market-maker.sh",
     "build-deps": "cargo build --workspace",
     "build-dev-deps": "cargo +nightly install cargo-expand",
     "build": "pnpm run build:dropset && pnpm run build:pack-orders && pnpm run build:to-order-info",
@@ -20,8 +19,14 @@
     "check:bench-phoenix": "cd cu-bench/phoenix && cargo check --tests",
     "clean": "cargo clean",
     "clippy": "cargo clippy --all-targets -- -D warnings",
-    "deploy": "solana program deploy target/deploy/dropset.so --program-id test-keypair.json || echo 'Make sure the local validator is running'",
+    "deploy": "solana program deploy -u localhost target/deploy/dropset.so --program-id test-keypair.json",
     "format": "cargo +nightly fmt --all",
+    "services:maker": "cargo run -p dropset-maker-bot",
+    "services:maker:docker": "docker compose -f services/maker-bot/compose.yaml up --build -d",
+    "services:taker": "cargo run -p dropset-taker-bot",
+    "services:taker:docker": "docker compose -f services/taker-bot/compose.yaml up --build -d",
+    "services:faucet": "cargo run -p dropset-faucet",
+    "services:faucet:docker": "docker compose -f services/faucet/compose.yaml up --build -d",
     "test": "pnpm run build && cargo test"
   },
   "packageManager": "pnpm@10.30.3"
