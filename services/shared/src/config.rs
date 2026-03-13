@@ -16,6 +16,7 @@ fn services_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("services")
 }
 
+#[derive(Copy, Clone)]
 pub enum Service {
     Maker,
     Taker,
@@ -89,11 +90,13 @@ impl ValidSharedConfig {
     }
 }
 
-/// Loads the raw toml config file for a service, printing helpful messages upon error.
-pub fn deserialize_service_config<T: DeserializeOwned>(service: Service) -> anyhow::Result<T> {
+/// Converts a service's toml config file to a raw string, with helpful error messages
+/// if the file doesn't exist or the expected file path is actually a directory.
+pub fn load_raw_service_config(service: Service) -> anyhow::Result<String> {
     let path = &service.toml_config_path();
     let example_path = &service.toml_config_example_path();
-    let raw = fs::read_to_string(path).map_err(|e| match e.kind() {
+
+    fs::read_to_string(path).map_err(|e| match e.kind() {
         ErrorKind::NotFound => anyhow::anyhow!(
             "Config file not found at '{}'.\n\
                  Copy the template and fill in empty fields:\n\n\
@@ -107,15 +110,23 @@ pub fn deserialize_service_config<T: DeserializeOwned>(service: Service) -> anyh
             "Expected a config file at '{}' but found a directory.\n\
                  If running via Docker, this means the host-side config file does not exist — \
                  Docker created a directory at the volume mount target.\n\
-                 Copy the template and fill in empty fields:\n\n\
+                 Remove the directory, then copy the template and fill in empty fields:\n\n\
+                 \trmdir {} && \\\n\
                  \tcp {} \\\n\
                  \t   {}\n",
+            path.display(),
             path.display(),
             example_path.display(),
             path.display(),
         ),
         _ => anyhow::anyhow!("Failed to read config file: '{path:#?}': {e}"),
-    })?;
+    })
+}
+
+/// Loads the raw toml config file for a service, printing helpful messages upon error.
+pub fn deserialize_service_config<T: DeserializeOwned>(service: Service) -> anyhow::Result<T> {
+    let path = &service.toml_config_path();
+    let raw = load_raw_service_config(service)?;
 
     toml::from_str(&raw).map_err(|e| anyhow::anyhow!("Failed to parse '{path:#?}': {e}"))
 }

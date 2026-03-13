@@ -1,4 +1,7 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    io::ErrorKind,
+};
 
 use anyhow::Context;
 use client::{
@@ -15,7 +18,10 @@ use client::{
     },
 };
 use dropset_interface::state::sector::NIL;
-use dropset_services_shared::config::Service;
+use dropset_services_shared::config::{
+    load_raw_service_config,
+    Service,
+};
 use solana_keypair::Keypair;
 use solana_sdk::signer::Signer;
 use toml_edit::DocumentMut;
@@ -134,22 +140,41 @@ async fn deposit_base_and_quote_to_market(
 }
 
 fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()> {
-    let config = service.toml_config_path();
-    if !config.exists() {
-        std::fs::copy(service.toml_config_example_path(), config.clone()).context(
+    let cfg_path = service.toml_config_path();
+
+    // Try to `rmdir` the path if it's a directory, which fails if it's empty.
+    // If the directory is empty, it's most likely because Docker mounted an empty directory
+    // to the path because it didn't exist, so it's safe to try to remove.
+    if cfg_path.is_dir() {
+        let res = std::fs::remove_dir(cfg_path.clone());
+        match res {
+            Ok(_) => {}
+            Err(e) => match e.kind() {
+                ErrorKind::DirectoryNotEmpty => {
+                    // Force an early return with an appropriate error message if it's not empty.
+                    load_raw_service_config(service)?;
+                }
+                e_kind => anyhow::bail!("Failed to remove empty directory: {e_kind}"),
+            },
+        }
+    }
+
+    // Copy from the example template if there's nothing at the config path.
+    if !cfg_path.exists() {
+        std::fs::copy(service.toml_config_example_path(), cfg_path.clone()).context(
             anyhow::anyhow!(
                 "Failed to copy {:#?} to {:#?}",
                 service.toml_config_example_path(),
-                config,
+                cfg_path,
             ),
         )?;
     }
 
-    let raw = std::fs::read_to_string(&config)?;
+    let raw = load_raw_service_config(service)?;
     let mut doc: DocumentMut = raw.parse()?;
     doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
     doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());
-    std::fs::write(&config, doc.to_string())?;
+    std::fs::write(&cfg_path, doc.to_string())?;
 
     Ok(())
 }

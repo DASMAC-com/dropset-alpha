@@ -47,3 +47,15 @@ cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_F
 pnpm run services:maker:docker
 pnpm run services:taker:docker
 pnpm run services:faucet:docker
+
+echo "Waiting to see if services are healthy..."
+sleep 3
+
+for service in maker-bot taker-bot faucet; do
+    status=$(docker inspect --format='{{.State.Status}}' $service 2>/dev/null)
+    if [ "$status" = "exited" ] || [ "$status" = "restarting" ]; then
+        echo "Error: $service failed to start (status: $status):"
+        docker logs --tail 5 $service 2>&1
+        exit 1
+    fi
+done
