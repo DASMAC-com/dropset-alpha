@@ -75,12 +75,12 @@ impl MarketContext {
         }
     }
 
-    pub fn get_base_ata(&self, owner: &Address) -> Address {
-        self.base.get_ata_for(owner)
+    pub fn get_base_ata(&self, user: &Address) -> Address {
+        self.base.get_ata_for(user)
     }
 
-    pub fn get_quote_ata(&self, owner: &Address) -> Address {
-        self.quote.get_ata_for(owner)
+    pub fn get_quote_ata(&self, user: &Address) -> Address {
+        self.quote.get_ata_for(user)
     }
 
     /// Creates a seat for the user by depositing the minimum amount required to create a seat.

@@ -22,7 +22,7 @@ fn close_seat() -> anyhow::Result<()> {
     // Mint 1 base and create the seat via create_seat (which deposits 1 base).
     assert!(mollusk
         .process_instruction_chain(&[
-            market_ctx.base.mint_to_owner(&user, 1)?,
+            market_ctx.base.mint_to_user(&user, 1)?,
             market_ctx.create_seat(user),
         ])
         .program_result

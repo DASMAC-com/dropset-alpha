@@ -8,7 +8,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
     transactions::{
@@ -66,12 +66,12 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
     // Mint the initial amounts to each account.
-    let e2e = E2e::new_traders_and_market(
+    let e2e = E2e::new_users_and_market(
         Some(rpc),
         [
-            Trader::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
-            Trader::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
-            Trader::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
+            User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
+            User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
+            User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
         ],
     )
     .await?;

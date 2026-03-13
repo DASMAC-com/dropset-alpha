@@ -24,9 +24,9 @@ fn multiple_seats() -> anyhow::Result<()> {
             market_ctx.base.create_ata_idempotent(&ADDR_A, &ADDR_A),
             market_ctx.base.create_ata_idempotent(&ADDR_B, &ADDR_B),
             market_ctx.base.create_ata_idempotent(&ADDR_C, &ADDR_C),
-            market_ctx.base.mint_to_owner(&ADDR_A, 1_000)?,
-            market_ctx.base.mint_to_owner(&ADDR_B, 1_000)?,
-            market_ctx.base.mint_to_owner(&ADDR_C, 1_000)?,
+            market_ctx.base.mint_to_user(&ADDR_A, 1_000)?,
+            market_ctx.base.mint_to_user(&ADDR_B, 1_000)?,
+            market_ctx.base.mint_to_user(&ADDR_C, 1_000)?,
         ])
         .program_result
         .is_ok());

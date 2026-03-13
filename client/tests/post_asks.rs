@@ -21,7 +21,7 @@ fn post_asks() -> anyhow::Result<()> {
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, 100_000)?,
+            market_ctx.base.mint_to_user(&user, 100_000)?,
         ])
         .program_result
         .is_ok());

@@ -38,7 +38,7 @@ fn post_and_cancel() -> anyhow::Result<()> {
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, 10_000)?,
+            market_ctx.base.mint_to_user(&user, 10_000)?,
             market_ctx.deposit_base(user, 1_000, NIL),
         ])
         .program_result
@@ -95,13 +95,13 @@ fn post_and_cancel_maintains_sort_order() -> anyhow::Result<()> {
         .program_result
         .is_ok());
 
-    // Create ATAs, mint to owner, then deposit it to the market.
+    // Create ATAs, mint to the user, then deposit it to the market.
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
-            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.base.mint_to_user(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_user(&user, u64::MAX)?,
             market_ctx.deposit_base(user, u64::MAX, NIL)
         ])
         .program_result

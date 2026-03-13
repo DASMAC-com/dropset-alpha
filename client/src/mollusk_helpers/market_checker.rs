@@ -32,15 +32,15 @@ impl<'a> MarketChecker<'a> {
     }
 
     /// Asserts that the user's base token balance is the expected value.
-    pub fn base_token_balance(&self, owner: Address, expected: u64) {
+    pub fn base_token_balance(&self, user: Address, expected: u64) {
         let base_mint = self.market_ctx.base.mint_address;
-        assert_eq!(self.mollusk.get_token_balance(owner, base_mint), expected);
+        assert_eq!(self.mollusk.get_token_balance(user, base_mint), expected);
     }
 
     /// Asserts that the user's quote token balance is the expected value.
-    pub fn quote_token_balance(&self, owner: Address, expected: u64) {
+    pub fn quote_token_balance(&self, user: Address, expected: u64) {
         let quote_mint = self.market_ctx.quote.mint_address;
-        assert_eq!(self.mollusk.get_token_balance(owner, quote_mint), expected);
+        assert_eq!(self.mollusk.get_token_balance(user, quote_mint), expected);
     }
 
     /// Asserts that the base available in the user's seat is the expected value.

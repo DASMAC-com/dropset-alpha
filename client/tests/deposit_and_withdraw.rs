@@ -31,8 +31,8 @@ fn deposit_and_withdraw() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, initial_base)?,
-            market_ctx.quote.mint_to_owner(&user, initial_quote)?,
+            market_ctx.base.mint_to_user(&user, initial_base)?,
+            market_ctx.quote.mint_to_user(&user, initial_quote)?,
         ])
         .program_result
         .is_ok());
@@ -107,8 +107,8 @@ fn deposit_auto_expand() -> anyhow::Result<()> {
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx
                 .base
-                .mint_to_owner(&user, 1)
-                .expect("Should mint to owner"),
+                .mint_to_user(&user, 1)
+                .expect("Should mint to user"),
             market_ctx.create_seat(user),
         ]
     };

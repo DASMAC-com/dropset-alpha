@@ -29,7 +29,7 @@ pub enum ClientDropsetInstruction {
     #[account(3, writable, name = "market_ata",     desc = "The market's associated token account.")]
     #[account(4,           name = "mint",           desc = "The token mint account.")]
     #[account(5,           name = "token_program",  desc = "The mint's token program.")]
-    #[args(trader: Address, "The trader's address.")]
+    #[args(user: Address, "The user's address.")]
     #[args(amount: u64, "The amount deposited.")]
     #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]
     Deposit,
@@ -40,7 +40,7 @@ pub enum ClientDropsetInstruction {
     #[account(3, writable, name = "market_ata",     desc = "The market's associated token account.")]
     #[account(4,           name = "mint",           desc = "The token mint account.")]
     #[account(5,           name = "token_program",  desc = "The mint's token program.")]
-    #[args(trader: Address, "The trader's address.")]
+    #[args(user: Address, "The user's address.")]
     #[args(amount: u64, "The amount withdrawn.")]
     #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]
 

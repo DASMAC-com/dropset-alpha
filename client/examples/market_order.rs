@@ -6,7 +6,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
     transactions::ParsedTransactionWithEvents,
@@ -232,7 +232,7 @@ async fn post_maker_order(
 }
 
 /// Initializes the `E2e` helper and returns the maker and taker's balances, respectively.
-async fn initialize_traders_and_market(ctx: &OrderContext<'_>) -> anyhow::Result<E2e> {
+async fn initialize_users_and_market(ctx: &OrderContext<'_>) -> anyhow::Result<E2e> {
     let order_info =
         to_order_info(ctx.order_info_args.clone()).map_err(|e| anyhow::anyhow!("{e:?}"))?;
 
@@ -249,11 +249,11 @@ async fn initialize_traders_and_market(ctx: &OrderContext<'_>) -> anyhow::Result
         BookSide::Bid => (base_atoms, 0),
     };
 
-    let e2e = E2e::new_traders_and_market(
+    let e2e = E2e::new_users_and_market(
         None,
         [
-            Trader::new(ctx.maker, maker_base, maker_quote),
-            Trader::new(ctx.taker, taker_base, taker_quote),
+            User::new(ctx.maker, maker_base, maker_quote),
+            User::new(ctx.taker, taker_base, taker_quote),
         ],
     )
     .await?;
@@ -357,8 +357,8 @@ async fn main() -> anyhow::Result<()> {
         assert_eq!(order_info.quote_atoms, MAKER_SIZE_QUOTE);
 
         // -----------------------------------------------------------------------------------------
-        // Initialize the traders, register the market, and post the maker order.
-        let e2e = initialize_traders_and_market(&ctx).await?;
+        // Initialize the users, register the market, and post the maker order.
+        let e2e = initialize_users_and_market(&ctx).await?;
 
         // Local helpers.
         let create_snapshot = async || MarketSnapshot::new(&e2e, &ctx).await;

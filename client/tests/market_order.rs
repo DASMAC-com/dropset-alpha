@@ -32,7 +32,7 @@ fn market_order() -> anyhow::Result<()> {
     let create_maker_base_ata = market_ctx.base.create_ata_idempotent(&maker, &maker);
     let mint_base_to_maker = market_ctx
         .base
-        .mint_to_owner(&maker, market_order.base_atoms)?;
+        .mint_to_user(&maker, market_order.base_atoms)?;
     let maker_deposit_base = market_ctx.deposit_base(maker, market_order.base_atoms, NIL);
     let maker_post_ask = market_ctx.post_order(
         maker,
@@ -43,7 +43,7 @@ fn market_order() -> anyhow::Result<()> {
     let create_taker_quote_ata = market_ctx.quote.create_ata_idempotent(&taker, &taker);
     let mint_quote_to_taker = market_ctx
         .quote
-        .mint_to_owner(&taker, market_order.quote_atoms)?;
+        .mint_to_user(&taker, market_order.quote_atoms)?;
     assert!(mollusk
         .process_instruction_chain(&[
             create_maker_base_ata,

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use client::{
     e2e_helpers::{
         E2e,
-        Trader,
+        User,
     },
     print_kv,
     single_signer_instruction::SingleSignerInstruction,
@@ -29,27 +29,27 @@ async fn main() -> anyhow::Result<()> {
         }),
     );
 
-    let trader = Keypair::new();
+    let user = Keypair::new();
 
-    let e2e = E2e::new_traders_and_market(Some(rpc), [Trader::new(&trader, 10000, 10000)]).await?;
+    let e2e = E2e::new_users_and_market(Some(rpc), [User::new(&user, 10000, 10000)]).await?;
 
-    // Create a seat for the trader.
+    // Create a seat for the user.
     e2e.market
-        .create_seat(trader.pubkey())
-        .send_single_signer(&e2e.rpc, &trader)
+        .create_seat(user.pubkey())
+        .send_single_signer(&e2e.rpc, &user)
         .await?;
 
     let market = e2e.view_market().await?;
     print_kv!("Seats before", market.header.num_seats, LogColor::Info);
 
     let user_seat = e2e
-        .fetch_seat(&trader.pubkey())
+        .fetch_seat(&user.pubkey())
         .await?
         .expect("User should have been registered on deposit");
 
     e2e.market
-        .close_seat(trader.pubkey(), user_seat.index)
-        .send_single_signer(&e2e.rpc, &trader)
+        .close_seat(user.pubkey(), user_seat.index)
+        .send_single_signer(&e2e.rpc, &user)
         .await?;
 
     let market = e2e.view_market().await?;

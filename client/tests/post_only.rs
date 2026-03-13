@@ -38,8 +38,8 @@ fn post_only_crossing_check() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
-            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.base.mint_to_user(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_user(&user, u64::MAX)?,
         ])
         .program_result
         .is_ok());
@@ -88,8 +88,8 @@ fn crossing_check_clears_with_cancel() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, u64::MAX)?,
-            market_ctx.quote.mint_to_owner(&user, u64::MAX)?,
+            market_ctx.base.mint_to_user(&user, u64::MAX)?,
+            market_ctx.quote.mint_to_user(&user, u64::MAX)?,
         ])
         .program_result
         .is_ok());
@@ -157,7 +157,7 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
     assert!(mollusk
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_a, &user_a),
-            market_ctx.base.mint_to_owner(&user_a, user_a_base)?,
+            market_ctx.base.mint_to_user(&user_a, user_a_base)?,
             market_ctx.deposit_base(user_a, user_a_base, NIL)
         ])
         .program_result
@@ -169,8 +169,8 @@ fn crossing_check_across_users() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user_b, &user_b),
             market_ctx.quote.create_ata_idempotent(&user_b, &user_b),
-            market_ctx.base.mint_to_owner(&user_b, user_b_base)?,
-            market_ctx.quote.mint_to_owner(&user_b, user_b_quote)?,
+            market_ctx.base.mint_to_user(&user_b, user_b_base)?,
+            market_ctx.quote.mint_to_user(&user_b, user_b_quote)?,
             market_ctx.deposit_base(user_b, user_b_base, NIL),
             market_ctx.deposit_quote(user_b, user_b_quote, user_b_seat_index),
         ])
@@ -263,9 +263,9 @@ fn price_time_priority() -> anyhow::Result<()> {
             market_ctx.base.create_ata_idempotent(&user_a, &user_a),
             market_ctx.base.create_ata_idempotent(&user_b, &user_b),
             market_ctx.base.create_ata_idempotent(&user_c, &user_c),
-            market_ctx.base.mint_to_owner(&user_a, u64::MAX / 3)?,
-            market_ctx.base.mint_to_owner(&user_b, u64::MAX / 3)?,
-            market_ctx.base.mint_to_owner(&user_c, u64::MAX / 3)?,
+            market_ctx.base.mint_to_user(&user_a, u64::MAX / 3)?,
+            market_ctx.base.mint_to_user(&user_b, u64::MAX / 3)?,
+            market_ctx.base.mint_to_user(&user_c, u64::MAX / 3)?,
             market_ctx.deposit_base(user_a, u64::MAX / 3, NIL),
             market_ctx.deposit_base(user_b, u64::MAX / 3, NIL),
             market_ctx.deposit_base(user_c, u64::MAX / 3, NIL),

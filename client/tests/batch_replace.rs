@@ -47,8 +47,8 @@ fn batch_replace_add_orders_happy_path() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, base_necessary)?,
-            market_ctx.quote.mint_to_owner(&user, quote_necessary)?,
+            market_ctx.base.mint_to_user(&user, base_necessary)?,
+            market_ctx.quote.mint_to_user(&user, quote_necessary)?,
         ])
         .program_result
         .is_ok());
@@ -138,8 +138,8 @@ fn batch_replace_interleaved_bids_are_sorted() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&maker_a, &maker_a),
             market_ctx.quote.create_ata_idempotent(&maker_a, &maker_a),
-            market_ctx.base.mint_to_owner(&maker_a, 1)?,
-            market_ctx.quote.mint_to_owner(&maker_a, maker_a_quote)?,
+            market_ctx.base.mint_to_user(&maker_a, 1)?,
+            market_ctx.quote.mint_to_user(&maker_a, maker_a_quote)?,
         ])
         .program_result
         .is_ok());
@@ -177,8 +177,8 @@ fn batch_replace_interleaved_bids_are_sorted() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&maker_b, &maker_b),
             market_ctx.quote.create_ata_idempotent(&maker_b, &maker_b),
-            market_ctx.base.mint_to_owner(&maker_b, 1)?,
-            market_ctx.quote.mint_to_owner(&maker_b, maker_b_quote)?,
+            market_ctx.base.mint_to_user(&maker_b, 1)?,
+            market_ctx.quote.mint_to_user(&maker_b, maker_b_quote)?,
         ])
         .program_result
         .is_ok());
@@ -265,8 +265,8 @@ fn batch_replace_unsorted_orders_failure() -> anyhow::Result<()> {
         .process_instruction_chain(&[
             market_ctx.base.create_ata_idempotent(&user, &user),
             market_ctx.quote.create_ata_idempotent(&user, &user),
-            market_ctx.base.mint_to_owner(&user, base_necessary)?,
-            market_ctx.quote.mint_to_owner(&user, quote_necessary)?,
+            market_ctx.base.mint_to_user(&user, base_necessary)?,
+            market_ctx.quote.mint_to_user(&user, quote_necessary)?,
         ])
         .program_result
         .is_ok());
