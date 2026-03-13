@@ -121,28 +121,6 @@ impl Taker {
         }
     }
 
-    /// Convenience constructors for demo variety
-    pub fn retail(address: Address, seed: u64) -> Self {
-        Self::new(address, ActivityProfile::retail(), 3000, 2.0, 0.5, seed)
-    }
-
-    pub fn whale(address: Address, seed: u64) -> Self {
-        // Large sizes, fat tail (high sigma), directional bias
-        Self::new(
-            address,
-            ActivityProfile::aggressive(),
-            15000,
-            4.0,
-            0.6,
-            seed,
-        )
-    }
-
-    pub fn sniper(address: Address, seed: u64) -> Self {
-        // Rare but precise: quiet most of the time, sudden sharp bursts
-        Self::new(address, ActivityProfile::passive(), 3000, 2.0, 0.5, seed)
-    }
-
     /// A single moment of market activity between idle intervals.
     /// Called repeatedly by the taker's task loop every `interval_ms`.
     /// Returns zero or more fills depending on burst state and Poisson draw.
@@ -216,10 +194,78 @@ impl Taker {
 }
 #[cfg(test)]
 mod tests {
-    use client::e2e_helpers::test_accounts;
+    use client::{
+        e2e_helpers::test_accounts,
+        mollusk_helpers::{
+            market_checker::MarketChecker,
+            new_dropset_mollusk_context_with_default_market,
+            utils::create_mock_user_account,
+        },
+    };
+    use dropset_interface::{
+        instructions::{
+            BatchReplaceInstructionData,
+            UnvalidatedOrders,
+        },
+        state::{
+            sector::{
+                MAX_PERMITTED_SECTOR_INCREASE,
+                NIL,
+            },
+            user_order_sectors::MAX_ORDERS_USIZE,
+        },
+    };
+    use price::client_helpers::to_order_info_args;
+    use rust_decimal::{
+        prelude::{
+            FromPrimitive,
+            ToPrimitive,
+        },
+        Decimal,
+    };
+    use solana_account::Account;
+    use solana_instruction::Instruction;
     use solana_keypair::Signer;
 
     use super::*;
+
+    /// Creates a [Taker] with a moderate activity profile and order size.
+    pub fn retail(address: Address, median_size: u64, seed: u64) -> Taker {
+        Taker::new(
+            address,
+            ActivityProfile::retail(),
+            median_size,
+            2.0,
+            0.5,
+            seed,
+        )
+    }
+
+    /// Creates a [Taker] with a high activity profile, large order sizes, and directional bias
+    /// with fat tail sizes (high sigma, aka large spread multiplier).
+    pub fn whale(address: Address, median_size: u64, seed: u64) -> Taker {
+        Taker::new(
+            address,
+            ActivityProfile::aggressive(),
+            median_size,
+            5.0,
+            0.6,
+            seed,
+        )
+    }
+
+    /// Creates a [Taker] with a passive activity profile, moderate order sizes, no directional
+    /// bias, and very low spread multiplier.
+    pub fn sniper(address: Address, median_size: u64, seed: u64) -> Taker {
+        Taker::new(
+            address,
+            ActivityProfile::passive(),
+            median_size,
+            1.5,
+            0.5,
+            seed,
+        )
+    }
 
     pub struct Simulation {
         pub takers: Vec<Taker>,
@@ -253,11 +299,11 @@ mod tests {
     #[test]
     fn poisson_takers_pure_simulation() {
         let takers = vec![
-            Taker::retail(test_accounts::acc_1111().pubkey(), 42),
-            Taker::retail(test_accounts::acc_4444().pubkey(), 555),
-            Taker::retail(test_accounts::acc_AAAA().pubkey(), 137),
-            Taker::whale(test_accounts::acc_CCCC().pubkey(), 9001),
-            Taker::sniper(test_accounts::acc_FFFF().pubkey(), 31337),
+            retail(test_accounts::acc_2222().pubkey(), 3000, 42),
+            retail(test_accounts::acc_4444().pubkey(), 3000, 555),
+            retail(test_accounts::acc_AAAA().pubkey(), 3000, 137),
+            whale(test_accounts::acc_CCCC().pubkey(), 15000, 9001),
+            sniper(test_accounts::acc_FFFF().pubkey(), 3000, 31337),
         ];
 
         let taker_addresses: Vec<Address> = takers.iter().map(|t| t.address).collect();
@@ -290,5 +336,118 @@ mod tests {
             );
         }
         println!("Total fills: {}", fills.len());
+    }
+
+    #[test]
+    fn poisson_takers_dropset_market() -> anyhow::Result<()> {
+        let maker_keypair = test_accounts::acc_1111();
+        let taker_keypairs = [
+            test_accounts::acc_2222(),
+            test_accounts::acc_4444(),
+            test_accounts::acc_AAAA(),
+            test_accounts::acc_CCCC(),
+            test_accounts::acc_FFFF(),
+        ];
+        let mollusk_account_pairs: Vec<(Address, Account)> = std::iter::once(&maker_keypair)
+            .chain(taker_keypairs.iter())
+            .map(|acc| create_mock_user_account(acc.pubkey(), 1_000_000_000))
+            .collect();
+
+        let mollusk_addresses: Vec<Address> = mollusk_account_pairs
+            .iter()
+            .map(|(addr, _)| *addr)
+            .collect();
+
+        let takers = [
+            retail(test_accounts::acc_2222().pubkey(), 3000, 42),
+            retail(test_accounts::acc_4444().pubkey(), 3000, 555),
+            retail(test_accounts::acc_AAAA().pubkey(), 3000, 137),
+            whale(test_accounts::acc_CCCC().pubkey(), 15000, 9001),
+            sniper(test_accounts::acc_FFFF().pubkey(), 3000, 31337),
+        ];
+
+        const INITIAL_BASE: u64 = 1_000_000_000;
+        const INITIAL_QUOTE: u64 = 1_000_000_000;
+        let (mollusk, market_ctx) =
+            new_dropset_mollusk_context_with_default_market(&mollusk_account_pairs);
+        let checker = MarketChecker::new(&mollusk, &market_ctx);
+
+        // Create all maker and taker ATAs for base/quote, then mint large amounts to them to use.
+        let create_token_accounts: Vec<Instruction> = mollusk_addresses
+            .iter()
+            .flat_map(|user| {
+                vec![
+                    market_ctx.base.create_ata_idempotent(user, user),
+                    market_ctx.quote.create_ata_idempotent(user, user),
+                    market_ctx.quote.mint_to_user(user, INITIAL_QUOTE).unwrap(),
+                    market_ctx.base.mint_to_user(user, INITIAL_BASE).unwrap(),
+                ]
+            })
+            .collect();
+        /// The maker seat's index post-creation should be 0 since it's the first market seat.
+        const MAKER_SEAT_INDEX: u32 = 0;
+        // Have the maker deposit all of their base and quote to the market.
+        let maker_deposits: Vec<Instruction> = vec![
+            market_ctx.deposit_base(maker_keypair.pubkey(), INITIAL_BASE, NIL),
+            // Maker should create the first seat.
+            market_ctx.deposit_quote(maker_keypair.pubkey(), INITIAL_QUOTE, MAKER_SEAT_INDEX),
+        ];
+
+        let expand_instruction =
+            market_ctx.expand(maker_keypair.pubkey(), MAX_PERMITTED_SECTOR_INCREASE as u16);
+
+        let initialization_instructions = [
+            create_token_accounts,
+            maker_deposits,
+            vec![expand_instruction],
+        ]
+        .concat();
+
+        assert!(mollusk
+            .process_instruction_chain(&initialization_instructions)
+            .program_result
+            .is_ok());
+
+        checker.has_seat(maker_keypair.pubkey());
+        checker.seat_index(maker_keypair.pubkey(), MAKER_SEAT_INDEX);
+
+        let maker_order_at_price = |price: usize, atoms: u64, in_base: bool| {
+            let decimal_price = Decimal::from_usize(price).unwrap();
+            let base_atoms = if in_base {
+                atoms
+            } else {
+                (Decimal::from_u64(atoms).unwrap() / decimal_price)
+                    .round()
+                    .to_u64()
+                    .unwrap()
+            };
+            to_order_info_args(decimal_price, base_atoms).unwrap()
+        };
+
+        // Have the maker create thick, layered orders. The purpose of this test is to employ the
+        // takers to fill orders, so the maker just needs to make sure takers have liquidity.
+        let bids = core::array::from_fn::<_, MAX_ORDERS_USIZE, _>(|i| {
+            maker_order_at_price(10 - i, INITIAL_QUOTE / 10, false)
+        });
+        let asks = core::array::from_fn::<_, MAX_ORDERS_USIZE, _>(|i| {
+            maker_order_at_price(11 + i, INITIAL_BASE / 10, true)
+        });
+        assert!(mollusk
+            .process_instruction_chain(&[market_ctx.batch_replace(
+                maker_keypair.pubkey(),
+                BatchReplaceInstructionData::new(
+                    MAKER_SEAT_INDEX,
+                    UnvalidatedOrders::new(bids),
+                    UnvalidatedOrders::new(asks),
+                ),
+            )])
+            .program_result
+            .is_ok());
+
+        checker.num_asks(10);
+        checker.num_bids(10);
+        checker.num_seats(1);
+
+        Ok(())
     }
 }
