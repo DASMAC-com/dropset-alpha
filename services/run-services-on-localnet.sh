@@ -23,7 +23,7 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     echo "Localnet not running. Starting solana-test-validator..."
     nohup solana-test-validator >/tmp/test-validator.log 2>&1 &
     VALIDATOR_PID=$!
-    echo "  Note: validator is running in the background (PID $VALIDATOR_PID)."
+    echo "  A validator is now running in the background (PID $VALIDATOR_PID)."
     echo "  It will survive terminal close. To stop it: kill $VALIDATOR_PID"
     echo "  Or to stop any validator: pkill -x solana-test-validator"
 
