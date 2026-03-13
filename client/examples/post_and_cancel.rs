@@ -4,7 +4,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
     transactions::{
@@ -36,18 +36,18 @@ async fn main() -> anyhow::Result<()> {
         }),
     );
 
-    let trader = test_accounts::acc_1111();
-    let e2e = E2e::new_traders_and_market(Some(rpc), [Trader::new(trader, 10000, 10000)]).await?;
+    let user = test_accounts::acc_1111();
+    let e2e = E2e::new_users_and_market(Some(rpc), [User::new(user, 10000, 10000)]).await?;
 
     e2e.market
-        .deposit_base(trader.pubkey(), 1000, NIL)
-        .send_single_signer(&e2e.rpc, trader)
+        .deposit_base(user.pubkey(), 1000, NIL)
+        .send_single_signer(&e2e.rpc, user)
         .await?;
 
     println!("Market after user deposit\n{:#?}", e2e.view_market().await?);
 
     let user_seat = e2e
-        .fetch_seat(&trader.pubkey())
+        .fetch_seat(&user.pubkey())
         .await?
         .expect("User should have been registered on deposit");
 
@@ -60,10 +60,10 @@ async fn main() -> anyhow::Result<()> {
     let post_ask_res = e2e
         .market
         .post_order(
-            trader.pubkey(),
+            user.pubkey(),
             PostOrderInstructionData::new(order_info_args, is_bid, user_seat.index),
         )
-        .send_single_signer(&e2e.rpc, trader)
+        .send_single_signer(&e2e.rpc, user)
         .await?;
 
     println!(
@@ -76,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
         e2e.view_market().await?
     );
 
-    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
+    let user_seat = e2e.fetch_seat(&user.pubkey()).await?.unwrap();
     println!("User seat after posting ask: {user_seat:#?}");
 
     let cancel_ask_res = e2e
@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
                 user_seat.index,
             ),
         )
-        .send_single_signer(&e2e.rpc, trader)
+        .send_single_signer(&e2e.rpc, user)
         .await?;
 
     println!(
@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
         cancel_ask_res.parsed_transaction.signature
     );
 
-    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
+    let user_seat = e2e.fetch_seat(&user.pubkey()).await?.unwrap();
     println!("User seat after canceling ask: {user_seat:#?}");
 
     println!(

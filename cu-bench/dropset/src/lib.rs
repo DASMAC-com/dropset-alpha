@@ -85,11 +85,11 @@ pub fn new_bench_fixture() -> BenchFixture {
         market_ctx.quote.create_ata_idempotent(&maker, &maker),
         market_ctx
             .base
-            .mint_to_owner(&maker, 1_000 * BASE_UNIT)
+            .mint_to_user(&maker, 1_000 * BASE_UNIT)
             .unwrap(),
         market_ctx
             .quote
-            .mint_to_owner(&maker, 1_000_000 * QUOTE_UNIT)
+            .mint_to_user(&maker, 1_000_000 * QUOTE_UNIT)
             .unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "fixture ATA/mint setup failed");
@@ -144,7 +144,7 @@ pub fn add_funded_maker(f: &BenchFixture) -> (Address, SectorIndex) {
         f.market_ctx.base.create_ata_idempotent(&maker, &maker),
         f.market_ctx
             .base
-            .mint_to_owner(&maker, 1_000 * BASE_UNIT)
+            .mint_to_user(&maker, 1_000 * BASE_UNIT)
             .unwrap(),
         f.market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL),
     ]);

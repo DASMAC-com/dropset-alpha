@@ -58,31 +58,31 @@ impl TokenContext {
         ))
     }
 
-    pub fn get_ata_for(&self, owner: &Address) -> Address {
-        get_associated_token_address_with_program_id(owner, &self.mint_address, &self.token_program)
+    pub fn get_ata_for(&self, user: &Address) -> Address {
+        get_associated_token_address_with_program_id(user, &self.mint_address, &self.token_program)
     }
 
-    /// Builds a create-ATA instruction for the given `owner`, funded by `funder`.
-    pub fn create_ata(&self, funder: &Address, owner: &Address) -> Instruction {
-        create_associated_token_account(funder, owner, &self.mint_address, &self.token_program)
+    /// Builds a create-ATA instruction for the given `user`, funded by `funder`.
+    pub fn create_ata(&self, funder: &Address, user: &Address) -> Instruction {
+        create_associated_token_account(funder, user, &self.mint_address, &self.token_program)
     }
 
-    /// Builds an idempotent create-ATA instruction for the given `owner`, funded by `funder`.
-    pub fn create_ata_idempotent(&self, funder: &Address, owner: &Address) -> Instruction {
+    /// Builds an idempotent create-ATA instruction for the given `user`, funded by `funder`.
+    pub fn create_ata_idempotent(&self, funder: &Address, user: &Address) -> Instruction {
         create_associated_token_account_idempotent(
             funder,
-            owner,
+            user,
             &self.mint_address,
             &self.token_program,
         )
     }
 
-    /// Builds a `mint_to_checked` instruction that mints `amount` tokens to the `owner`'s
+    /// Builds a `mint_to_checked` instruction that mints `amount` tokens to the `user`'s
     /// associated token account.
     ///
     /// To mint directly to an associated token account, use [TokenContext::mint_to_ata]
-    pub fn mint_to_owner(&self, owner: &Address, amount: u64) -> anyhow::Result<Instruction> {
-        self.mint_to_ata(&self.get_ata_for(owner), amount)
+    pub fn mint_to_user(&self, user: &Address, amount: u64) -> anyhow::Result<Instruction> {
+        self.mint_to_ata(&self.get_ata_for(user), amount)
     }
 
     /// Builds a `mint_to_checked` instruction that mints `amount` tokens to `destination_ata`.

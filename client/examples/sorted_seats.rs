@@ -2,7 +2,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
 };
@@ -17,11 +17,11 @@ async fn main() -> anyhow::Result<()> {
     assert!(payer_1.pubkey().to_string().starts_with("6666"));
     assert!(payer_2.pubkey().to_string().starts_with("7777"));
 
-    let traders = [
-        Trader::new(payer_1, 10000, 10000),
-        Trader::new(payer_2, 10000, 10000),
+    let users = [
+        User::new(payer_1, 10000, 10000),
+        User::new(payer_2, 10000, 10000),
     ];
-    let e2e = E2e::new_traders_and_market(None, traders).await?;
+    let e2e = E2e::new_users_and_market(None, users).await?;
 
     // Deposit to both payers' accounts, but ensure that payer 2's seat is created
     // before payer 1 so that they're inserted out of order.

@@ -562,7 +562,7 @@ fn market_order_fill(n: u64) -> Result<u64, DropsetError> {
         f.market_ctx.quote.create_ata_idempotent(&taker, &taker),
         f.market_ctx
             .quote
-            .mint_to_owner(&taker, quote_needed * 10)
+            .mint_to_user(&taker, quote_needed * 10)
             .unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "taker setup failed");

@@ -7,7 +7,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     transactions::{
         CustomRpcClient,
@@ -30,36 +30,36 @@ async fn main() -> anyhow::Result<()> {
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
-    // Create the collection of traders out of order so that the order must change when they're
+    // Create the collection of users out of order so that the order must change when they're
     // sorted on insert later.
-    let traders = [
-        Trader::new(test_accounts::acc_5555(), 10000, 10000),
-        Trader::new(test_accounts::acc_2222(), 10000, 10000),
-        Trader::new(test_accounts::acc_4444(), 10000, 10000),
-        Trader::new(test_accounts::acc_1111(), 10000, 10000),
-        Trader::new(test_accounts::acc_3333(), 10000, 10000),
+    let users = [
+        User::new(test_accounts::acc_5555(), 10000, 10000),
+        User::new(test_accounts::acc_2222(), 10000, 10000),
+        User::new(test_accounts::acc_4444(), 10000, 10000),
+        User::new(test_accounts::acc_1111(), 10000, 10000),
+        User::new(test_accounts::acc_3333(), 10000, 10000),
     ];
-    let e2e = E2e::new_traders_and_market(Some(rpc), &traders).await?;
+    let e2e = E2e::new_users_and_market(Some(rpc), &users).await?;
 
-    // Create the seats for each trader.
-    let seat_creations: Vec<Instruction> = traders
+    // Create the seats for each user.
+    let seat_creations: Vec<Instruction> = users
         .iter()
         .map(|pk| -> Instruction { e2e.market.create_seat(pk.address()) })
         .collect();
     e2e.rpc
         .send_and_confirm_txn(
             test_accounts::default_payer(),
-            &traders.iter().map(|tr| tr.keypair).collect_vec(),
+            &users.iter().map(|tr| tr.keypair).collect_vec(),
             &seat_creations,
         )
         .await?;
 
     let market_seats = e2e.view_market().await?.seats;
-    let trader_seats: Vec<SectorIndex> = traders
+    let user_seats: Vec<SectorIndex> = users
         .iter()
-        .map(|trader| {
-            e2e.find_seat(&market_seats, &trader.address())
-                .expect("Trader should have a seat")
+        .map(|user| {
+            e2e.find_seat(&market_seats, &user.address())
+                .expect("User should have a seat")
                 .index
         })
         .collect();
@@ -73,26 +73,26 @@ async fn main() -> anyhow::Result<()> {
         (test_accounts::acc_5555().pubkey(), (100, 50)),
     ]);
 
-    let (deposits, withdraws): (Vec<Instruction>, Vec<Instruction>) = traders
+    let (deposits, withdraws): (Vec<Instruction>, Vec<Instruction>) = users
         .iter()
-        .zip(trader_seats)
-        .map(|(trader, seat)| {
-            let trader_addr = trader.address();
-            let (deposit, withdraw) = base_amounts.get(&trader_addr).unwrap();
+        .zip(user_seats)
+        .map(|(user, seat)| {
+            let user_addr = user.address();
+            let (deposit, withdraw) = base_amounts.get(&user_addr).unwrap();
             (
-                e2e.market.deposit_base(trader_addr, *deposit, seat),
-                e2e.market.withdraw_base(trader_addr, *withdraw, seat),
+                e2e.market.deposit_base(user_addr, *deposit, seat),
+                e2e.market.withdraw_base(user_addr, *withdraw, seat),
             )
         })
         .unzip();
 
-    let trader_keypairs = &traders.into_iter().map(|tr| tr.keypair).collect_vec();
+    let user_keypairs = &users.into_iter().map(|tr| tr.keypair).collect_vec();
     e2e.rpc
-        .send_and_confirm_txn(test_accounts::default_payer(), trader_keypairs, &deposits)
+        .send_and_confirm_txn(test_accounts::default_payer(), user_keypairs, &deposits)
         .await?;
 
     e2e.rpc
-        .send_and_confirm_txn(test_accounts::default_payer(), trader_keypairs, &withdraws)
+        .send_and_confirm_txn(test_accounts::default_payer(), user_keypairs, &withdraws)
         .await?;
 
     let expected_base = base_amounts

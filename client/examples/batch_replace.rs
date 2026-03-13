@@ -1,7 +1,7 @@
 use client::{
     e2e_helpers::{
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
 };
@@ -20,32 +20,31 @@ use solana_sdk::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let trader = Keypair::new();
+    let user = Keypair::new();
     let e2e =
-        E2e::new_traders_and_market(None, [Trader::new(&trader, 1_000_000_000, 1_000_000_000)])
-            .await?;
+        E2e::new_users_and_market(None, [User::new(&user, 1_000_000_000, 1_000_000_000)]).await?;
 
-    let base = e2e.get_base_balance(&trader.pubkey()).await?;
-    let quote = e2e.get_quote_balance(&trader.pubkey()).await?;
+    let base = e2e.get_base_balance(&user.pubkey()).await?;
+    let quote = e2e.get_quote_balance(&user.pubkey()).await?;
     println!("{base} {quote}");
 
     e2e.market
-        .deposit_base(trader.pubkey(), 1_000_000_000, NIL)
-        .send_single_signer(&e2e.rpc, &trader)
+        .deposit_base(user.pubkey(), 1_000_000_000, NIL)
+        .send_single_signer(&e2e.rpc, &user)
         .await?;
     let seat = e2e
-        .fetch_seat(&trader.pubkey())
+        .fetch_seat(&user.pubkey())
         .await?
-        .expect("Trader should have a seat");
+        .expect("User should have a seat");
     e2e.market
-        .deposit_quote(trader.pubkey(), 1_000_000_000, seat.index)
-        .send_single_signer(&e2e.rpc, &trader)
+        .deposit_quote(user.pubkey(), 1_000_000_000, seat.index)
+        .send_single_signer(&e2e.rpc, &user)
         .await?;
 
     let res = e2e
         .market
         .batch_replace(
-            trader.pubkey(),
+            user.pubkey(),
             BatchReplaceInstructionData::new(
                 seat.index,
                 UnvalidatedOrders::new([OrderInfoArgs::new_unscaled(11_000_000, 1)]),
@@ -58,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
                 ]),
             ),
         )
-        .send_single_signer(&e2e.rpc, &trader)
+        .send_single_signer(&e2e.rpc, &user)
         .await?;
 
     for msg in res.parsed_transaction.log_messages {

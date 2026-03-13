@@ -66,7 +66,7 @@ there is nothing to pre-expand before measuring.
 All three suites share the same fundamental constraints:
 
 - **Nearly empty order book.** Each test starts from a fresh market with a
-  single trader. Real order books have many resting orders and traders, which
+  single user. Real order books have many resting orders and users, which
   increases account sizes and traversal costs. These results are a lower-bound,
   not an average or worst-case.
 

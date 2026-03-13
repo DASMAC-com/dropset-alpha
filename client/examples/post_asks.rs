@@ -4,7 +4,7 @@ use client::{
     e2e_helpers::{
         test_accounts,
         E2e,
-        Trader,
+        User,
     },
     single_signer_instruction::SingleSignerInstruction,
     transactions::{
@@ -31,18 +31,18 @@ async fn main() -> anyhow::Result<()> {
         }),
     );
 
-    let trader = test_accounts::acc_1111();
-    let e2e = E2e::new_traders_and_market(Some(rpc), [Trader::new(trader, 10000, 10000)]).await?;
+    let user = test_accounts::acc_1111();
+    let e2e = E2e::new_users_and_market(Some(rpc), [User::new(user, 10000, 10000)]).await?;
 
     e2e.market
-        .deposit_base(trader.pubkey(), 10000, NIL)
-        .send_single_signer(&e2e.rpc, trader)
+        .deposit_base(user.pubkey(), 10000, NIL)
+        .send_single_signer(&e2e.rpc, user)
         .await?;
 
     println!("Market after user deposit\n{:#?}", e2e.view_market().await?);
 
     let user_seat = e2e
-        .fetch_seat(&trader.pubkey())
+        .fetch_seat(&user.pubkey())
         .await?
         .expect("User should have been registered on deposit");
 
@@ -53,10 +53,10 @@ async fn main() -> anyhow::Result<()> {
     let post_ask_res = e2e
         .market
         .post_order(
-            trader.pubkey(),
+            user.pubkey(),
             PostOrderInstructionData::new(order_info_args.clone(), is_bid, user_seat.index),
         )
-        .send_single_signer(&e2e.rpc, trader)
+        .send_single_signer(&e2e.rpc, user)
         .await?;
 
     println!(
@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
         e2e.view_market().await?
     );
 
-    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
+    let user_seat = e2e.fetch_seat(&user.pubkey()).await?.unwrap();
     println!("User seat after posting ask: {user_seat:#?}");
 
     // Post an ask. The user provides base as collateral and receives quote when filled.
@@ -78,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     let ask_instructions = (1..5)
         .map(|i| {
             e2e.market.post_order(
-                trader.pubkey(),
+                user.pubkey(),
                 PostOrderInstructionData::new(
                     OrderInfoArgs::new(
                         order_info_args.price_mantissa + i,
@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
         .collect_vec();
 
     e2e.rpc
-        .send_and_confirm_txn(trader, &[trader], &ask_instructions)
+        .send_and_confirm_txn(user, &[user], &ask_instructions)
         .await?;
 
     println!(
@@ -102,7 +102,7 @@ async fn main() -> anyhow::Result<()> {
         e2e.view_market().await?
     );
 
-    let user_seat = e2e.fetch_seat(&trader.pubkey()).await?.unwrap();
+    let user_seat = e2e.fetch_seat(&user.pubkey()).await?.unwrap();
     println!("User seat after posting many asks: {user_seat:#?}");
 
     Ok(())

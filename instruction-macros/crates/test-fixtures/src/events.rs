@@ -16,12 +16,12 @@ pub enum DropsetEvent {
     #[args(emitted_count: u16, "The number of events in the following event buffer.")]
     Header,
 
-    #[args(trader: Address, "The trader's address.")]
+    #[args(user: Address, "The user's address.")]
     #[args(amount: u64, "The amount deposited.")]
     #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]
     Deposit,
 
-    #[args(trader: Address, "The trader's address.")]
+    #[args(user: Address, "The user's address.")]
     #[args(amount: u64, "The amount withdrawn.")]
     #[args(is_base: bool, "Which token, i.e., `true` => base token, `false` => quote token.")]
     Withdraw,
