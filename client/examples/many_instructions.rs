@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
         .iter()
         .map(|user| {
             e2e.find_seat(&market_seats, &user.address())
-                .expect("Trader should have a seat")
+                .expect("User should have a seat")
                 .index
         })
         .collect();

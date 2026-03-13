@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let seat = e2e
         .fetch_seat(&user.pubkey())
         .await?
-        .expect("Trader should have a seat");
+        .expect("User should have a seat");
     e2e.market
         .deposit_quote(user.pubkey(), 1_000_000_000, seat.index)
         .send_single_signer(&e2e.rpc, &user)
