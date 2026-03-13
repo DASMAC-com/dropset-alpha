@@ -48,6 +48,7 @@ pinocchio-token-2022 = { version = "0.2.0" }
 rand = "0.10.0"
 regex = "1.12.2"
 reqwest = "0.13.1"
+rand_distr = "0.6.0"
 rust_decimal = { version = "1.40.0", features = ["macros"] }
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = { version = "1.0.0" }

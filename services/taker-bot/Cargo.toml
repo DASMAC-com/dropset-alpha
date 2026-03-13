@@ -8,6 +8,7 @@ anyhow.workspace = true
 client = { path = "../../client" }
 dropset-interface = { path = "../../interface" }
 dropset-services-shared = { path = "../shared" }
+rand_distr.workspace = true
 serde.workspace = true
 solana-address.workspace = true
 solana-client.workspace = true
