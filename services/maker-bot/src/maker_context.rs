@@ -77,26 +77,27 @@ pub struct MakerContext {
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
 
-    /// The order size in atoms for each order denominated in base.
-    pub ask_order_size: u64,
-
     /// The order size in atoms for each order denominated in quote.
     pub bid_order_size: u64,
+
+    /// The order size in atoms for each order denominated in base.
+    pub ask_order_size: u64,
 }
 
 impl MakerContext {
-    /// Creates a new maker context from a token pair.
+    /// Creates a new maker context from a [ValidMakerConfig].
     pub async fn init(rpc: &CustomRpcClient, cfg: ValidMakerConfig) -> anyhow::Result<Self> {
         let ValidMakerConfig {
             shared,
             target_base: base_target_atoms,
             batch_replace,
-            ask_order_size,
             bid_order_size,
+            ask_order_size,
             oanda_args,
             initial_price_feed_response,
             ..
         } = cfg;
+
         let ValidSharedConfig {
             keypair,
             base_mint,
@@ -148,8 +149,8 @@ impl MakerContext {
             base_target_atoms,
             mid_price,
             batch_replace,
-            ask_order_size,
             bid_order_size,
+            ask_order_size,
         })
     }
 

@@ -10,3 +10,11 @@ buy_order_size = 1000
 
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"
+
+# The minimum amount of time (in milliseconds) in between sending each order.
+order_interval = 500
+
+# The jitter amount added to the amount of time in between sending each order.
+# More specifically, some value between 0 and `order_interval_jitter` is added
+# to the time in milliseconds in between sending each order.
+order_interval_jitter = 50

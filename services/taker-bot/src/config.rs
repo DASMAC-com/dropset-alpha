@@ -11,6 +11,8 @@ pub struct ValidTakerConfig {
     pub shared: ValidSharedConfig,
     pub sell_order_size: u64,
     pub buy_order_size: u64,
+    pub order_interval: u64,
+    pub order_interval_jitter: u64,
 }
 
 #[derive(Deserialize)]
@@ -19,6 +21,8 @@ pub struct TakerConfigInput {
     pub quote_mint: String,
     pub sell_order_size: u64,
     pub buy_order_size: u64,
+    pub order_interval: u64,
+    pub order_interval_jitter: u64,
     pub rpc_url: String,
 }
 
@@ -31,6 +35,8 @@ pub async fn validate_config_and_endpoint(
         sell_order_size,
         buy_order_size,
         rpc_url: rpc_url_input,
+        order_interval,
+        order_interval_jitter,
     } = input;
 
     let shared = ValidSharedConfig::new(
@@ -45,6 +51,8 @@ pub async fn validate_config_and_endpoint(
         shared,
         sell_order_size,
         buy_order_size,
+        order_interval,
+        order_interval_jitter,
     })
 }
 

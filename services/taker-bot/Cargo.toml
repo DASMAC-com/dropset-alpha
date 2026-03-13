@@ -9,5 +9,8 @@ client = { path = "../../client" }
 dropset-interface = { path = "../../interface" }
 dropset-services-shared = { path = "../shared" }
 serde.workspace = true
+solana-address.workspace = true
 solana-client.workspace = true
+solana-keypair.workspace = true
+rand.workspace = true
 tokio.workspace = true
