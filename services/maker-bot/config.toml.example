@@ -1,0 +1,41 @@
+# OANDA API authentication token.
+# See: https://developer.oanda.com/rest-live-v20/authentication/
+oanda_auth_token = "your-token-here"
+
+# Currency pair to trade (format: BASE_QUOTE).
+pair = "EUR_USD"
+
+# Target base inventory in atoms. The model gravitates toward this amount.
+# The initialization helper deposits a constant amount of atoms (MAKER_INITIAL_BASE) by default.
+# The bot's bias is determined by target_base relative to the maker's current balance: when the
+# balance exceeds target_base, the model pushes toward aggressive asks; when below, aggressive bids.
+target_base = 8000
+
+# Use the BatchReplace instruction instead of individual cancel/post instructions.
+# There is generally no reason to disable this except for CU profiling.
+batch_replace = true
+
+# Token mint addresses for the market.
+base_mint  = ""
+quote_mint = ""
+
+# Each ask order's size, denominated in base atoms.
+ask_order_size = 1000
+
+# Each bid order's size, denominated in quote atoms.
+bid_order_size = 1000
+
+# The Solana RPC endpoint.
+rpc_url = "http://localhost:8899"
+
+# The Solana WebSocket endpoint.
+ws_url = "ws://localhost:8900"
+
+# The polling interval for the OANDA price feed endpoint.
+#
+# Oanda recommends limiting to twice per second (no less than a 500ms interval).
+# See: <https://developer.oanda.com/rest-live-v20/best-practices/>
+price_feed_poll_interval = 5000
+
+# The minimum amount of time the maker will wait before posting new orders.
+order_update_throttle_window = 500

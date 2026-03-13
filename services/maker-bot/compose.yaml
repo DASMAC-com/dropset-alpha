@@ -1,0 +1,20 @@
+services:
+  maker-bot:
+    build:
+      context: ../../
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: maker-bot
+    image: dropset-maker-bot
+    container_name: maker-bot
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config.toml:/app/services/maker-bot/config.toml:ro
+      - ./keypair.json:/app/services/maker-bot/keypair.json:ro
+    healthcheck:
+      test: ["CMD", "/app/service", "--health-check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

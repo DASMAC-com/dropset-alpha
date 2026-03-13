@@ -28,12 +28,29 @@ RPC services.
 Provides helpers for sending transactions and fetching parsed state via the JSON
 RPC API.
 
-### **`market-maker`** *(bot)*
-A prototype market-making bot implementing a naive version of the
+### `dropset/services`
+
+The faucet, maker, and taker bots below are prototype services intended for experimentation and testing, not production use.
+
+#### **`faucet`** service
+
+A `faucet` service intended to send `base` and `quote` mint tokens associated
+with a `dropset` market to an address upon request.
+
+It's obviously only intended to run on a Solana test network like `localhost`, `devnet`, or `testnet`.
+
+See [faucet/README.md](services/faucet/README.md) for more info.
+
+#### **`maker-bot`**
+A market-making bot implementing a naive version of the
 [Avellaneda-Stoikov model] for a `dropset` market.
 
-Intended for experimentation and testing, not production use.
-See [bots/README.md](bots/README.md) for setup and usage.
+See [maker-bot/README.md](services/maker-bot/README.md) for more info.
+
+#### **`taker-bot`**
+A taker bot that periodically sends random market orders to a `dropset` market.
+
+See [taker-bot/README.md](services/taker-bot/README.md) for more info.
 
 ## ▶️ Running
 
@@ -47,9 +64,13 @@ bash cu-bench/manifest/run-bench.sh
 bash cu-bench/phoenix/run-bench.sh
 ```
 
-### 🤖 Market Maker/Taker Bots *(experimental)*
+### 🧪 Faucet Service and Market Maker/Taker Bots *(experimental)*
 
-See [bots/README.md](bots/README.md).
+See each service's `README.md` for how to run it:
+
+- [faucet/README.md](services/faucet/README.md)
+- [maker-bot/README.md](services/maker-bot/README.md)
+- [taker-bot/README.md](services/taker-bot/README.md)
 
 ## 📚 Documentation
 

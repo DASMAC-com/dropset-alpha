@@ -1,0 +1,12 @@
+# Token mint addresses for the market.
+base_mint  = ""
+quote_mint = ""
+
+# Each market sell's order size, denominated in base atoms.
+sell_order_size = 1000
+
+# Each market buy's order size, denominated in quote atoms.
+buy_order_size = 1000
+
+# The Solana RPC endpoint.
+rpc_url = "http://localhost:8899"

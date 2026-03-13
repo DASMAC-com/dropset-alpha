@@ -605,9 +605,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.15.3"
+version = "1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e84ce723ab67259cfeb9877c6a639ee9eb7a27b28123abd71db7f0d5d0cc9d86"
+checksum = "94bffc006df10ac2a68c83692d734a465f8ee6c5b384d8545a636f81d858f4bf"
 dependencies = [
  "aws-lc-sys",
  "zeroize",
@@ -615,9 +615,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.36.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a442ece363113bd4bd4c8b18977a7798dd4d3c3383f34fb61936960e8f4ad8"
+checksum = "4321e568ed89bb5a7d291a7f37997c2c0df89809d7b6d12062c81ddb54aa782e"
 dependencies = [
  "cc",
  "cmake",
@@ -939,9 +939,9 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.43"
+version = "0.4.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
+checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
 dependencies = [
  "iana-time-zone",
  "js-sys",
@@ -960,46 +960,6 @@ dependencies = [
  "crypto-common",
  "inout",
 ]
-
-[[package]]
-name = "clap"
-version = "4.5.54"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6e6ff9dcd79cff5cd969a17a545d79e84ab086e444102a591e288a8aa3ce394"
-dependencies = [
- "clap_builder",
- "clap_derive",
-]
-
-[[package]]
-name = "clap_builder"
-version = "4.5.54"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa42cf4d2b7a41bc8f663a7cab4031ebafa1bf3875705bfaf8466dc60ab52c00"
-dependencies = [
- "anstream",
- "anstyle",
- "clap_lex",
- "strsim",
-]
-
-[[package]]
-name = "clap_derive"
-version = "4.5.49"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0b5487afeab2deb2ff4e03a807ad1a03ac532ff5a2cee5d86884440c7f7671"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn 2.0.114",
-]
-
-[[package]]
-name = "clap_lex"
-version = "0.7.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3e64b0cc0439b12df2fa678eae89a1c56a529fd067a9115f7827f1fffd22b32"
 
 [[package]]
 name = "client"
@@ -1553,6 +1513,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dropset-faucet"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "client",
+ "dropset-interface",
+ "dropset-services-shared",
+ "serde",
+ "solana-client",
+ "tokio",
+]
+
+[[package]]
 name = "dropset-interface"
 version = "0.1.0"
 dependencies = [
@@ -1573,6 +1546,70 @@ dependencies = [
  "static_assertions",
  "strum",
  "strum_macros",
+]
+
+[[package]]
+name = "dropset-maker-bot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "client",
+ "colored",
+ "dropset-interface",
+ "dropset-services-shared",
+ "itertools 0.14.0",
+ "price",
+ "reqwest 0.13.2",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "solana-address 2.0.0",
+ "solana-client",
+ "solana-keypair",
+ "solana-sdk",
+ "strum",
+ "strum_macros",
+ "tokio",
+ "tokio-stream",
+ "toml 0.8.23",
+ "toml_edit 0.22.27",
+ "transaction-parser",
+]
+
+[[package]]
+name = "dropset-services-shared"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "client",
+ "dropset-interface",
+ "reqwest 0.13.2",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "solana-address 2.0.0",
+ "solana-keypair",
+ "solana-sdk",
+ "strum",
+ "strum_macros",
+ "tokio",
+ "toml 0.8.23",
+ "toml_edit 0.22.27",
+]
+
+[[package]]
+name = "dropset-taker-bot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "client",
+ "dropset-interface",
+ "dropset-services-shared",
+ "serde",
+ "solana-client",
+ "tokio",
 ]
 
 [[package]]
@@ -2371,9 +2408,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.64"
+version = "0.1.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33e57f83510bb73707521ebaffa789ec8caf86f9657cad665b092b581d40e9fb"
+checksum = "e31bc9ad994ba00e440a8aa5c9ef0ec67d5cb5e5cb0cc7f8b744a35b389cc470"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -2913,42 +2950,6 @@ dependencies = [
  "serde_json",
  "syn 2.0.114",
  "toml 0.9.11+spec-1.1.0",
-]
-
-[[package]]
-name = "market-maker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "client",
- "colored",
- "dropset-interface",
- "itertools 0.14.0",
- "price",
- "reqwest 0.13.1",
- "rust_decimal",
- "serde",
- "serde_json",
- "solana-address 2.0.0",
- "solana-client",
- "solana-keypair",
- "solana-sdk",
- "strum",
- "strum_macros",
- "tokio",
- "tokio-stream",
- "toml 0.8.23",
- "toml_edit 0.22.27",
- "transaction-parser",
-]
-
-[[package]]
-name = "market-taker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
 ]
 
 [[package]]
@@ -4050,9 +4051,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e9018c9d814e5f30cc16a0f03271aeab3571e609612d9fe78c1aa8d11c2f62"
+checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
 dependencies = [
  "base64 0.22.1",
  "bytes",

@@ -1,0 +1,13 @@
+[package]
+name = "dropset-faucet"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+client = { path = "../../client" }
+dropset-interface = { path = "../../interface" }
+dropset-services-shared = { path = "../shared" }
+serde.workspace = true
+solana-client.workspace = true
+tokio.workspace = true
