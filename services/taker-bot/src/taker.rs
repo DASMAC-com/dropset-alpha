@@ -6,17 +6,22 @@ use rand_distr::{
     LogNormal,
     Poisson,
 };
-use solana_address::Address;
+use tokio::time::MissedTickBehavior;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Side {
     Buy,
     Sell,
 }
 
+impl Side {
+    pub fn is_buy(&self) -> bool {
+        matches!(self, Side::Buy)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TakerFill {
-    pub address: Address,
     pub side: Side,
     pub size: u64,
 }
@@ -42,7 +47,7 @@ impl ActivityProfile {
     /// A passive, slow taker: rare, small pokes.
     pub fn passive() -> Self {
         Self {
-            interval: 2000,
+            interval: 3000,
             lambda_quiet: 0.2,
             lambda_burst: 2.5,
             burst_entry_prob: 0.05,
@@ -53,7 +58,7 @@ impl ActivityProfile {
     /// A normal retail taker: occasional bursts.
     pub fn retail() -> Self {
         Self {
-            interval: 400,
+            interval: 750,
             lambda_quiet: 0.5,
             lambda_burst: 5.0,
             burst_entry_prob: 0.1,
@@ -64,7 +69,7 @@ impl ActivityProfile {
     /// An aggressive taker: frequent, intense bursts.
     pub fn aggressive() -> Self {
         Self {
-            interval: 50,
+            interval: 100,
             lambda_quiet: 1.0,
             lambda_burst: 12.0,
             burst_entry_prob: 0.2,
@@ -73,8 +78,7 @@ impl ActivityProfile {
     }
 }
 
-pub struct Taker {
-    pub address: Address,
+pub struct TakerStrategy {
     pub activity_profile: ActivityProfile,
     /// The median order size in atoms. A developer-friendly representation of `mu`.
     pub median_size: u64,
@@ -98,18 +102,16 @@ pub struct Taker {
     rng: StdRng,
 }
 
-impl Taker {
+impl TakerStrategy {
     pub fn new(
-        address: Address,
-        profile: ActivityProfile,
+        activity_profile: ActivityProfile,
         median_size: u64,
         spread_multiplier: f64,
         buy_bias: f64,
         seed: u64,
     ) -> Self {
         Self {
-            address,
-            activity_profile: profile,
+            activity_profile,
             median_size,
             spread_multiplier,
             buy_bias,
@@ -165,31 +167,28 @@ impl Taker {
 
                 let size = size_dist.sample(&mut self.rng).max(1.0) as u64;
 
-                TakerFill {
-                    address: self.address,
-                    side,
-                    size,
-                }
+                TakerFill { side, size }
             })
             .collect()
     }
 
-    /// Spawns a [tokio] task based on the taker's configuration where `on_fill` is called every
-    /// [ActivityProfile::interval] milliseconds.
-    pub fn into_task(
+    /// Creates the interval loop based on the taker's activity profile and taker strategy, calling
+    /// `on_fill` every [ActivityProfile::interval] milliseconds.
+    pub async fn interval_loop(
         mut self,
-        mut on_fill: impl FnMut(TakerFill) + Send + 'static,
-    ) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(Duration::from_millis(self.activity_profile.interval));
-            loop {
-                interval.tick().await;
-                for fill in self.step() {
-                    on_fill(fill);
-                }
+        mut on_fill: impl FnMut(TakerFill),
+        tick_behavior: MissedTickBehavior,
+    ) {
+        let mut interval =
+            tokio::time::interval(Duration::from_millis(self.activity_profile.interval));
+        interval.set_missed_tick_behavior(tick_behavior);
+
+        loop {
+            interval.tick().await;
+            for fill in self.step() {
+                on_fill(fill);
             }
-        })
+        }
     }
 }
 #[cfg(test)]
@@ -205,6 +204,7 @@ mod tests {
     use dropset_interface::{
         instructions::{
             BatchReplaceInstructionData,
+            MarketOrderInstructionData,
             UnvalidatedOrders,
         },
         state::{
@@ -224,66 +224,71 @@ mod tests {
         Decimal,
     };
     use solana_account::Account;
+    use solana_address::Address;
     use solana_instruction::Instruction;
     use solana_keypair::Signer;
 
     use super::*;
 
     /// Creates a [Taker] with a moderate activity profile and order size.
-    pub fn retail(address: Address, median_size: u64, seed: u64) -> Taker {
-        Taker::new(
-            address,
-            ActivityProfile::retail(),
-            median_size,
-            2.0,
-            0.5,
-            seed,
-        )
+    pub fn retail(median_size: u64, seed: u64) -> TakerStrategy {
+        TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, seed)
     }
 
     /// Creates a [Taker] with a high activity profile, large order sizes, and directional bias
     /// with fat tail sizes (high sigma, aka large spread multiplier).
-    pub fn whale(address: Address, median_size: u64, seed: u64) -> Taker {
-        Taker::new(
-            address,
-            ActivityProfile::aggressive(),
-            median_size,
-            5.0,
-            0.6,
-            seed,
-        )
+    pub fn whale(median_size: u64, seed: u64) -> TakerStrategy {
+        TakerStrategy::new(ActivityProfile::aggressive(), median_size, 5.0, 0.6, seed)
     }
 
     /// Creates a [Taker] with a passive activity profile, moderate order sizes, no directional
     /// bias, and very low spread multiplier.
-    pub fn sniper(address: Address, median_size: u64, seed: u64) -> Taker {
-        Taker::new(
-            address,
-            ActivityProfile::passive(),
-            median_size,
-            1.5,
-            0.5,
-            seed,
-        )
+    pub fn sniper(median_size: u64, seed: u64) -> TakerStrategy {
+        TakerStrategy::new(ActivityProfile::passive(), median_size, 1.5, 0.5, seed)
     }
 
     pub struct Simulation {
-        pub takers: Vec<Taker>,
+        pub taker_addresses: Vec<Address>,
+        pub taker_strategies: Vec<TakerStrategy>,
         pub n_steps: usize,
     }
 
+    pub struct TakerFillWithAddress {
+        pub address: Address,
+        pub side: Side,
+        pub size: u64,
+    }
+
     impl Simulation {
-        pub fn new(takers: Vec<Taker>, n_steps: usize) -> Self {
-            Self { takers, n_steps }
+        pub fn new(
+            taker_addresses: Vec<Address>,
+            taker_strategies: Vec<TakerStrategy>,
+            n_steps: usize,
+        ) -> Self {
+            Self {
+                taker_addresses,
+                taker_strategies,
+                n_steps,
+            }
         }
 
         /// Step each taker `n_steps` times, collecting all fills.
-        pub fn run(&mut self) -> Vec<TakerFill> {
-            let all_fills: Vec<TakerFill> = (0..self.n_steps)
+        pub fn run(&mut self) -> Vec<TakerFillWithAddress> {
+            let all_fills: Vec<TakerFillWithAddress> = (0..self.n_steps)
                 .flat_map(|_| {
-                    self.takers
-                        .iter_mut()
-                        .flat_map(|taker| taker.step())
+                    self.taker_addresses
+                        .iter()
+                        .zip(&mut self.taker_strategies)
+                        .flat_map(|(address, strategy)| {
+                            strategy
+                                .step()
+                                .into_iter()
+                                .map(|fill| TakerFillWithAddress {
+                                    address: *address,
+                                    side: fill.side,
+                                    size: fill.size,
+                                })
+                        })
                         .collect::<Vec<_>>()
                 })
                 .collect();
@@ -298,16 +303,17 @@ mod tests {
 
     #[test]
     fn poisson_takers_pure_simulation() {
-        let takers = vec![
-            retail(test_accounts::acc_2222().pubkey(), 3000, 42),
-            retail(test_accounts::acc_4444().pubkey(), 3000, 555),
-            retail(test_accounts::acc_AAAA().pubkey(), 3000, 137),
-            whale(test_accounts::acc_CCCC().pubkey(), 15000, 9001),
-            sniper(test_accounts::acc_FFFF().pubkey(), 3000, 31337),
-        ];
+        let (taker_addresses, takers): (Vec<Address>, Vec<_>) = vec![
+            (test_accounts::acc_2222().pubkey(), retail(3000, 42)),
+            (test_accounts::acc_4444().pubkey(), retail(3000, 555)),
+            (test_accounts::acc_AAAA().pubkey(), retail(3000, 137)),
+            (test_accounts::acc_CCCC().pubkey(), whale(15000, 9001)),
+            (test_accounts::acc_FFFF().pubkey(), sniper(3000, 31337)),
+        ]
+        .into_iter()
+        .unzip();
 
-        let taker_addresses: Vec<Address> = takers.iter().map(|t| t.address).collect();
-        let mut sim = Simulation::new(takers, 50);
+        let mut sim = Simulation::new(taker_addresses, takers, 50);
         let fills = sim.run();
 
         println!("{:<10} {:<6} {:<10}", "taker", "side", "size");
@@ -322,7 +328,7 @@ mod tests {
         }
 
         println!("\n── Per-taker summary ──────────────────────────────");
-        for address in taker_addresses {
+        for address in sim.taker_addresses {
             let mine: Vec<_> = fills.iter().filter(|f| f.address == address).collect();
             let buys = mine.iter().filter(|f| f.side == Side::Buy).count();
             let vol: u64 = mine.iter().map(|f| f.size).sum();
@@ -338,8 +344,10 @@ mod tests {
         println!("Total fills: {}", fills.len());
     }
 
-    #[test]
-    fn poisson_takers_dropset_market() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn poisson_takers_dropset_market() -> anyhow::Result<()> {
+        const TEST_DURATION: u64 = 5;
+
         let maker_keypair = test_accounts::acc_1111();
         let taker_keypairs = [
             test_accounts::acc_2222(),
@@ -357,14 +365,6 @@ mod tests {
             .iter()
             .map(|(addr, _)| *addr)
             .collect();
-
-        let takers = [
-            retail(test_accounts::acc_2222().pubkey(), 3000, 42),
-            retail(test_accounts::acc_4444().pubkey(), 3000, 555),
-            retail(test_accounts::acc_AAAA().pubkey(), 3000, 137),
-            whale(test_accounts::acc_CCCC().pubkey(), 15000, 9001),
-            sniper(test_accounts::acc_FFFF().pubkey(), 3000, 31337),
-        ];
 
         const INITIAL_BASE: u64 = 1_000_000_000;
         const INITIAL_QUOTE: u64 = 1_000_000_000;
@@ -447,6 +447,60 @@ mod tests {
         checker.num_asks(10);
         checker.num_bids(10);
         checker.num_seats(1);
+
+        // Spawn the taker tasks and have them fill orders for a period of time, then print out
+        // the results.
+
+        struct Taker {
+            pub address: Address,
+            pub strategy: TakerStrategy,
+        }
+
+        impl Taker {
+            pub fn new(address: Address, strategy: TakerStrategy) -> Self {
+                Self { address, strategy }
+            }
+        }
+
+        let taker_1 = Taker::new(test_accounts::acc_2222().pubkey(), retail(3000, 42));
+        let taker_2 = Taker::new(test_accounts::acc_4444().pubkey(), retail(3000, 555));
+        let taker_3 = Taker::new(test_accounts::acc_AAAA().pubkey(), retail(3000, 137));
+        let taker_4 = Taker::new(test_accounts::acc_CCCC().pubkey(), whale(15000, 9001));
+        let taker_5 = Taker::new(test_accounts::acc_FFFF().pubkey(), sniper(3000, 31337));
+
+        tokio::select! {
+            _ = taker_1.strategy.interval_loop(|TakerFill { side, size }| {
+                mollusk.process_instruction(&market_ctx.market_order(
+                    taker_1.address,
+                    MarketOrderInstructionData::new(size, side.is_buy(), true),
+                ));
+            }, MissedTickBehavior::Skip) => {},
+            _ = taker_2.strategy.interval_loop(|TakerFill { side, size }| {
+                mollusk.process_instruction(&market_ctx.market_order(
+                    taker_2.address,
+                    MarketOrderInstructionData::new(size, side.is_buy(), true),
+                ));
+            }, MissedTickBehavior::Skip) => {},
+            _ = taker_3.strategy.interval_loop(|TakerFill { side, size }| {
+                mollusk.process_instruction(&market_ctx.market_order(
+                    taker_3.address,
+                    MarketOrderInstructionData::new(size, side.is_buy(), true),
+                ));
+            }, MissedTickBehavior::Skip) => {},
+            _ = taker_4.strategy.interval_loop(|TakerFill { side, size }| {
+                mollusk.process_instruction(&market_ctx.market_order(
+                    taker_4.address,
+                    MarketOrderInstructionData::new(size, side.is_buy(), true),
+                ));
+            }, MissedTickBehavior::Skip) => {},
+            _ = taker_5.strategy.interval_loop(|TakerFill { side, size }| {
+                mollusk.process_instruction(&market_ctx.market_order(
+                    taker_5.address,
+                    MarketOrderInstructionData::new(size, side.is_buy(), true),
+                ));
+            }, MissedTickBehavior::Skip) => {},
+            _ = tokio::time::sleep(Duration::from_secs(TEST_DURATION)) => { println!("Test complete!") },
+        }
 
         Ok(())
     }

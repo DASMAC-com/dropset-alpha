@@ -20,4 +20,5 @@ rand.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+chrono.workspace = true
 solana-account.workspace = true
