@@ -101,7 +101,7 @@ impl TakerContext {
                 &[self.market_ctx.market_order(
                     self.address(),
                     // The sell order size is denominated in base.
-                    MarketOrderInstructionData::new(self.buy_order_size, false, true),
+                    MarketOrderInstructionData::new(self.sell_order_size, false, true),
                 )],
             )
             .await
