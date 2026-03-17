@@ -2,16 +2,12 @@ pub mod config;
 pub mod taker;
 pub mod taker_context;
 
-use std::{
-    collections::HashSet,
-    time::Duration,
-};
+use std::collections::HashSet;
 
 use client::transactions::{
     CustomRpcClient,
     SendTransactionConfig,
 };
-use rand::random_bool;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
@@ -42,16 +38,13 @@ async fn main() -> anyhow::Result<()> {
         }),
     );
 
-    let taker_ctx = TakerContext::init(rpc, cfg).await?;
+    let taker_ctx = TakerContext::init(rpc, cfg.shared).await?;
+    let mut strategy = cfg.taker_strategy;
 
     loop {
-        let jitter = rand::random::<u64>() % taker_ctx.order_interval_jitter;
-        tokio::time::sleep(Duration::from_millis(taker_ctx.order_interval + jitter)).await;
-
-        if random_bool(0.5) {
-            taker_ctx.buy().await?;
-        } else {
-            taker_ctx.sell().await?;
+        strategy.activity_profile.interval.tick().await;
+        for fill in strategy.step() {
+            taker_ctx.submit_fill(&fill).await?;
         }
     }
 }

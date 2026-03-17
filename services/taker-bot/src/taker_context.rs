@@ -17,30 +17,16 @@ use solana_keypair::{
     Signer,
 };
 
-use crate::config::ValidTakerConfig;
+use crate::taker::TakerFill;
 
 pub struct TakerContext {
     pub rpc: CustomRpcClient,
-    /// The taker's keypair.
     pub keypair: Keypair,
     pub market_ctx: MarketContext,
-    pub buy_order_size: u64,
-    pub sell_order_size: u64,
-    pub order_interval: u64,
-    pub order_interval_jitter: u64,
 }
 
 impl TakerContext {
-    /// Creates a new taker context from a [ValidTakerConfig].
-    pub async fn init(rpc: CustomRpcClient, cfg: ValidTakerConfig) -> anyhow::Result<Self> {
-        let ValidTakerConfig {
-            shared,
-            sell_order_size,
-            buy_order_size,
-            order_interval,
-            order_interval_jitter,
-        } = cfg;
-
+    pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
         let ValidSharedConfig {
             keypair,
             base_mint,
@@ -70,10 +56,6 @@ impl TakerContext {
             rpc,
             keypair,
             market_ctx,
-            buy_order_size,
-            sell_order_size,
-            order_interval,
-            order_interval_jitter,
         })
     }
 
@@ -81,27 +63,18 @@ impl TakerContext {
         self.keypair.pubkey()
     }
 
-    pub async fn buy(&self) -> anyhow::Result<ParsedTransactionWithEvents> {
+    /// Submits a market order for a fill produced by [TakerStrategy::step].
+    /// Order size is treated as base atoms for both sides.
+    pub async fn submit_fill(
+        &self,
+        fill: &TakerFill,
+    ) -> anyhow::Result<ParsedTransactionWithEvents> {
         self.rpc
             .send_single_signer(
                 &self.keypair,
                 &[self.market_ctx.market_order(
                     self.address(),
-                    // The buy order size is denominated in quote.
-                    MarketOrderInstructionData::new(self.buy_order_size, true, false),
-                )],
-            )
-            .await
-    }
-
-    pub async fn sell(&self) -> anyhow::Result<ParsedTransactionWithEvents> {
-        self.rpc
-            .send_single_signer(
-                &self.keypair,
-                &[self.market_ctx.market_order(
-                    self.address(),
-                    // The sell order size is denominated in base.
-                    MarketOrderInstructionData::new(self.sell_order_size, false, true),
+                    MarketOrderInstructionData::new(fill.size, fill.side.is_buy(), true),
                 )],
             )
             .await

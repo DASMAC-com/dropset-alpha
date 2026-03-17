@@ -1,7 +1,10 @@
 use std::time::Duration;
 
 use anyhow::Context;
-use rand::prelude::*;
+use rand::{
+    prelude::*,
+    random,
+};
 use rand_distr::{
     Distribution,
     LogNormal,
@@ -115,7 +118,7 @@ impl TakerStrategy {
         median_size: u64,
         spread_multiplier: f64,
         buy_bias: f64,
-        seed: u64,
+        seed: Option<u64>,
     ) -> anyhow::Result<Self> {
         let size_mu = (median_size as f64).ln();
         let size_sigma = spread_multiplier.ln();
@@ -157,7 +160,7 @@ impl TakerStrategy {
             size_mu,
             size_sigma,
             in_burst: false,
-            rng: StdRng::seed_from_u64(seed),
+            rng: StdRng::seed_from_u64(seed.unwrap_or(random::<u64>())),
         })
     }
 
@@ -269,22 +272,34 @@ mod tests {
 
     /// Creates a [Taker] with a moderate activity profile and order size.
     pub fn retail(median_size: u64, seed: u64) -> TakerStrategy {
-        TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, seed)
+        TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, Some(seed))
             .expect("Should be valid inputs")
     }
 
     /// Creates a [Taker] with a high activity profile, large order sizes, and directional bias
     /// with fat tail sizes (high sigma, aka large spread multiplier).
     pub fn whale(median_size: u64, seed: u64) -> TakerStrategy {
-        TakerStrategy::new(ActivityProfile::aggressive(), median_size, 5.0, 0.6, seed)
-            .expect("Should be valid inputs")
+        TakerStrategy::new(
+            ActivityProfile::aggressive(),
+            median_size,
+            5.0,
+            0.6,
+            Some(seed),
+        )
+        .expect("Should be valid inputs")
     }
 
     /// Creates a [Taker] with a passive activity profile, moderate order sizes, no directional
     /// bias, and very low spread multiplier.
     pub fn sniper(median_size: u64, seed: u64) -> TakerStrategy {
-        TakerStrategy::new(ActivityProfile::passive(), median_size, 1.5, 0.5, seed)
-            .expect("Should be valid inputs")
+        TakerStrategy::new(
+            ActivityProfile::passive(),
+            median_size,
+            1.5,
+            0.5,
+            Some(seed),
+        )
+        .expect("Should be valid inputs")
     }
 
     pub struct Simulation {
