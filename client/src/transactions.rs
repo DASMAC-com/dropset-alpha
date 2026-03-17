@@ -10,10 +10,7 @@ use anyhow::{
 use dropset_interface::error::DropsetError;
 use itertools::Itertools;
 use solana_address::Address;
-use solana_client::{
-    client_error::ClientError,
-    nonblocking::rpc_client::RpcClient,
-};
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
@@ -49,6 +46,30 @@ use crate::{
     print_kv,
     LogColor,
 };
+
+/// Error returned by transaction submission. Distinguishes dropset program errors (which callers
+/// may want to match on) from all other failures.
+pub enum TransactionSubmitError {
+    /// The transaction failed with a known dropset program error.
+    Dropset(DropsetError),
+    /// Any other failure (RPC, signing, parsing, etc).
+    Other(anyhow::Error),
+}
+
+impl From<TransactionSubmitError> for anyhow::Error {
+    fn from(e: TransactionSubmitError) -> Self {
+        match e {
+            TransactionSubmitError::Dropset(e) => anyhow::anyhow!("{e:?}"),
+            TransactionSubmitError::Other(e) => e,
+        }
+    }
+}
+
+impl From<anyhow::Error> for TransactionSubmitError {
+    fn from(e: anyhow::Error) -> Self {
+        TransactionSubmitError::Other(e)
+    }
+}
 
 pub struct CustomRpcClient {
     pub client: RpcClient,
@@ -119,7 +140,7 @@ impl CustomRpcClient {
         &self,
         signer: &Keypair,
         instructions: impl AsRef<[Instruction]>,
-    ) -> anyhow::Result<ParsedTransactionWithEvents> {
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         self.send_and_confirm_txn(signer, &[signer], instructions.as_ref())
             .await
     }
@@ -130,7 +151,7 @@ impl CustomRpcClient {
         payer: &Keypair,
         signers: &[&Keypair],
         instructions: &[Instruction],
-    ) -> anyhow::Result<ParsedTransactionWithEvents> {
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         send_transaction_with_config(&self.client, payer, signers, instructions, &self.config).await
     }
 }
@@ -199,7 +220,7 @@ async fn send_transaction_with_config(
     signers: &[&Keypair],
     instructions: &[Instruction],
     config: &SendTransactionConfig,
-) -> anyhow::Result<ParsedTransactionWithEvents> {
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
     let bh = rpc
         .get_latest_blockhash()
         .await
@@ -274,7 +295,12 @@ async fn send_transaction_with_config(
                 print!("{err}");
                 print_kv!("Payer", payer.pubkey(), LogColor::Error);
             });
-            Err(error).context("Failed transaction submission")
+            match DropsetError::from_client_error(&error, final_instructions) {
+                Some(dropset_err) => Err(TransactionSubmitError::Dropset(dropset_err)),
+                None => Err(TransactionSubmitError::Other(
+                    anyhow::Error::from(error).context("Failed transaction submission"),
+                )),
+            }
         }
     }
 }
@@ -293,14 +319,6 @@ async fn fetch_transaction_json(
     )
     .await
     .context("Should be able to fetch transaction with config")
-}
-
-/// Extracts a [`DropsetError`] from an anyhow error chain, if a [`ClientError`] with a dropset
-/// program error is present.
-pub fn extract_dropset_error(e: &anyhow::Error) -> Option<DropsetError> {
-    e.chain()
-        .find_map(|s| s.downcast_ref::<ClientError>())
-        .and_then(DropsetError::from_client_error)
 }
 
 /// Checks if an account at the given address exists on-chain.

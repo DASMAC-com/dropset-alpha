@@ -9,7 +9,10 @@ use client::{
         User,
     },
     single_signer_instruction::SingleSignerInstruction,
-    transactions::ParsedTransactionWithEvents,
+    transactions::{
+        ParsedTransactionWithEvents,
+        TransactionSubmitError,
+    },
 };
 use dropset_interface::{
     events::MarketOrderEventInstructionData,
@@ -176,7 +179,7 @@ async fn run_partial_fill(
     e2e: &E2e,
     ctx: &OrderContext<'_>,
     denomination: Denomination,
-) -> anyhow::Result<ParsedTransactionWithEvents> {
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
     let taker_is_market_buy = matches!(ctx.maker_side, BookSide::Ask);
 
     e2e.market
@@ -199,7 +202,7 @@ async fn run_partial_fill(
 async fn post_maker_order(
     e2e: &E2e,
     ctx: &OrderContext<'_>,
-) -> anyhow::Result<ParsedTransactionWithEvents> {
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
     let order_info = ctx.order_info()?;
     let market = &e2e.market;
     let maker = ctx.maker;
