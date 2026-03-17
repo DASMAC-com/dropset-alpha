@@ -39,6 +39,9 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     done
 fi
 
+pnpm run build
+pnpm run deploy
+
 # Creates a market, writes to the faucet, taker, and maker keypair files, and
 # patches the base and quote mints into their respective toml config files.
 cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_FLAG
