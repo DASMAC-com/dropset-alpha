@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Context;
 use rand::prelude::*;
 use rand_distr::{
     Distribution,
@@ -115,18 +116,49 @@ impl TakerStrategy {
         spread_multiplier: f64,
         buy_bias: f64,
         seed: u64,
-    ) -> Self {
-        Self {
+    ) -> anyhow::Result<Self> {
+        let size_mu = (median_size as f64).ln();
+        let size_sigma = spread_multiplier.ln();
+        LogNormal::new(size_mu, size_sigma).with_context(|| {
+            let msg = format!("Invalid (size_mu, size_sigma): ({size_mu}, {size_sigma}) when calculating LogNormal");
+            anyhow::anyhow!(msg)
+        })?;
+
+        if spread_multiplier < 0.0 {
+            anyhow::bail!("Spread multiplier must be greater than zero");
+        }
+
+        if (0.0..=1.0).contains(&buy_bias) {
+            anyhow::bail!("Buy bias must be between 0.0 and 1.0");
+        }
+
+        Poisson::new(activity_profile.lambda_burst).with_context(|| {
+            let msg = format!(
+                "Invalid `lambda_burst` when calculating Poisson::new({})",
+                activity_profile.lambda_burst
+            );
+            anyhow::anyhow!(msg)
+        })?;
+
+        Poisson::new(activity_profile.lambda_quiet).with_context(|| {
+            let msg = format!(
+                "Invalid `lambda_quiet` when calculating Poisson::new({})",
+                activity_profile.lambda_burst
+            );
+            anyhow::anyhow!(msg)
+        })?;
+
+        Ok(Self {
             activity_profile,
             median_size,
             spread_multiplier,
             buy_bias,
             bias_reversion: 0.05,
-            size_mu: (median_size as f64).ln(),
-            size_sigma: spread_multiplier.ln(),
+            size_mu,
+            size_sigma,
             in_burst: false,
             rng: StdRng::seed_from_u64(seed),
-        }
+        })
     }
 
     /// A single moment of market activity between idle intervals.
@@ -152,13 +184,20 @@ impl TakerStrategy {
         // an integer type, but the authors of the `rust_random` crate decided to defer
         // truncation to the user. `as u64` used below is the expected and suggested solution.
         // See here: https://rust-random.github.io/book/guide-dist.html#integers
-        let n_orders = Poisson::new(lambda).unwrap().sample(&mut self.rng) as u64;
+        let n_orders = Poisson::new(lambda)
+            .unwrap_or_else(|_| panic!("Poisson::new({}) was checked in the constructor", lambda))
+            .sample(&mut self.rng) as u64;
 
         if n_orders == 0 {
             return vec![];
         }
 
-        let size_dist = LogNormal::new(self.size_mu, self.size_sigma).unwrap();
+        let size_dist = LogNormal::new(self.size_mu, self.size_sigma).unwrap_or_else(|_| {
+            panic!(
+                "LogNormal::new({}, {}) was checked in the constructor",
+                self.size_mu, self.size_sigma
+            )
+        });
 
         (0..n_orders)
             .map(|_| {
@@ -231,18 +270,21 @@ mod tests {
     /// Creates a [Taker] with a moderate activity profile and order size.
     pub fn retail(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, seed)
+            .expect("Should be valid inputs")
     }
 
     /// Creates a [Taker] with a high activity profile, large order sizes, and directional bias
     /// with fat tail sizes (high sigma, aka large spread multiplier).
     pub fn whale(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(ActivityProfile::aggressive(), median_size, 5.0, 0.6, seed)
+            .expect("Should be valid inputs")
     }
 
     /// Creates a [Taker] with a passive activity profile, moderate order sizes, no directional
     /// bias, and very low spread multiplier.
     pub fn sniper(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(ActivityProfile::passive(), median_size, 1.5, 0.5, seed)
+            .expect("Should be valid inputs")
     }
 
     pub struct Simulation {
