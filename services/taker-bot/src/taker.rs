@@ -510,34 +510,39 @@ mod tests {
 
         tokio::select! {
             _ = taker_1.strategy.interval_loop(|TakerFill { side, size }| {
-                mollusk.process_instruction(&market_ctx.market_order(
+                let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_1.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_2.strategy.interval_loop(|TakerFill { side, size }| {
-                mollusk.process_instruction(&market_ctx.market_order(
+                let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_2.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_3.strategy.interval_loop(|TakerFill { side, size }| {
-                mollusk.process_instruction(&market_ctx.market_order(
+                let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_3.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_4.strategy.interval_loop(|TakerFill { side, size }| {
-                mollusk.process_instruction(&market_ctx.market_order(
+                let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_4.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_5.strategy.interval_loop(|TakerFill { side, size }| {
-                mollusk.process_instruction(&market_ctx.market_order(
+                let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_5.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                assert!(res.program_result.is_ok());
             }) => {},
             _ = tokio::time::sleep(Duration::from_secs(TEST_DURATION)) => { println!("Test complete!") },
         }
