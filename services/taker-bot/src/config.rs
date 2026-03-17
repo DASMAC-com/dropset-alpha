@@ -79,8 +79,8 @@ pub async fn validate_config_and_endpoint(
         strategy,
     } = input;
 
-    let shared = ValidSharedConfig::new(SERVICE.keypair_path(), base_mint, quote_mint, rpc_url)
-        .await?;
+    let shared =
+        ValidSharedConfig::new(SERVICE.keypair_path(), base_mint, quote_mint, rpc_url).await?;
 
     let taker_strategy = strategy.into_strategy()?;
 
