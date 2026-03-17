@@ -47,8 +47,9 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
 /// atoms may not match the price ratio in human-readable units if the tokens don't use the same
 /// amount of decimals.
 ///
-/// To convert a price in human-readable units to atoms:
-/// `human_readable_price * 10 ^ (quote_decimals - base_decimals)`
+/// To convert a price in human-readable units to atoms, multiply it by the `quote - base` decimal
+/// difference as a power of 10:
+/// `human_readable_price * 10.powi(quote_decimals - base_decimals)`
 pub fn to_order_info_args(
     price: Decimal,
     order_size_base_atoms: u64,
