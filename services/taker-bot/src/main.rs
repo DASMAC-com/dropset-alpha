@@ -5,9 +5,9 @@ pub mod taker_context;
 use std::collections::HashSet;
 
 use client::transactions::{
-    extract_dropset_error,
     CustomRpcClient,
     SendTransactionConfig,
+    TransactionSubmitError,
 };
 use dropset_interface::error::DropsetError;
 use solana_client::{
@@ -48,11 +48,12 @@ async fn main() -> anyhow::Result<()> {
         for fill in strategy.step() {
             match taker_ctx.submit_fill(&fill).await {
                 Ok(_) => {}
-                Err(e) => match extract_dropset_error(&e) {
+                Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — no liquidity to fill against, skip.
-                    Some(DropsetError::AmountCannotBeZero) => {}
-                    _ => return Err(e),
+                    DropsetError::AmountCannotBeZero => {}
+                    _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },
+                Err(e) => return Err(e.into()),
             }
         }
     }

@@ -7,6 +7,7 @@ use client::{
     transactions::{
         CustomRpcClient,
         ParsedTransactionWithEvents,
+        TransactionSubmitError,
     },
 };
 use dropset_interface::instructions::MarketOrderInstructionData;
@@ -68,7 +69,7 @@ impl TakerContext {
     pub async fn submit_fill(
         &self,
         fill: &TakerFill,
-    ) -> anyhow::Result<ParsedTransactionWithEvents> {
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         self.rpc
             .send_single_signer(
                 &self.keypair,
