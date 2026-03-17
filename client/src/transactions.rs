@@ -7,9 +7,13 @@ use anyhow::{
     bail,
     Context,
 };
+use dropset_interface::error::DropsetError;
 use itertools::Itertools;
 use solana_address::Address;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::{
+    client_error::ClientError,
+    nonblocking::rpc_client::RpcClient,
+};
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
@@ -289,6 +293,14 @@ async fn fetch_transaction_json(
     )
     .await
     .context("Should be able to fetch transaction with config")
+}
+
+/// Extracts a [`DropsetError`] from an anyhow error chain, if a [`ClientError`] with a dropset
+/// program error is present.
+pub fn extract_dropset_error(e: &anyhow::Error) -> Option<DropsetError> {
+    e.chain()
+        .find_map(|s| s.downcast_ref::<ClientError>())
+        .and_then(DropsetError::from_client_error)
 }
 
 /// Checks if an account at the given address exists on-chain.
