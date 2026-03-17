@@ -46,8 +46,10 @@ impl PrettyInstructionError {
         let res = match instruction_error {
             SolanaInstructionError::Custom(code) => {
                 if instruction.program_id == dropset::ID {
+                    let dropset_code =
+                        u8::try_from(code).expect("Dropset error codes should be valid u8 values");
                     let dropset_error =
-                        DropsetError::from_repr(code as u8).expect("Should be valid");
+                        DropsetError::from_repr(dropset_code).expect("Should be valid");
                     let dropset_tag =
                         DropsetInstruction::try_from(instruction_tag).expect("Should be valid");
 
