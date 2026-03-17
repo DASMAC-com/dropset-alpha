@@ -42,6 +42,8 @@ const TAKER_INITIAL_QUOTE: u64 = 100_000;
 /// - Creates a market from two new tokens.
 /// - Mints initial base/quote amounts to the faucet, maker, and taker.
 /// - For the maker, the base/quote amounts are deposited to the `dropset` market, creating a seat.
+/// - The taker keeps their balance in their associated token accounts, since the MarketOrder
+///   instruction expects the balance to be in their ATA, not their seat.
 /// - Writes the maker, taker, and faucet's keypair to their appropriate, respective keypair files.
 /// - Patches `base_mint` and `quote_mint` into the appropriate config files.
 #[tokio::main]
