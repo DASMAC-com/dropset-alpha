@@ -146,7 +146,7 @@ impl TakerStrategy {
         Poisson::new(activity_profile.lambda_quiet).with_context(|| {
             let msg = format!(
                 "Invalid `lambda_quiet` when calculating Poisson::new({})",
-                activity_profile.lambda_burst
+                activity_profile.lambda_quiet
             );
             anyhow::anyhow!(msg)
         })?;
