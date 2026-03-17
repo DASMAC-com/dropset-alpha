@@ -6,7 +6,10 @@ use rand_distr::{
     LogNormal,
     Poisson,
 };
-use tokio::time::MissedTickBehavior;
+use tokio::time::{
+    Interval,
+    MissedTickBehavior,
+};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Side {
@@ -29,10 +32,9 @@ pub struct TakerFill {
 /// Controls the activity profile for a taker. This indicates how frequently a taker places orders
 /// and how often they "burst" orders. A burst is a short window of
 /// elevated λ, followed by quiet. This is the key to realistic CLOB flow.
-#[derive(Clone)]
 pub struct ActivityProfile {
     /// The time in milliseconds between periods of activity.
-    pub interval: u64,
+    pub interval: Interval,
     /// Base arrival rate (orders/slot) during quiet periods.
     pub lambda_quiet: f64,
     /// Arrival rate during an active burst.
@@ -47,7 +49,7 @@ impl ActivityProfile {
     /// A passive, slow taker: rare, small pokes.
     pub fn passive() -> Self {
         Self {
-            interval: 3000,
+            interval: tokio::time::interval(Duration::from_millis(3000)),
             lambda_quiet: 0.2,
             lambda_burst: 2.5,
             burst_entry_prob: 0.05,
@@ -58,7 +60,7 @@ impl ActivityProfile {
     /// A normal retail taker: occasional bursts.
     pub fn retail() -> Self {
         Self {
-            interval: 750,
+            interval: tokio::time::interval(Duration::from_millis(750)),
             lambda_quiet: 0.5,
             lambda_burst: 5.0,
             burst_entry_prob: 0.1,
@@ -68,8 +70,12 @@ impl ActivityProfile {
 
     /// An aggressive taker: frequent, intense bursts.
     pub fn aggressive() -> Self {
+        // This taker takes so often in the tests that it needs to skip missed ticks since `mollusk`
+        // instruction processing is bottlenecked by the single-threaded runtime.
+        let mut interval = tokio::time::interval(Duration::from_millis(100));
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Self {
-            interval: 100,
+            interval,
             lambda_quiet: 1.0,
             lambda_burst: 12.0,
             burst_entry_prob: 0.2,
@@ -82,7 +88,7 @@ pub struct TakerStrategy {
     pub activity_profile: ActivityProfile,
     /// The median order size in atoms. A developer-friendly representation of `mu`.
     pub median_size: u64,
-    /// The spread multiplier for order sizes, based around the [Taker::median_size].
+    /// The spread multiplier for order sizes, based around the [TakerStrategy::median_size].
     /// A value of 2 here would mean that order sizes range roughly from median/2 to median*2.
     /// A developer-friendly representation of `sigma`.
     pub spread_multiplier: f64,
@@ -92,10 +98,10 @@ pub struct TakerStrategy {
     pub bias_reversion: f64,
 
     /// `mu` parameter for the underlying normal distribution.
-    /// This is just the natural logarithm of [Taker::median_size].
+    /// This is just the natural logarithm of [TakerStrategy::median_size].
     size_mu: f64,
     /// `sigma` parameter for the underlying normal distribution.
-    /// This is just the natural logarithm of [Taker::spread_multiplier].
+    /// This is just the natural logarithm of [TakerStrategy::spread_multiplier].
     size_sigma: f64,
 
     in_burst: bool,
@@ -174,17 +180,9 @@ impl TakerStrategy {
 
     /// Creates the interval loop based on the taker's activity profile and taker strategy, calling
     /// `on_fill` every [ActivityProfile::interval] milliseconds.
-    pub async fn interval_loop(
-        mut self,
-        mut on_fill: impl FnMut(TakerFill),
-        tick_behavior: MissedTickBehavior,
-    ) {
-        let mut interval =
-            tokio::time::interval(Duration::from_millis(self.activity_profile.interval));
-        interval.set_missed_tick_behavior(tick_behavior);
-
+    pub async fn interval_loop(mut self, mut on_fill: impl FnMut(TakerFill)) {
         loop {
-            interval.tick().await;
+            self.activity_profile.interval.tick().await;
             for fill in self.step() {
                 on_fill(fill);
             }
@@ -474,31 +472,31 @@ mod tests {
                     taker_1.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
-            }, MissedTickBehavior::Skip) => {},
+            }) => {},
             _ = taker_2.strategy.interval_loop(|TakerFill { side, size }| {
                 mollusk.process_instruction(&market_ctx.market_order(
                     taker_2.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
-            }, MissedTickBehavior::Skip) => {},
+            }) => {},
             _ = taker_3.strategy.interval_loop(|TakerFill { side, size }| {
                 mollusk.process_instruction(&market_ctx.market_order(
                     taker_3.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
-            }, MissedTickBehavior::Skip) => {},
+            }) => {},
             _ = taker_4.strategy.interval_loop(|TakerFill { side, size }| {
                 mollusk.process_instruction(&market_ctx.market_order(
                     taker_4.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
-            }, MissedTickBehavior::Skip) => {},
+            }) => {},
             _ = taker_5.strategy.interval_loop(|TakerFill { side, size }| {
                 mollusk.process_instruction(&market_ctx.market_order(
                     taker_5.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
-            }, MissedTickBehavior::Skip) => {},
+            }) => {},
             _ = tokio::time::sleep(Duration::from_secs(TEST_DURATION)) => { println!("Test complete!") },
         }
 
