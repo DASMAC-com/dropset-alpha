@@ -50,7 +50,9 @@ impl DropsetError {
                 if instruction.program_id != program::ID {
                     return None;
                 }
-                DropsetError::from_repr(code as u8)
+                let dropset_code =
+                    u8::try_from(code).expect("Dropset error codes should be valid u8 values");
+                DropsetError::from_repr(dropset_code)
             }
             _ => None,
         }
