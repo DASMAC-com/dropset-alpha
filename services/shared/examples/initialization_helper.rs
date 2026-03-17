@@ -76,9 +76,9 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    // Create the maker and taker's market seats by depositing their base and quote.
+    // Create the maker market seat by depositing base and quote. Note that the taker does not need
+    // a market seat and must have the base/quote token in their token accounts, not market seats.
     deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
-    deposit_base_and_quote_to_market(taker, &e2e, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE).await?;
 
     // Write each keypair to the appropriate file.
     write_keypair_to_file(Service::Faucet, faucet)?;
