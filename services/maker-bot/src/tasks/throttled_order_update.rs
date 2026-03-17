@@ -6,8 +6,12 @@ use std::{
 
 use client::{
     print_kv,
-    transactions::CustomRpcClient,
+    transactions::{
+        CustomRpcClient,
+        TransactionSubmitError,
+    },
 };
+use dropset_interface::error::DropsetError;
 use tokio::sync::watch;
 
 use crate::{
@@ -37,15 +41,28 @@ pub async fn throttled_order_update(
 
         // Then cancel all orders and post new ones.
         let (maker_keypair, instructions) = {
-            let ctx = maker_ctx.try_borrow()?;
+            let mut ctx = maker_ctx.try_borrow_mut()?;
             let maker_keypair = ctx.keypair.insecure_clone();
             let instructions = ctx.create_cancel_and_post_instructions()?;
             (maker_keypair, instructions)
         };
 
         if !instructions.is_empty() {
-            rpc.send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
-                .await?;
+            match rpc
+                .send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
+                .await
+            {
+                Ok(_) => {}
+                Err(TransactionSubmitError::Dropset(DropsetError::NoFreeSectorsRemaining)) => {
+                    print_kv!(
+                        "Expanding market",
+                        "no free sectors remaining",
+                        client::LogColor::Info,
+                    );
+                    maker_ctx.try_borrow_mut()?.needs_expand = true;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
 
         // Sleep for the throttle window in milliseconds before doing work again.

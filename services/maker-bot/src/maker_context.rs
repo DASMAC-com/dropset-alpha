@@ -6,9 +6,12 @@ use client::{
     },
     transactions::CustomRpcClient,
 };
-use dropset_interface::instructions::{
-    BatchReplaceInstructionData,
-    UnvalidatedOrders,
+use dropset_interface::{
+    instructions::{
+        BatchReplaceInstructionData,
+        UnvalidatedOrders,
+    },
+    state::user_order_sectors::MAX_ORDERS_USIZE,
 };
 use dropset_services_shared::{
     config::ValidSharedConfig,
@@ -18,7 +21,10 @@ use dropset_services_shared::{
     },
 };
 use itertools::Itertools;
-use price::client_helpers::to_order_info_args;
+use price::{
+    client_helpers::to_order_info_args,
+    OrderInfoArgs,
+};
 use rust_decimal::{
     prelude::ToPrimitive,
     Decimal,
@@ -76,6 +82,10 @@ pub struct MakerContext {
 
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
+
+    /// Set to true when the last submission failed with [`DropsetError::NoFreeSectorsRemaining`].
+    /// The next call to [`Self::create_cancel_and_post_instructions`] will prepend an expand ix.
+    pub needs_expand: bool,
 
     /// The order size in atoms for each order denominated in quote.
     pub bid_order_size: u64,
@@ -151,6 +161,7 @@ impl MakerContext {
             batch_replace,
             bid_order_size,
             ask_order_size,
+            needs_expand: false,
         })
     }
 
@@ -179,24 +190,42 @@ impl MakerContext {
             / Decimal::from(10u64.pow(self.market_ctx.base.mint_decimals as u32))
     }
 
-    pub fn create_cancel_and_post_instructions(&self) -> anyhow::Result<Vec<Instruction>> {
-        let (bid_price, ask_price) = self.get_bid_and_ask_prices();
+    pub fn create_cancel_and_post_instructions(&mut self) -> anyhow::Result<Vec<Instruction>> {
+        let expand_ix = self.needs_expand.then(|| {
+            self.needs_expand = false;
+            self.market_ctx
+                .expand(self.maker_address, (MAX_ORDERS_USIZE * 2) as u16)
+        });
 
-        // Denominate the bid order size in base.
-        let bid_size = (Decimal::from(self.bid_order_size) / bid_price)
-            .to_u64()
-            .with_context(|| {
-                format!(
-                    "Couldn't denominate quote size in base as a u64: Decimal::from({} / {})",
-                    self.bid_order_size, bid_price
-                )
-            })?;
+        let (bid_price, ask_price) = self.get_bid_and_ask_prices();
+        let step = half_spread();
+
+        // Generate MAX_ORDERS_USIZE layered (price, base_size) pairs per side, stepping outward by
+        // half_spread per layer with order sizes scaling linearly (1x, 2x, ... Nx base size).
+        let bid_layers: Vec<(Decimal, u64)> = (0..MAX_ORDERS_USIZE as u32)
+            .map(|i| {
+                let price = bid_price - step * Decimal::from(i);
+                let size = (Decimal::from(self.bid_order_size) * Decimal::from(i + 1) / price)
+                    .to_u64()
+                    .with_context(|| {
+                        format!("Couldn't convert bid size to u64 at layer {i}: price={price}")
+                    })?;
+                Ok((price, size))
+            })
+            .collect::<anyhow::Result<_>>()?;
+
+        let ask_layers: Vec<(Decimal, u64)> = (0..MAX_ORDERS_USIZE as u32)
+            .map(|i| {
+                let price = ask_price + step * Decimal::from(i);
+                Ok((price, self.ask_order_size * u64::from(i + 1)))
+            })
+            .collect::<anyhow::Result<_>>()?;
 
         let (cancels, posts) = get_non_redundant_order_flow(
             self.latest_state.bids.clone(),
             self.latest_state.asks.clone(),
-            vec![(bid_price, bid_size)],
-            vec![(ask_price, self.ask_order_size)],
+            bid_layers.clone(),
+            ask_layers.clone(),
             self.latest_state.seat.index,
         )?;
 
@@ -206,20 +235,39 @@ impl MakerContext {
             if cancels.len() + posts.len() == 0 {
                 return Ok(vec![]);
             }
+
+            let bid_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = bid_layers
+                .into_iter()
+                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
+                .collect::<anyhow::Result<Vec<_>>>()?
+                .try_into()
+                .expect("exactly MAX_ORDERS_USIZE layers");
+
+            let ask_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = ask_layers
+                .into_iter()
+                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
+                .collect::<anyhow::Result<Vec<_>>>()?
+                .try_into()
+                .expect("exactly MAX_ORDERS_USIZE layers");
+
             let ixn = self.market_ctx.batch_replace(
                 self.maker_address,
                 BatchReplaceInstructionData::new(
                     self.latest_state.seat.index,
-                    UnvalidatedOrders::new([to_order_info_args(bid_price, bid_size)?]),
-                    UnvalidatedOrders::new([to_order_info_args(ask_price, self.ask_order_size)?]),
+                    UnvalidatedOrders::new(bid_args),
+                    UnvalidatedOrders::new(ask_args),
                 ),
             );
 
-            Ok(vec![ixn])
+            Ok(expand_ix.into_iter().chain([ixn]).collect_vec())
         } else {
-            let ixns = cancels
+            let ixns = expand_ix
                 .into_iter()
-                .map(|cancel| self.market_ctx.cancel_order(self.maker_address, cancel))
+                .chain(
+                    cancels
+                        .into_iter()
+                        .map(|cancel| self.market_ctx.cancel_order(self.maker_address, cancel)),
+                )
                 .chain(
                     posts
                         .into_iter()
