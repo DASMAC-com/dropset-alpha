@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
             match taker_ctx.submit_fill(&fill).await {
                 Ok(_) => {}
                 Err(TransactionSubmitError::Dropset(err)) => match err {
-                    // Book is dry — no liquidity to fill against, skip.
+                    // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {}
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },
