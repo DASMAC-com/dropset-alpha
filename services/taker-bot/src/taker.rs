@@ -128,7 +128,7 @@ impl TakerStrategy {
             anyhow::bail!("Spread multiplier must be greater than zero");
         }
 
-        if (0.0..=1.0).contains(&buy_bias) {
+        if !(0.0..=1.0).contains(&buy_bias) {
             anyhow::bail!("Buy bias must be between 0.0 and 1.0");
         }
 
