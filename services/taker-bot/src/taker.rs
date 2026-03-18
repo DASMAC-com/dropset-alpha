@@ -176,10 +176,16 @@ impl TakerStrategy {
         })
     }
 
+    fn clamp_biases(&mut self) {
+        self.bias_reversion = self.bias_reversion.clamp(0.0, 1.0);
+        self.buy_bias = self.buy_bias.clamp(0.0, 1.0);
+    }
+
     /// A single moment of market activity between idle intervals.
     /// Called repeatedly by the taker's task loop every `interval_ms`.
     /// Returns zero or more fills depending on burst state and Poisson draw.
     pub fn step(&mut self) -> Vec<TakerFill> {
+        self.clamp_biases();
         let bp = &self.activity_profile;
 
         // Burst state machine
