@@ -368,7 +368,11 @@ mod tests {
         format!("0x{}", &taker_addr.to_string()[0..4])
     }
 
+    /// Runs a deterministic taker-flow simulation and prints the generated fills.
+    /// Ignored by default because this is a manual inspection/debug harness,
+    /// not an assertion-based test.
     #[tokio::test]
+    #[ignore]
     async fn poisson_takers_pure_simulation() {
         let (taker_addresses, takers): (Vec<Address>, Vec<_>) = vec![
             (test_accounts::acc_2222().pubkey(), retail(3000, 42)),
