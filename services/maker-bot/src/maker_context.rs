@@ -4,8 +4,11 @@ use client::{
         market::MarketContext,
         token::TokenContext,
     },
+    fmt_kv,
     transactions::CustomRpcClient,
+    LogColor,
 };
+use colored::Colorize;
 use dropset_interface::{
     instructions::{
         BatchReplaceInstructionData,
@@ -22,7 +25,10 @@ use dropset_services_shared::{
 };
 use itertools::Itertools;
 use price::{
-    client_helpers::to_order_info_args,
+    client_helpers::{
+        to_order_info_args,
+        try_encoded_u32_to_decoded_decimal,
+    },
     OrderInfoArgs,
 };
 use rust_decimal::{
@@ -43,14 +49,15 @@ use transaction_parser::views::{
 use crate::{
     config::ValidMakerConfig,
     get_non_redundant_order_flow,
+    logger::{
+        divider,
+        Logger,
+    },
     model::calculate_spreads::{
         half_spread,
         reservation_price,
     },
-    utils::{
-        get_normalized_mid_price,
-        log_orders,
-    },
+    utils::get_normalized_mid_price,
     MakerState,
 };
 
@@ -83,7 +90,14 @@ pub struct MakerContext {
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
 
-    /// Set to true when the last submission failed with [`DropsetError::NoFreeSectorsRemaining`].
+    /// Whether to render the ASCII order book visualization instead of compact price arrays.
+    pub visualize: bool,
+
+    pub logger: Logger,
+
+    /// Set to true when the last submission failed with
+    /// [DropsetError::NoFreeSectorsRemaining](dropset_interface::error::DropsetError::NoFreeSectorsRemaining).
+    ///
     /// The next call to [`Self::create_cancel_and_post_instructions`] will prepend an expand ix.
     pub needs_expand: bool,
 
@@ -92,6 +106,9 @@ pub struct MakerContext {
 
     /// The order size in atoms for each order denominated in base.
     pub ask_order_size: u64,
+
+    /// The maker's SOL balance in lamports, updated after each successful transaction.
+    sol_lamports: u64,
 }
 
 impl MakerContext {
@@ -103,6 +120,7 @@ impl MakerContext {
             batch_replace,
             bid_order_size,
             ask_order_size,
+            visualize,
             oanda_args,
             initial_price_feed_response,
             ..
@@ -149,8 +167,9 @@ impl MakerContext {
         let mid_price =
             get_normalized_mid_price(initial_price_feed_response, &oanda_args.pair, &market_ctx)?;
         let maker_address = keypair.pubkey();
+        let sol_lamports = rpc.client.get_balance(&maker_address).await.unwrap_or(0);
 
-        Ok(Self {
+        let mut ctx = Self {
             keypair,
             market_ctx,
             maker_address,
@@ -161,8 +180,13 @@ impl MakerContext {
             batch_replace,
             bid_order_size,
             ask_order_size,
+            visualize,
             needs_expand: false,
-        })
+            logger: Logger::new(visualize),
+            sol_lamports,
+        };
+        ctx.render_chart();
+        Ok(ctx)
     }
 
     /// See [`MakerContext::mid_price`].
@@ -229,8 +253,6 @@ impl MakerContext {
             self.latest_state.seat.index,
         )?;
 
-        log_orders(&posts, &cancels)?;
-
         if self.batch_replace {
             if cancels.len() + posts.len() == 0 {
                 return Ok(vec![]);
@@ -281,8 +303,154 @@ impl MakerContext {
 
     pub fn update_maker_state(&mut self, new_market_state: MarketViewAll) -> anyhow::Result<()> {
         self.latest_state = MakerState::new_from_market(self.maker_address, new_market_state)?;
-
+        self.render_chart();
         Ok(())
+    }
+
+    /// Renders the maker's current on-chain order book as a depth chart.
+    pub fn render_chart(&mut self) {
+        if !self.visualize {
+            return;
+        }
+
+        const BAR_WIDTH: usize = 20;
+        const PRICE_WIDTH: usize = 10;
+
+        let decode = |orders: &[_]| -> Vec<(Decimal, u64)> {
+            orders
+                .iter()
+                .filter_map(|o: &transaction_parser::views::OrderView| {
+                    let price =
+                        try_encoded_u32_to_decoded_decimal(o.encoded_price.as_u32()).ok()?;
+                    Some((price, o.base_remaining))
+                })
+                .collect()
+        };
+
+        let mut asks = decode(&self.latest_state.asks);
+        let mut bids = decode(&self.latest_state.bids);
+
+        asks.sort_by_key(|(p, _)| std::cmp::Reverse(*p));
+        bids.sort_by_key(|(p, _)| std::cmp::Reverse(*p));
+
+        let max_size = asks
+            .iter()
+            .chain(bids.iter())
+            .map(|(_, s)| *s)
+            .max()
+            .unwrap_or(1);
+
+        let bar = |size: u64| -> String {
+            let filled = ((size as f64 / max_size as f64) * BAR_WIDTH as f64).round() as usize;
+            "█".repeat(filled.max(1))
+        };
+
+        let fmt_row = |p: &Decimal, s: u64| {
+            format!(
+                "{:>PRICE_WIDTH$}  {:<BAR_WIDTH$}",
+                p,
+                bar(s),
+                PRICE_WIDTH = PRICE_WIDTH,
+                BAR_WIDTH = BAR_WIDTH,
+            )
+        };
+
+        let sol = Decimal::from(self.sol_lamports) / Decimal::from(1_000_000_000u64);
+        let base_seat = self.latest_state.seat.base_available;
+        let base_orders = self.latest_state.base_inventory.saturating_sub(base_seat);
+        let base_total = base_seat + base_orders;
+        let quote_seat = self.latest_state.seat.quote_available;
+        let quote_orders = self.latest_state.quote_inventory.saturating_sub(quote_seat);
+        let quote_total = quote_seat + quote_orders;
+
+        let base_scale = Decimal::from(10u64.pow(self.market_ctx.base.mint_decimals as u32));
+        let quote_scale = Decimal::from(10u64.pow(self.market_ctx.quote.mint_decimals as u32));
+
+        // Compute precision for 8 sig figs based on a reference value (the row total),
+        // then use that same precision for all three columns so they align.
+        let sig8_prec = |reference: u64, scale: Decimal| -> usize {
+            let d = Decimal::from(reference) / scale;
+            d.to_f64()
+                .filter(|f| f.is_normal())
+                .map(|f| {
+                    let mag = f.log10().floor() as i32;
+                    if mag >= 7 { 0 } else { (8 - mag - 1) as usize }
+                })
+                .unwrap_or(2)
+        };
+
+        // Drive precision from the smallest value in each row so that all three columns
+        // (seat, orders, total) share enough decimal places to show the least-significant
+        // difference. Using the total (the largest value) would truncate the smaller columns
+        // and hide sub-unit discrepancies from order-size truncation.
+        let base_prec = sig8_prec(base_seat.min(base_orders).min(base_total).max(1), base_scale);
+        let quote_prec = sig8_prec(quote_seat.min(quote_orders).min(quote_total).max(1), quote_scale);
+
+        let fmt_base = |atoms: u64| format!("{:.base_prec$}", Decimal::from(atoms) / base_scale);
+        let fmt_quote = |atoms: u64| format!("{:.quote_prec$}", Decimal::from(atoms) / quote_scale);
+
+        let bs = fmt_base(base_seat);
+        let bo = fmt_base(base_orders);
+        let bt = fmt_base(base_total);
+        let qs = fmt_quote(quote_seat);
+        let qo = fmt_quote(quote_orders);
+        let qt = fmt_quote(quote_total);
+
+        let col_w = [&bs, &bo, &bt, &qs, &qo, &qt]
+            .iter()
+            .map(|s| s.len())
+            .max()
+            .unwrap_or(1);
+
+        // Total portfolio value in quote tokens.
+        let total_value = Decimal::from(base_total) * self.mid_price + Decimal::from(quote_total);
+        let total_value_display = total_value / quote_scale;
+        let value_precision = total_value_display
+            .to_f64()
+            .filter(|f| f.is_normal())
+            .map(|f| {
+                let mag = f.log10().floor() as i32;
+                if mag >= 7 { 0 } else { (8 - mag - 1) as usize }
+            })
+            .unwrap_or(2);
+
+        let mut lines = Vec::with_capacity(4 + MAX_ORDERS_USIZE * 2 + 1);
+
+        lines.push(fmt_kv!("SOL  ", format!("{sol:.6}")));
+        lines.push(fmt_kv!("Base ", format!("{bs:>col_w$} seat  |  {bo:>col_w$} orders  |  {bt:>col_w$} total")));
+        lines.push(fmt_kv!("Quote", format!("{qs:>col_w$} seat  |  {qo:>col_w$} orders  |  {qt:>col_w$} total")));
+        lines.push(fmt_kv!("Value", format!("{total_value_display:.value_precision$} quote")));
+        lines.push(divider());
+
+        // Only render the order book once there are orders to show.
+        if !asks.is_empty() || !bids.is_empty() {
+            // Asks: pad empty lines at top so best ask stays closest to center.
+            for _ in 0..MAX_ORDERS_USIZE.saturating_sub(asks.len()) {
+                lines.push(String::new());
+            }
+            for (p, s) in &asks {
+                lines.push(format!(
+                    "{}",
+                    fmt_row(p, *s).as_str().color(LogColor::Error)
+                ));
+            }
+
+            lines.push(divider());
+
+            // Bids: pad empty lines at bottom so best bid stays closest to center.
+            for (p, s) in &bids {
+                lines.push(format!("{}", fmt_row(p, *s).as_str().color(LogColor::Info)));
+            }
+            for _ in 0..MAX_ORDERS_USIZE.saturating_sub(bids.len()) {
+                lines.push(String::new());
+            }
+        }
+
+        self.logger.update_chart(lines);
+    }
+
+    pub fn update_sol_balance(&mut self, lamports: u64) {
+        self.sol_lamports = lamports;
     }
 
     pub fn update_price_from_candlestick(

@@ -3,25 +3,12 @@ use std::{
     hash::Hash,
 };
 
-use client::{
-    context::market::MarketContext,
-    print_kv,
-};
-use dropset_interface::instructions::{
-    CancelOrderInstructionData,
-    PostOrderInstructionData,
-};
+use client::context::market::MarketContext;
 use dropset_services_shared::oanda_types::{
     CurrencyPair,
     OandaCandlestickResponse,
 };
-use price::{
-    client_helpers::{
-        decimal_pow10_i16,
-        try_encoded_u32_to_decoded_decimal,
-    },
-    to_order_info,
-};
+use price::client_helpers::decimal_pow10_i16;
 use rust_decimal::Decimal;
 
 pub fn get_normalized_mid_price(
@@ -100,25 +87,6 @@ pub fn split_symmetric_difference<'a, K: Eq + Hash, V1, V2>(
     (a_uniques, b_uniques)
 }
 
-pub fn log_orders(
-    posts: &[PostOrderInstructionData],
-    cancels: &[CancelOrderInstructionData],
-) -> anyhow::Result<()> {
-    for cancel in cancels.iter() {
-        let side = if cancel.is_bid { "bid" } else { "ask" };
-        let decimal_price = try_encoded_u32_to_decoded_decimal(cancel.encoded_price)?;
-        print_kv!(format!("Canceling {side} at"), format!("{decimal_price}"),);
-    }
-
-    for post in posts.iter() {
-        let side = if post.is_bid { "bid" } else { "ask" };
-        let encoded_price = to_order_info(post.order_info_args.clone())?.encoded_price;
-        let decimal_price = try_encoded_u32_to_decoded_decimal(encoded_price.as_u32())?;
-        print_kv!(format!("Posting {side} at"), format!("{decimal_price}"));
-    }
-
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

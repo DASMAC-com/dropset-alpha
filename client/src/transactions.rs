@@ -291,11 +291,13 @@ async fn send_transaction_with_config(
             })
         }
         Err(error) => {
-            PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
-                print!("{err}");
-                print_kv!("Sender", payer.pubkey(), LogColor::Gray);
-                println!();
-            });
+            if matches!(config.debug_logs, Some(true)) {
+                PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
+                    print!("{err}");
+                    print_kv!("Sender", payer.pubkey(), LogColor::Gray);
+                    println!();
+                });
+            }
             match DropsetError::from_client_error(&error, final_instructions) {
                 Some(dropset_err) => Err(TransactionSubmitError::Dropset(dropset_err)),
                 None => Err(TransactionSubmitError::Other(

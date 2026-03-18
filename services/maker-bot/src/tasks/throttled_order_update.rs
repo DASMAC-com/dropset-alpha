@@ -5,13 +5,14 @@ use std::{
 };
 
 use client::{
-    print_kv,
+    fmt_kv,
     transactions::{
         CustomRpcClient,
         TransactionSubmitError,
     },
 };
 use dropset_interface::error::DropsetError;
+use solana_keypair::Signer;
 use tokio::sync::watch;
 
 use crate::{
@@ -37,7 +38,9 @@ pub async fn throttled_order_update(
 
         let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
         let msg = format!("[{timestamp}]");
-        print_kv!(msg, *rx.borrow());
+        let update = *rx.borrow();
+        // Log the incoming task update.
+        maker_ctx.try_borrow_mut()?.logger.log(fmt_kv!(msg, update));
 
         // Then cancel all orders and post new ones.
         let (maker_keypair, instructions) = {
@@ -52,14 +55,24 @@ pub async fn throttled_order_update(
                 .send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
                 .await
             {
-                Ok(_) => {}
+                Ok(_) => {
+                    let lamports = rpc
+                        .client
+                        .get_balance(&maker_keypair.pubkey())
+                        .await
+                        .unwrap_or(0);
+                    let mut ctx = maker_ctx.try_borrow_mut()?;
+                    ctx.update_sol_balance(lamports);
+                    ctx.render_chart();
+                }
                 Err(TransactionSubmitError::Dropset(DropsetError::NoFreeSectorsRemaining)) => {
-                    print_kv!(
+                    let mut ctx = maker_ctx.try_borrow_mut()?;
+                    ctx.logger.log(fmt_kv!(
                         "Expanding market",
                         "no free sectors remaining",
                         client::LogColor::Info,
-                    );
-                    maker_ctx.try_borrow_mut()?.needs_expand = true;
+                    ));
+                    ctx.needs_expand = true;
                 }
                 Err(e) => return Err(e.into()),
             }

@@ -72,7 +72,7 @@ pub enum LogColor {
 mod unformatted {
     use super::*;
 
-    pub fn fmt_divider() -> String { "--------------------------------------------------------------------------------".into() }
+    pub fn fmt_divider() -> String { "────────────────────────────────────────────────────────────".into() }
 
     pub fn log_divider() { println!("{}", fmt_divider()); }
 

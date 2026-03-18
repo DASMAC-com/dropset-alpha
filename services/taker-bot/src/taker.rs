@@ -356,8 +356,8 @@ mod tests {
         format!("0x{}", &taker_addr.to_string()[0..4])
     }
 
-    #[test]
-    fn poisson_takers_pure_simulation() {
+    #[tokio::test]
+    async fn poisson_takers_pure_simulation() {
         let (taker_addresses, takers): (Vec<Address>, Vec<_>) = vec![
             (test_accounts::acc_2222().pubkey(), retail(3000, 42)),
             (test_accounts::acc_4444().pubkey(), retail(3000, 555)),

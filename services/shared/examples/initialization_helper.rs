@@ -29,11 +29,11 @@ use toml_edit::DocumentMut;
 const FAUCET_INITIAL_BASE: u64 = 100_000_000_000;
 const FAUCET_INITIAL_QUOTE: u64 = 100_000_000_000;
 
-const MAKER_INITIAL_BASE: u64 = 100_000;
-const MAKER_INITIAL_QUOTE: u64 = 100_000;
+const MAKER_INITIAL_BASE: u64 = 10_000_000_000;
+const MAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 
-const TAKER_INITIAL_BASE: u64 = 100_000;
-const TAKER_INITIAL_QUOTE: u64 = 100_000;
+const TAKER_INITIAL_BASE: u64 = 10_000_000_000;
+const TAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 
 /// A helper example to bootstrap a market and a market maker on a localnet validator.
 ///
@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
         None,
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(false),
+            debug_logs: Some(true),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
@@ -67,13 +67,15 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
     // Mint the initial amounts to each account.
-    let e2e = E2e::new_users_and_market(
+    let e2e = E2e::new_users_and_market_with_mint_decimals(
         Some(rpc),
         [
             User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
             User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
             User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
         ],
+        Some(6),
+        Some(6),
     )
     .await?;
 

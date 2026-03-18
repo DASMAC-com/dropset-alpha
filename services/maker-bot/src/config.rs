@@ -32,6 +32,7 @@ pub struct ValidMakerConfig {
     pub batch_replace: bool,
     pub ask_order_size: u64,
     pub bid_order_size: u64,
+    pub visualize: bool,
     pub ws_url: Url,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
@@ -53,6 +54,8 @@ pub struct MakerConfigInput {
     pub ws_url: String,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
+    #[serde(default)]
+    pub visualize: bool,
 }
 
 pub async fn validate_config_and_endpoint(
@@ -72,6 +75,7 @@ pub async fn validate_config_and_endpoint(
         ws_url: ws_url_input,
         price_feed_poll_interval,
         order_update_throttle_window,
+        visualize,
     } = input;
 
     if oanda_auth_token.is_empty() || oanda_auth_token == "your-token-here" {
@@ -110,6 +114,7 @@ pub async fn validate_config_and_endpoint(
         batch_replace,
         ask_order_size,
         bid_order_size,
+        visualize,
         ws_url,
         price_feed_poll_interval,
         order_update_throttle_window,

@@ -33,13 +33,13 @@ impl MakerState {
             anyhow::anyhow!("Couldn't find market maker in market user data"),
         )?;
 
-        // Sum the maker's base inventory by adding the seat balance + the bid collateral amounts.
-        let base_inventory = bids
+        // Asks lock base as collateral (base_remaining), bids lock quote as collateral
+        // (quote_remaining). Sum each with the corresponding seat balance to get total inventory.
+        let base_inventory = asks
             .iter()
             .fold(seat.base_available, |v, order| v + order.base_remaining);
 
-        // Sum the maker's quote inventory by adding the seat balance + the ask collateral amounts.
-        let quote_inventory = asks
+        let quote_inventory = bids
             .iter()
             .fold(seat.quote_available, |v, order| v + order.quote_remaining);
 
