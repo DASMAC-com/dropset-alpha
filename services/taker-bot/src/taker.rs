@@ -139,6 +139,14 @@ impl TakerStrategy {
             anyhow::bail!("Buy bias must be between 0.0 and 1.0");
         }
 
+        if !(0.0..=1.0).contains(&activity_profile.burst_entry_prob) {
+            anyhow::bail!("burst_entry_prob must be between 0.0 and 1.0");
+        }
+
+        if !(0.0..=1.0).contains(&activity_profile.burst_exit_prob) {
+            anyhow::bail!("burst_exit_prob must be between 0.0 and 1.0");
+        }
+
         Poisson::new(activity_profile.lambda_burst).with_context(|| {
             let msg = format!(
                 "Invalid `lambda_burst` when calculating Poisson::new({})",
