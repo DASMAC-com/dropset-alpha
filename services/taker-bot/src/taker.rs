@@ -96,10 +96,10 @@ pub struct TakerStrategy {
     /// A value of 2 here would mean that order sizes range roughly from median/2 to median*2.
     /// A developer-friendly representation of `sigma`.
     pub spread_multiplier: f64,
-    /// Probability this taker's next order is a buy.
-    pub buy_bias: f64,
-    /// Bias drifts: after a buy burst, lean sell (mean reversion behaviour).
-    pub bias_reversion: f64,
+    /// Probability this taker's next order is a buy. Always in [0.0, 1.0].
+    buy_bias: f64,
+    /// Fraction by which `buy_bias` reverts toward 0.5 each step. Always in [0.0, 1.0].
+    bias_reversion: f64,
 
     /// `mu` parameter for the underlying normal distribution.
     /// This is just the natural logarithm of [TakerStrategy::median_size].
@@ -176,16 +176,10 @@ impl TakerStrategy {
         })
     }
 
-    fn clamp_biases(&mut self) {
-        self.bias_reversion = self.bias_reversion.clamp(0.0, 1.0);
-        self.buy_bias = self.buy_bias.clamp(0.0, 1.0);
-    }
-
     /// A single moment of market activity between idle intervals.
     /// Called repeatedly by the taker's task loop every `interval_ms`.
     /// Returns zero or more fills depending on burst state and Poisson draw.
     pub fn step(&mut self) -> Vec<TakerFill> {
-        self.clamp_biases();
         let bp = &self.activity_profile;
 
         // Burst state machine
@@ -228,7 +222,7 @@ impl TakerStrategy {
                     Side::Sell
                 };
 
-                // Nudge bias toward 0.5 after each order (slight mean reversion)
+                // Convex combination toward 0.5 — keeps buy_bias in [0.0, 1.0].
                 self.buy_bias += self.bias_reversion * (0.5 - self.buy_bias);
 
                 let size = size_dist.sample(&mut self.rng).max(1.0) as u64;
