@@ -79,6 +79,10 @@ pub async fn validate_config_and_endpoint(
         strategy,
     } = input;
 
+    if strategy.interval_ms == 0 {
+        anyhow::bail!("The taker strategy's interval value must be greater than zero");
+    }
+
     let shared =
         ValidSharedConfig::new(SERVICE.keypair_path(), base_mint, quote_mint, rpc_url).await?;
 
