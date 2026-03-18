@@ -120,16 +120,20 @@ impl TakerStrategy {
         buy_bias: f64,
         seed: Option<u64>,
     ) -> anyhow::Result<Self> {
+        if median_size == 0 {
+            anyhow::bail!("Median size must be greater than zero");
+        }
+
+        if spread_multiplier <= 0.0 {
+            anyhow::bail!("Spread multiplier must be greater than zero");
+        }
+
         let size_mu = (median_size as f64).ln();
         let size_sigma = spread_multiplier.ln();
         LogNormal::new(size_mu, size_sigma).with_context(|| {
             let msg = format!("Invalid (size_mu, size_sigma): ({size_mu}, {size_sigma}) when calculating LogNormal");
             anyhow::anyhow!(msg)
         })?;
-
-        if spread_multiplier < 0.0 {
-            anyhow::bail!("Spread multiplier must be greater than zero");
-        }
 
         if !(0.0..=1.0).contains(&buy_bias) {
             anyhow::bail!("Buy bias must be between 0.0 and 1.0");
