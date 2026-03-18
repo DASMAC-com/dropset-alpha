@@ -50,7 +50,9 @@ async fn main() -> anyhow::Result<()> {
                 Ok(_) => {}
                 Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — most likely there is no liquidity to fill against, skip.
-                    DropsetError::AmountCannotBeZero => {}
+                    DropsetError::AmountCannotBeZero => {
+                        tracing::debug!("fill returned zero amount, book likely empty — skipping");
+                    }
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },
                 Err(e) => return Err(e.into()),
