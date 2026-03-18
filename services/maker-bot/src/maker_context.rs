@@ -229,11 +229,12 @@ impl MakerContext {
         let bid_layers: Vec<(Decimal, u64)> = (0..MAX_ORDERS_USIZE as u32)
             .map(|i| {
                 let price = bid_price - step * Decimal::from(i);
+
+                let error_msg =
+                    || format!("Couldn't convert bid size to u64 at layer {i}: price={price}");
                 let size = (Decimal::from(self.bid_order_size) * Decimal::from(i + 1) / price)
                     .to_u64()
-                    .with_context(|| {
-                        format!("Couldn't convert bid size to u64 at layer {i}: price={price}")
-                    })?;
+                    .with_context(error_msg)?;
                 Ok((price, size))
             })
             .collect::<anyhow::Result<_>>()?;
