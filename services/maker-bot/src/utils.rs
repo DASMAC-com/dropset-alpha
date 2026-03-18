@@ -87,7 +87,6 @@ pub fn split_symmetric_difference<'a, K: Eq + Hash, V1, V2>(
     (a_uniques, b_uniques)
 }
 
-
 #[cfg(test)]
 mod tests {
     use rust_decimal::dec;

@@ -49,7 +49,7 @@ pub enum TaskUpdate {
 impl fmt::Display for TaskUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TaskUpdate::MakerState => write!(f, "MakerState"),
+            TaskUpdate::MakerState => write!(f, "Maker state changed"),
             TaskUpdate::Price(p) => write!(f, "Price — {p}"),
         }
     }

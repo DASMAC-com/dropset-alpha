@@ -21,8 +21,8 @@ pub fn divider() -> String {
 
 /// A terminal logger with two modes:
 ///
-/// - `visualize = true`: fixed-height in-place display with a scrolling log buffer above a
-///   sticky depth chart. The total rendered height is `2 + LOG_LINES + chart lines`.
+/// - `visualize = true`: fixed-height in-place display with a scrolling log buffer above a sticky
+///   depth chart. The total rendered height is `2 + LOG_LINES + chart lines`.
 /// - `visualize = false`: plain scrolling output via `println!`, no ANSI cursor movement.
 pub struct Logger {
     visualize: bool,

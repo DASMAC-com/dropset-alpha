@@ -10,6 +10,7 @@ use client::{
         CustomRpcClient,
         TransactionSubmitError,
     },
+    LogColor,
 };
 use dropset_interface::error::DropsetError;
 use solana_keypair::Signer;
@@ -40,7 +41,8 @@ pub async fn throttled_order_update(
         let msg = format!("[{timestamp}]");
         let update = *rx.borrow();
         // Log the incoming task update.
-        maker_ctx.try_borrow_mut()?.logger.log(fmt_kv!(msg, update));
+        let log_msg = fmt_kv!(msg, update, LogColor::Gray, LogColor::FadedGray);
+        maker_ctx.try_borrow_mut()?.logger.log(log_msg);
 
         // Then cancel all orders and post new ones.
         let (maker_keypair, instructions) = {

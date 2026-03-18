@@ -374,7 +374,11 @@ impl MakerContext {
                 .filter(|f| f.is_normal())
                 .map(|f| {
                     let mag = f.log10().floor() as i32;
-                    if mag >= 7 { 0 } else { (8 - mag - 1) as usize }
+                    if mag >= 7 {
+                        0
+                    } else {
+                        (8 - mag - 1) as usize
+                    }
                 })
                 .unwrap_or(2)
         };
@@ -383,8 +387,14 @@ impl MakerContext {
         // (seat, orders, total) share enough decimal places to show the least-significant
         // difference. Using the total (the largest value) would truncate the smaller columns
         // and hide sub-unit discrepancies from order-size truncation.
-        let base_prec = sig8_prec(base_seat.min(base_orders).min(base_total).max(1), base_scale);
-        let quote_prec = sig8_prec(quote_seat.min(quote_orders).min(quote_total).max(1), quote_scale);
+        let base_prec = sig8_prec(
+            base_seat.min(base_orders).min(base_total).max(1),
+            base_scale,
+        );
+        let quote_prec = sig8_prec(
+            quote_seat.min(quote_orders).min(quote_total).max(1),
+            quote_scale,
+        );
 
         let fmt_base = |atoms: u64| format!("{:.base_prec$}", Decimal::from(atoms) / base_scale);
         let fmt_quote = |atoms: u64| format!("{:.quote_prec$}", Decimal::from(atoms) / quote_scale);
@@ -410,16 +420,23 @@ impl MakerContext {
             .filter(|f| f.is_normal())
             .map(|f| {
                 let mag = f.log10().floor() as i32;
-                if mag >= 7 { 0 } else { (8 - mag - 1) as usize }
+                if mag >= 7 {
+                    0
+                } else {
+                    (8 - mag - 1) as usize
+                }
             })
             .unwrap_or(2);
 
         let mut lines = Vec::with_capacity(4 + MAX_ORDERS_USIZE * 2 + 1);
 
+        let base_msg = format!("{bs:>col_w$} seat  |  {bo:>col_w$} orders  |  {bt:>col_w$} total");
+        let quote_msg = format!("{qs:>col_w$} seat  |  {qo:>col_w$} orders  |  {qt:>col_w$} total");
+        let value_msg = format!("{total_value_display:.value_precision$} quote");
         lines.push(fmt_kv!("SOL  ", format!("{sol:.6}")));
-        lines.push(fmt_kv!("Base ", format!("{bs:>col_w$} seat  |  {bo:>col_w$} orders  |  {bt:>col_w$} total")));
-        lines.push(fmt_kv!("Quote", format!("{qs:>col_w$} seat  |  {qo:>col_w$} orders  |  {qt:>col_w$} total")));
-        lines.push(fmt_kv!("Value", format!("{total_value_display:.value_precision$} quote")));
+        lines.push(fmt_kv!("Base ", base_msg));
+        lines.push(fmt_kv!("Quote", quote_msg));
+        lines.push(fmt_kv!("Value", value_msg));
         lines.push(divider());
 
         // Only render the order book once there are orders to show.
