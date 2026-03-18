@@ -12,12 +12,15 @@ pinocchio-token-interface.workspace = true
 price = { path = "../price" }
 solana-account-view.workspace = true
 solana-address = { workspace = true, features = ["copy"] }
+solana-client = { workspace = true, optional = true }
 solana-cpi = { workspace = true, optional = true }
 solana-instruction = { workspace = true, optional = true }
+solana-instruction-error = { workspace = true, optional = true }
 solana-instruction-view = { workspace = true, features = ["cpi"] }
 solana-program-error.workspace = true
 solana-sdk = { workspace = true, optional = true }
 solana-system-interface.workspace = true
+solana-transaction-error = { workspace = true, optional = true }
 static_assertions.workspace = true
 strum = { workspace = true, optional = true }
 strum_macros = { workspace = true, optional = true }
@@ -34,4 +37,13 @@ workspace = true
 default = ["program"]
 std = []
 program = []
-client = ["dep:solana-instruction", "dep:solana-cpi", "dep:solana-sdk", "dep:strum", "dep:strum_macros"]
+client = [
+  "dep:solana-client",
+  "dep:solana-instruction-error",
+  "dep:solana-transaction-error",
+  "dep:solana-instruction",
+  "dep:solana-cpi",
+  "dep:solana-sdk",
+  "dep:strum",
+  "dep:strum_macros"
+]

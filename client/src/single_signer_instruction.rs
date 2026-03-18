@@ -6,6 +6,7 @@ use solana_sdk::signature::Keypair;
 use crate::transactions::{
     CustomRpcClient,
     ParsedTransactionWithEvents,
+    TransactionSubmitError,
 };
 
 /// Extension trait for submitting an instruction as a single-signer transaction.
@@ -17,7 +18,7 @@ pub trait SingleSignerInstruction {
         self,
         rpc: &CustomRpcClient,
         signer: &Keypair,
-    ) -> impl Future<Output = anyhow::Result<ParsedTransactionWithEvents>> + Send;
+    ) -> impl Future<Output = Result<ParsedTransactionWithEvents, TransactionSubmitError>> + Send;
 }
 
 impl SingleSignerInstruction for Instruction {
@@ -25,12 +26,13 @@ impl SingleSignerInstruction for Instruction {
         self,
         rpc: &CustomRpcClient,
         signer: &Keypair,
-    ) -> anyhow::Result<ParsedTransactionWithEvents> {
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         let num_signers = self.accounts.iter().filter(|meta| meta.is_signer).count();
         if num_signers != 1 {
             return Err(anyhow::anyhow!(
                 "Expected a single signer instruction, got {num_signers} signers."
-            ));
+            )
+            .into());
         }
         rpc.send_single_signer(signer, [self]).await
     }

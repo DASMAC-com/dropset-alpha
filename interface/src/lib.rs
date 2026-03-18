@@ -6,6 +6,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "client")]
+pub mod client_error;
 pub mod error;
 pub mod events;
 pub mod instructions;
