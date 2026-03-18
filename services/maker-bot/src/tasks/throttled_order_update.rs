@@ -58,13 +58,11 @@ pub async fn throttled_order_update(
                 .await
             {
                 Ok(_) => {
-                    let lamports = rpc
-                        .client
-                        .get_balance(&maker_keypair.pubkey())
-                        .await
-                        .unwrap_or(0);
+                    let balance = rpc.client.get_balance(&maker_keypair.pubkey()).await;
                     let mut ctx = maker_ctx.try_borrow_mut()?;
-                    ctx.update_sol_balance(lamports);
+                    if let Ok(balance) = balance {
+                        ctx.update_sol_balance(balance);
+                    }
                     ctx.render_chart();
                 }
                 Err(TransactionSubmitError::Dropset(DropsetError::NoFreeSectorsRemaining)) => {
