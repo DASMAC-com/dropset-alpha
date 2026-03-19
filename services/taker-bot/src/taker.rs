@@ -281,14 +281,14 @@ mod tests {
 
     use super::*;
 
-    /// Creates a [Taker] with a moderate activity profile and order size.
+    /// Creates a [TakerStrategy] with a moderate activity profile and order size.
     pub fn retail(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, Some(seed))
             .expect("Should be valid inputs")
     }
 
-    /// Creates a [Taker] with a high activity profile, large order sizes, and directional bias
-    /// with fat tail sizes (high sigma, aka large spread multiplier).
+    /// Creates a [TakerStrategy] with a high activity profile, large order sizes, and directional
+    /// bias with fat tail sizes (high sigma, aka large spread multiplier).
     pub fn whale(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(
             ActivityProfile::aggressive(),
@@ -300,8 +300,8 @@ mod tests {
         .expect("Should be valid inputs")
     }
 
-    /// Creates a [Taker] with a passive activity profile, moderate order sizes, no directional
-    /// bias, and very low spread multiplier.
+    /// Creates a [TakerStrategy] with a passive activity profile, moderate order sizes, no
+    /// directional bias, and very low spread multiplier.
     pub fn sniper(median_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(
             ActivityProfile::passive(),
