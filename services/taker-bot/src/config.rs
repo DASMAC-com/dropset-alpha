@@ -25,6 +25,7 @@ pub struct TakerConfigInput {
     pub base_mint: String,
     pub quote_mint: String,
     pub rpc_url: String,
+    #[serde(default)]
     pub verbose: bool,
     pub strategy: TakerStrategyConfig,
 }
