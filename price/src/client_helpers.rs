@@ -184,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pow10_i16() -> Result<(), OrderInfoError> {
+    fn test_decimal_pow10() -> Result<(), OrderInfoError> {
         assert_eq!(decimal_pow10(dec!(1.23), 2)?, dec!(123));
         assert_eq!(decimal_pow10(dec!(1.6923), 3)?, dec!(1692.3));
         assert_eq!(decimal_pow10(dec!(1.000333), 4)?, dec!(10003.33));
