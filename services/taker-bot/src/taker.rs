@@ -95,7 +95,7 @@ pub struct TakerStrategy {
     buy_bias: f64,
     /// Fraction by which `buy_bias` reverts toward 0.5 each step. Always in [0.0, 1.0].
     bias_reversion: f64,
-    /// `mu` for the LogNormal order size distribution. Computed as `ln(median_size)`.
+    /// `mu` for the LogNormal order size distribution. Computed as `ln(median_order_size)`.
     size_mu: f64,
     /// `sigma` for the LogNormal order size distribution. Computed as `ln(spread_multiplier)`.
     /// A `spread_multiplier` of 2 means sizes range roughly from `median/2` to `median*2`.
@@ -107,17 +107,17 @@ pub struct TakerStrategy {
 }
 
 impl TakerStrategy {
-    /// `median_size` is the median order size in base atoms (`mu = ln(median_size)`).
+    /// `median_order_size` is the median order size in base atoms (`mu = ln(median_order_size)`).
     /// `spread_multiplier` controls the width of the size distribution: a value of 2 means
     /// sizes range roughly from `median/2` to `median*2` (`sigma = ln(spread_multiplier)`).
     pub fn new(
         activity_profile: ActivityProfile,
-        median_size: u64,
+        median_order_size: u64,
         spread_multiplier: f64,
         buy_bias: f64,
         seed: Option<u64>,
     ) -> anyhow::Result<Self> {
-        if median_size == 0 {
+        if median_order_size == 0 {
             anyhow::bail!("Median size must be greater than zero");
         }
 
@@ -125,7 +125,7 @@ impl TakerStrategy {
             anyhow::bail!("Spread multiplier must be greater than zero");
         }
 
-        let size_mu = (median_size as f64).ln();
+        let size_mu = (median_order_size as f64).ln();
         let size_sigma = spread_multiplier.ln();
         LogNormal::new(size_mu, size_sigma).with_context(|| {
             let msg = format!("Invalid (size_mu, size_sigma): ({size_mu}, {size_sigma}) when calculating LogNormal");
@@ -282,17 +282,23 @@ mod tests {
     use super::*;
 
     /// Creates a [TakerStrategy] with a moderate activity profile and order size.
-    pub fn retail(median_size: u64, seed: u64) -> TakerStrategy {
-        TakerStrategy::new(ActivityProfile::retail(), median_size, 2.0, 0.5, Some(seed))
-            .expect("Should be valid inputs")
+    pub fn retail(median_order_size: u64, seed: u64) -> TakerStrategy {
+        TakerStrategy::new(
+            ActivityProfile::retail(),
+            median_order_size,
+            2.0,
+            0.5,
+            Some(seed),
+        )
+        .expect("Should be valid inputs")
     }
 
     /// Creates a [TakerStrategy] with a high activity profile, large order sizes, and directional
     /// bias with fat tail sizes (high sigma, aka large spread multiplier).
-    pub fn whale(median_size: u64, seed: u64) -> TakerStrategy {
+    pub fn whale(median_order_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(
             ActivityProfile::aggressive(),
-            median_size,
+            median_order_size,
             5.0,
             0.6,
             Some(seed),
@@ -302,10 +308,10 @@ mod tests {
 
     /// Creates a [TakerStrategy] with a passive activity profile, moderate order sizes, no
     /// directional bias, and very low spread multiplier.
-    pub fn sniper(median_size: u64, seed: u64) -> TakerStrategy {
+    pub fn sniper(median_order_size: u64, seed: u64) -> TakerStrategy {
         TakerStrategy::new(
             ActivityProfile::passive(),
-            median_size,
+            median_order_size,
             1.5,
             0.5,
             Some(seed),

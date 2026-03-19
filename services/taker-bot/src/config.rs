@@ -41,7 +41,7 @@ pub struct TakerStrategyConfig {
     /// Probability of exiting the burst each tick (controls burst duration).
     pub burst_exit_prob: f64,
     /// Median order size in atoms.
-    pub median_size: u64,
+    pub median_order_size: u64,
     /// Spread multiplier: order sizes range roughly from `median / x` to `median * x`.
     pub spread_multiplier: f64,
     /// Probability the next order is a buy (0.0–1.0).
@@ -66,7 +66,7 @@ impl TakerStrategyConfig {
         };
         TakerStrategy::new(
             profile,
-            self.median_size,
+            self.median_order_size,
             self.spread_multiplier,
             self.buy_bias,
             self.seed,
