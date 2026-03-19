@@ -36,8 +36,8 @@ const FAUCET_INITIAL_QUOTE: u64 = 100_000_000_000;
 const MAKER_INITIAL_BASE: u64 = 10_000_000_000;
 const MAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 
-const TAKER_INITIAL_BASE: u64 = 10_000_000_000;
-const TAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
+const TAKER_INITIAL_BASE: u64 = 1_000_000_000_000;
+const TAKER_INITIAL_QUOTE: u64 = 1_000_000_000_000;
 
 /// A helper example to bootstrap a market and a market maker on a localnet validator.
 ///
