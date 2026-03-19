@@ -502,11 +502,12 @@ mod tests {
 
         // Have the maker create thick, layered orders. The purpose of this test is to employ the
         // takers to fill orders, so the maker just needs to make sure takers have liquidity.
-        let bids = core::array::from_fn::<_, MAX_ORDERS_USIZE, _>(|i| {
-            maker_order_at_price(10 - i, INITIAL_QUOTE / 10, false)
+        const N: usize = MAX_ORDERS_USIZE;
+        let bids = core::array::from_fn::<_, N, _>(|i| {
+            maker_order_at_price(N - i, INITIAL_QUOTE / N as u64, false)
         });
-        let asks = core::array::from_fn::<_, MAX_ORDERS_USIZE, _>(|i| {
-            maker_order_at_price(11 + i, INITIAL_BASE / 10, true)
+        let asks = core::array::from_fn::<_, N, _>(|i| {
+            maker_order_at_price(N + 1 + i, INITIAL_BASE / N as u64, true)
         });
         assert!(mollusk
             .process_instruction_chain(&[market_ctx.batch_replace(
