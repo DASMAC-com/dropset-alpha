@@ -27,6 +27,7 @@ use price::{
     client_helpers::{
         to_order_info_args,
         try_encoded_u32_to_decoded_decimal,
+        ui_price_to_atoms_price,
     },
     OrderInfoArgs,
 };
@@ -261,16 +262,26 @@ impl MakerContext {
                 return Ok(expand_ix.into_iter().collect());
             }
 
+            let to_atoms_order_info =
+                |(price, order_size): (Decimal, u64)| -> anyhow::Result<OrderInfoArgs> {
+                    let atoms_price = ui_price_to_atoms_price(
+                        price,
+                        self.market_ctx.base.mint_decimals,
+                        self.market_ctx.quote.mint_decimals,
+                    )?;
+                    to_order_info_args(atoms_price, order_size).map_err(anyhow::Error::from)
+                };
+
             let bid_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = bid_layers
                 .into_iter()
-                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
+                .map(to_atoms_order_info)
                 .collect::<anyhow::Result<Vec<_>>>()?
                 .try_into()
                 .expect("exactly MAX_ORDERS_USIZE layers");
 
             let ask_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = ask_layers
                 .into_iter()
-                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
+                .map(to_atoms_order_info)
                 .collect::<anyhow::Result<Vec<_>>>()?
                 .try_into()
                 .expect("exactly MAX_ORDERS_USIZE layers");

@@ -6,6 +6,7 @@ use core::num::NonZeroU64;
 use rust_decimal::{
     dec,
     Decimal,
+    MathematicalOps,
 };
 
 use crate::{
@@ -41,15 +42,33 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
     (x, pow)
 }
 
+/// Converts a UI (human-readable) price into a price denominated in atoms
+/// by scaling by 10^(quote_decimals - base_decimals).
+///
+/// In other words, converts:
+///   quote tokens / base token
+/// into:
+///   quote atoms / base atoms
+pub fn ui_price_to_atoms_price(
+    ui_price: Decimal,
+    base_decimals: u8,
+    quote_decimals: u8,
+) -> Result<Decimal, OrderInfoError> {
+    let pow_multiplier = dec!(10)
+        .checked_powi(quote_decimals as i64 - base_decimals as i64)
+        .ok_or(OrderInfoError::ArithmeticOverflow)?;
+    ui_price
+        .checked_mul(pow_multiplier)
+        .ok_or(OrderInfoError::ArithmeticOverflow)
+}
+
 /// A helper function to convert a price ratio and order size (in base atoms) to order info args.
 ///
 /// NOTE: Make sure `price` here equals `quote_atoms / base_atoms`. That is, the price ratio in
-/// atoms may not match the price ratio in human-readable units if the tokens don't use the same
-/// amount of decimals.
+/// atoms doesn't equal the price ratio in UI-based (aka human-readable) units if the base and quote
+/// tokens don't use the same amount of decimals.
 ///
-/// To convert a price in human-readable units to atoms, multiply it by the `quote - base` decimal
-/// difference as a power of 10:
-/// `human_readable_price * 10.powi(quote_decimals - base_decimals)`
+/// To convert a price in human-readable units to atoms, use [ui_price_to_atoms_price].
 pub fn to_order_info_args(
     price: Decimal,
     order_size_base_atoms: u64,
@@ -178,6 +197,13 @@ mod tests {
         let expected = OrderInfoArgs::new(12_500_000, 5, biased_exponent!(8), biased_exponent!(1));
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), expected);
+    }
+
+    #[test]
+    fn test_ui_price_to_atoms_price() {
+        let ui_price = rust_decimal::dec!(100);
+        let res = ui_price_to_atoms_price(ui_price, 9, 6).unwrap();
+        assert_eq!(res, rust_decimal::dec!(0.1));
     }
 
     #[test]
