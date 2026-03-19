@@ -215,7 +215,7 @@ impl MakerContext {
             / Decimal::from(10u64.pow(self.market_ctx.base.mint_decimals as u32))
     }
 
-    pub fn create_cancel_and_post_instructions(&mut self) -> anyhow::Result<Vec<Instruction>> {
+    pub fn create_update_book_instructions(&mut self) -> anyhow::Result<Vec<Instruction>> {
         let expand_ix = self.needs_expand.then(|| {
             self.needs_expand = false;
             self.market_ctx
@@ -257,7 +257,7 @@ impl MakerContext {
 
         if self.batch_replace {
             if cancels.len() + posts.len() == 0 {
-                return Ok(vec![]);
+                return Ok(expand_ix.into_iter().collect());
             }
 
             let bid_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = bid_layers

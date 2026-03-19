@@ -48,7 +48,7 @@ pub async fn throttled_order_update(
         let (maker_keypair, instructions) = {
             let mut ctx = maker_ctx.try_borrow_mut()?;
             let maker_keypair = ctx.keypair.insecure_clone();
-            let instructions = ctx.create_cancel_and_post_instructions()?;
+            let instructions = ctx.create_update_book_instructions()?;
             (maker_keypair, instructions)
         };
 
