@@ -51,7 +51,7 @@ pub struct TakerStrategyConfig {
 }
 
 impl TakerStrategyConfig {
-    pub fn into_strategy(self) -> anyhow::Result<TakerStrategy> {
+    fn into_strategy(self) -> anyhow::Result<TakerStrategy> {
         let profile = ActivityProfile {
             interval: tokio::time::interval(Duration::from_millis(self.interval_ms)),
             lambda_quiet: self.lambda_quiet,
