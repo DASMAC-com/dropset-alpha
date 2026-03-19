@@ -55,7 +55,8 @@ impl Logger {
         self.redraw();
     }
 
-    /// Replace the depth chart and redraw. No-op when not in visualize mode.
+    /// Replace the depth chart and redraw. No-op when not in visualize mode, or if the log
+    /// buffer is empty (render is deferred until the first log line arrives).
     pub fn update_chart(&mut self, lines: Vec<String>) {
         if !self.visualize {
             return;
