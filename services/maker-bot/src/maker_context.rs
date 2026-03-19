@@ -6,7 +6,6 @@ use client::{
     },
     fmt_kv,
     transactions::CustomRpcClient,
-    LogColor,
 };
 use colored::Colorize;
 use dropset_interface::{
@@ -52,6 +51,8 @@ use crate::{
     logger::{
         divider,
         Logger,
+        BUY_COLOR,
+        SELL_COLOR,
     },
     model::calculate_spreads::{
         half_spread,
@@ -448,17 +449,14 @@ impl MakerContext {
                 lines.push(String::new());
             }
             for (p, s) in &asks {
-                lines.push(format!(
-                    "{}",
-                    fmt_row(p, *s).as_str().color(LogColor::Error)
-                ));
+                lines.push(format!("{}", fmt_row(p, *s).as_str().color(SELL_COLOR)));
             }
 
             lines.push(divider());
 
             // Bids: pad empty lines at bottom so best bid stays closest to center.
             for (p, s) in &bids {
-                lines.push(format!("{}", fmt_row(p, *s).as_str().color(LogColor::Info)));
+                lines.push(format!("{}", fmt_row(p, *s).as_str().color(BUY_COLOR)));
             }
             for _ in 0..MAX_ORDERS_USIZE.saturating_sub(bids.len()) {
                 lines.push(String::new());

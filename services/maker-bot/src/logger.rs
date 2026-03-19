@@ -7,10 +7,24 @@ use client::{
     logs::fmt_divider,
     LogColor,
 };
-use colored::Colorize;
+use colored::{
+    Color,
+    Colorize,
+};
 
 /// Number of recent log lines kept above the depth chart.
 const LOG_LINES: usize = 8;
+
+pub const BUY_COLOR: Color = Color::TrueColor {
+    r: 30,
+    g: 135,
+    b: 80,
+};
+pub const SELL_COLOR: Color = Color::TrueColor {
+    r: 240,
+    g: 75,
+    b: 90,
+};
 
 pub fn divider() -> String {
     static DIVIDER: LazyLock<String> =
