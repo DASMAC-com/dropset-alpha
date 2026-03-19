@@ -42,26 +42,6 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
     (x, pow)
 }
 
-/// Converts a UI (human-readable) price into a price denominated in atoms
-/// by scaling by 10^(quote_decimals - base_decimals).
-///
-/// In other words, converts:
-///   quote tokens / base token
-/// into:
-///   quote atoms / base atoms
-pub fn ui_price_to_atoms_price(
-    ui_price: Decimal,
-    base_decimals: u8,
-    quote_decimals: u8,
-) -> Result<Decimal, OrderInfoError> {
-    let pow_multiplier = dec!(10)
-        .checked_powi(quote_decimals as i64 - base_decimals as i64)
-        .ok_or(OrderInfoError::ArithmeticOverflow)?;
-    ui_price
-        .checked_mul(pow_multiplier)
-        .ok_or(OrderInfoError::ArithmeticOverflow)
-}
-
 /// A helper function to convert a price ratio and order size (in base atoms) to order info args.
 ///
 /// NOTE: Make sure `price` here equals `quote_atoms / base_atoms`. That is, the price ratio in
@@ -96,21 +76,12 @@ pub fn to_order_info_args(
     ))
 }
 
-pub fn decimal_pow10_i16(value: Decimal, pow: i16) -> Decimal {
-    const TEN: Decimal = dec!(10);
-    let is_negative = pow.is_negative();
-    (0..pow.abs())
-        .fold(
-            value,
-            |acc, _| {
-                if is_negative {
-                    acc / TEN
-                } else {
-                    acc * TEN
-                }
-            },
-        )
-        .normalize()
+/// Multiplies a `value` by 10 to the power of `pow`.
+pub fn decimal_pow10(value: Decimal, pow: i64) -> Result<Decimal, OrderInfoError> {
+    dec!(10)
+        .checked_powi(pow)
+        .and_then(|scale| value.checked_mul(scale))
+        .ok_or(OrderInfoError::ArithmeticOverflow)
 }
 
 /// Converts a u32 encoded price to a decoded decimal price. Typical usage would be converting the
@@ -200,19 +171,14 @@ mod tests {
     }
 
     #[test]
-    fn test_ui_price_to_atoms_price() {
-        let ui_price = rust_decimal::dec!(100);
-        let res = ui_price_to_atoms_price(ui_price, 9, 6).unwrap();
-        assert_eq!(res, rust_decimal::dec!(0.1));
-    }
+    fn test_pow10_i16() -> Result<(), OrderInfoError> {
+        assert_eq!(decimal_pow10(dec!(1.23), 2)?, dec!(123));
+        assert_eq!(decimal_pow10(dec!(1.6923), 3)?, dec!(1692.3));
+        assert_eq!(decimal_pow10(dec!(1.000333), 4)?, dec!(10003.33));
+        assert_eq!(decimal_pow10(dec!(1.23), -1)?, dec!(0.123));
+        assert_eq!(decimal_pow10(dec!(1.23), -2)?, dec!(0.0123));
+        assert_eq!(decimal_pow10(dec!(0.05123), -9)?, dec!(0.00000000005123));
 
-    #[test]
-    fn test_pow10_i16() {
-        assert_eq!(decimal_pow10_i16(dec!(1.23), 2), dec!(123));
-        assert_eq!(decimal_pow10_i16(dec!(1.6923), 3), dec!(1692.3));
-        assert_eq!(decimal_pow10_i16(dec!(1.000333), 4), dec!(10003.33));
-        assert_eq!(decimal_pow10_i16(dec!(1.23), -1), dec!(0.123));
-        assert_eq!(decimal_pow10_i16(dec!(1.23), -2), dec!(0.0123));
-        assert_eq!(decimal_pow10_i16(dec!(0.05123), -9), dec!(0.00000000005123));
+        Ok(())
     }
 }

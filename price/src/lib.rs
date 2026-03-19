@@ -299,7 +299,7 @@ mod tests {
     use static_assertions::*;
 
     use super::*;
-    use crate::client_helpers::decimal_pow10_i16;
+    use crate::client_helpers::decimal_pow10;
 
     #[test]
     fn happy_path_simple_price() {
@@ -358,9 +358,9 @@ mod tests {
             .expect("Should be a valid Decimal");
         assert_eq!(decoded_mantissa.as_u32(), mantissa);
         assert_eq!(decoded, dec!(0.12345678));
-        let unbiased_exponent = *decoded_exponent as i16 - BIAS as i16;
+        let unbiased_exponent = *decoded_exponent as i64 - BIAS as i64;
         assert_eq!(
-            decimal_pow10_i16(Decimal::from(decoded_mantissa.as_u32()), unbiased_exponent),
+            decimal_pow10(Decimal::from(decoded_mantissa.as_u32()), unbiased_exponent).unwrap(),
             decoded
         );
     }

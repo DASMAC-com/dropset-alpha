@@ -27,7 +27,6 @@ use price::{
     client_helpers::{
         to_order_info_args,
         try_encoded_u32_to_decoded_decimal,
-        ui_price_to_atoms_price,
     },
     OrderInfoArgs,
 };
@@ -87,7 +86,7 @@ pub struct MakerContext {
     ///
     /// Note that the price as quote_atoms / base_atoms may differ from quote / base. Be sure to
     /// express the price as a ratio of atoms.
-    mid_price: Decimal,
+    mid_price_atoms: Decimal,
 
     /// Whether or not to use batch replace instead of individual instructions.
     pub batch_replace: bool,
@@ -179,7 +178,7 @@ impl MakerContext {
             pair: oanda_args.pair,
             latest_state,
             base_target_atoms,
-            mid_price,
+            mid_price_atoms: mid_price,
             batch_replace,
             bid_order_size,
             ask_order_size,
@@ -192,9 +191,9 @@ impl MakerContext {
         Ok(ctx)
     }
 
-    /// See [`MakerContext::mid_price`].
-    pub fn mid_price(&self) -> Decimal {
-        self.mid_price
+    /// See [`MakerContext::mid_price_atoms`].
+    pub fn get_mid_price_atoms(&self) -> Decimal {
+        self.mid_price_atoms
     }
 
     /// In the A-S model `q` represents the base inventory as a reflection of the maker's net short
@@ -262,26 +261,16 @@ impl MakerContext {
                 return Ok(expand_ix.into_iter().collect());
             }
 
-            let to_atoms_order_info =
-                |(price, order_size): (Decimal, u64)| -> anyhow::Result<OrderInfoArgs> {
-                    let atoms_price = ui_price_to_atoms_price(
-                        price,
-                        self.market_ctx.base.mint_decimals,
-                        self.market_ctx.quote.mint_decimals,
-                    )?;
-                    to_order_info_args(atoms_price, order_size).map_err(anyhow::Error::from)
-                };
-
             let bid_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = bid_layers
                 .into_iter()
-                .map(to_atoms_order_info)
+                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
                 .collect::<anyhow::Result<Vec<_>>>()?
                 .try_into()
                 .expect("exactly MAX_ORDERS_USIZE layers");
 
             let ask_args: [OrderInfoArgs; MAX_ORDERS_USIZE] = ask_layers
                 .into_iter()
-                .map(to_atoms_order_info)
+                .map(|(price, size)| to_order_info_args(price, size).map_err(anyhow::Error::from))
                 .collect::<anyhow::Result<Vec<_>>>()?
                 .try_into()
                 .expect("exactly MAX_ORDERS_USIZE layers");
@@ -427,7 +416,8 @@ impl MakerContext {
             .unwrap_or(1);
 
         // Total portfolio value in quote tokens.
-        let total_value = Decimal::from(base_total) * self.mid_price + Decimal::from(quote_total);
+        let total_value =
+            Decimal::from(base_total) * self.mid_price_atoms + Decimal::from(quote_total);
         let total_value_display = total_value / quote_scale;
         let value_precision = total_value_display
             .to_f64()
@@ -485,7 +475,7 @@ impl MakerContext {
         &mut self,
         candlestick_response: OandaCandlestickResponse,
     ) -> anyhow::Result<()> {
-        self.mid_price =
+        self.mid_price_atoms =
             get_normalized_mid_price(candlestick_response, &self.pair, &self.market_ctx)?;
 
         Ok(())
@@ -493,8 +483,10 @@ impl MakerContext {
 
     /// Calculates the model's output bid and ask prices based on the market's current mid price
     /// and the maker's current state.
+    ///
+    /// Note that these prices are already normalized to being in atoms.
     fn get_bid_and_ask_prices(&self) -> (Decimal, Decimal) {
-        let reservation_price = reservation_price(self.mid_price(), self.q());
+        let reservation_price = reservation_price(self.get_mid_price_atoms(), self.q());
         let bid_price = reservation_price - half_spread();
         let ask_price = reservation_price + half_spread();
 

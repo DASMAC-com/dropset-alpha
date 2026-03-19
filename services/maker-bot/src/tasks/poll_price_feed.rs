@@ -38,7 +38,7 @@ pub async fn poll_price_feed(
                 maker_ctx
                     .try_borrow_mut()?
                     .update_price_from_candlestick(response)?;
-                let mid = maker_ctx.try_borrow()?.mid_price();
+                let mid = maker_ctx.try_borrow()?.get_mid_price_atoms();
                 sender.send(TaskUpdate::Price(mid))?;
             }
             Err(e) => eprintln!("Price feed error: {e:#?}"),

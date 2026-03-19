@@ -8,7 +8,10 @@ use dropset_services_shared::oanda_types::{
     CurrencyPair,
     OandaCandlestickResponse,
 };
-use price::client_helpers::decimal_pow10_i16;
+use price::{
+    client_helpers::decimal_pow10,
+    OrderInfoError,
+};
 use rust_decimal::Decimal;
 
 pub fn get_normalized_mid_price(
@@ -44,7 +47,7 @@ pub fn get_normalized_mid_price(
         latest_price,
         market_ctx.base.mint_decimals,
         market_ctx.quote.mint_decimals,
-    ))
+    )?)
 }
 
 /// Converts a token price not denominated in atoms to a token price denominated in atoms using
@@ -53,10 +56,10 @@ pub fn normalize_non_atoms_price(
     non_atoms_price: Decimal,
     base_decimals: u8,
     quote_decimals: u8,
-) -> Decimal {
-    decimal_pow10_i16(
+) -> Result<Decimal, OrderInfoError> {
+    decimal_pow10(
         non_atoms_price,
-        quote_decimals as i16 - base_decimals as i16,
+        quote_decimals as i64 - base_decimals as i64,
     )
 }
 
@@ -94,27 +97,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn varying_decimal_pair() {
+    fn varying_decimal_pair() -> Result<(), OrderInfoError> {
         // Equal decimals => do nothing.
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 6), dec!(1.27));
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 6)?, dec!(1.27));
 
         // 10 ^ (quote - base) == 10 ^ 1 == multiply by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 5, 6), dec!(12.7));
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 5, 6)?, dec!(12.7));
 
         // 10 ^ (quote - base) == 10 ^ -1 == divide by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 5), dec!(0.127));
+        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 5)?, dec!(0.127));
 
         // 10 ^ (quote - base) == 10 ^ (19 - 11) == multiply by 10 ^ 8
         assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 11, 19),
+            normalize_non_atoms_price(dec!(1.27), 11, 19)?,
             dec!(127_000_000)
         );
 
         // 10 ^ (quote - base) == 10 ^ (11 - 19) = divide by 10 ^ 8
         assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 19, 11),
+            normalize_non_atoms_price(dec!(1.27), 19, 11)?,
             dec!(0.0000000127)
         );
+
+        Ok(())
     }
 
     #[test]
