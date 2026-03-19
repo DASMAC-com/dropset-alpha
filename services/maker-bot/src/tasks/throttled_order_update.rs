@@ -41,7 +41,7 @@ pub async fn throttled_order_update(
         let msg = format!("[{timestamp}]");
         let update = *rx.borrow();
         // Log the incoming task update.
-        let log_msg = fmt_kv!(msg, update, LogColor::Gray, LogColor::FadedGray);
+        let log_msg = fmt_kv!(msg, update, LogColor::Gray, LogColor::Debug);
         maker_ctx.try_borrow_mut()?.logger.log(log_msg);
 
         // Then cancel all orders and post new ones.
