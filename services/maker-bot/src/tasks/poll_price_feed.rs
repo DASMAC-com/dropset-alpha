@@ -18,7 +18,7 @@ use crate::{
 /// The indefinite task loop for polling the price feed endpoint.
 ///
 /// On each loop iteration, it updates the maker context price info and notifies the
-/// [`throttled_order_update`] task of a [`TaskUpdate::Price`] update.
+/// `throttled_order_update` task of a [`TaskUpdate::Price`] update.
 pub async fn poll_price_feed(
     maker_ctx: Rc<RefCell<MakerContext>>,
     sender: watch::Sender<TaskUpdate>,

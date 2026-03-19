@@ -64,7 +64,7 @@ impl TakerContext {
         self.keypair.pubkey()
     }
 
-    /// Submits a market order for a fill produced by [TakerStrategy::step].
+    /// Submits a market order for a fill produced by [`crate::taker::TakerStrategy::step`].
     /// Order size is treated as base atoms for both sides.
     pub async fn submit_fill(
         &self,
