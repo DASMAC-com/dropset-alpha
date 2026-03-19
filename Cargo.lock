@@ -1627,7 +1627,6 @@ name = "dropset-taker-bot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "chrono",
  "client",
  "dropset-interface",
  "dropset-services-shared",
