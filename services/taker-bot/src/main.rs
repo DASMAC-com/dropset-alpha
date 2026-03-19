@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         )),
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(cfg.debug_logs),
+            debug_logs: Some(cfg.verbose),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
