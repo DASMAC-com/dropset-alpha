@@ -60,6 +60,7 @@ pub async fn throttled_order_update(
                 Ok(_) => {
                     let balance = rpc.client.get_balance(&maker_keypair.pubkey()).await;
                     let mut ctx = maker_ctx.try_borrow_mut()?;
+                    ctx.needs_expand = false;
                     if let Ok(balance) = balance {
                         ctx.update_sol_balance(balance);
                     }

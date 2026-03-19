@@ -205,11 +205,12 @@ impl MakerContext {
     ///
     /// In practice, this has two opposing effects.
     /// - When q is negative, it pushes the spread upwards so that bid prices are closer to the
-    ///   [`crate::model::calculate_spreads::reservation_price`] and ask prices are further away. This
-    ///   effectively increases the likelihood of getting bids filled and vice versa for asks.
+    ///   [`crate::model::calculate_spreads::reservation_price`] and ask prices are further away.
+    ///   This effectively increases the likelihood of getting bids filled and vice versa for asks.
     /// - When q is positive, it pushes the spread downwards so that ask prices are closer to the
-    ///   [`crate::model::calculate_spreads::reservation_price`] price and bid prices are further away.
-    ///   This effectively increases the likelihood of getting asks filled and vice versa for bids.
+    ///   [`crate::model::calculate_spreads::reservation_price`] price and bid prices are further
+    ///   away. This effectively increases the likelihood of getting asks filled and vice versa for
+    ///   bids.
     pub fn q(&self) -> Decimal {
         (Decimal::from(self.latest_state.base_inventory) - Decimal::from(self.base_target_atoms))
             / Decimal::from(10u64.pow(self.market_ctx.base.mint_decimals as u32))
@@ -217,7 +218,6 @@ impl MakerContext {
 
     pub fn create_update_book_instructions(&mut self) -> anyhow::Result<Vec<Instruction>> {
         let expand_ix = self.needs_expand.then(|| {
-            self.needs_expand = false;
             self.market_ctx
                 .expand(self.maker_address, (MAX_ORDERS_USIZE * 2) as u16)
         });
