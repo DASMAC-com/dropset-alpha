@@ -26,6 +26,10 @@ use solana_keypair::Keypair;
 use solana_sdk::signer::Signer;
 use toml_edit::DocumentMut;
 
+// If you change these amounts, make sure the corresponding `config.toml` files still make sense.
+// Inventory targets, order sizes, and similar parameters are expressed in base/quote atoms, so
+// they need to be consistent with the amounts deposited here. For example, if the maker deposits
+// 10_000_000_000 base atoms but `target_base` is still 100_000, it will be heavily sell-biased.
 const FAUCET_INITIAL_BASE: u64 = 100_000_000_000;
 const FAUCET_INITIAL_QUOTE: u64 = 100_000_000_000;
 
