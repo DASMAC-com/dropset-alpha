@@ -52,8 +52,13 @@ pub struct TakerStrategyConfig {
 
 impl TakerStrategyConfig {
     fn into_strategy(self) -> anyhow::Result<TakerStrategy> {
+        let mut interval = tokio::time::interval(Duration::from_millis(self.interval_ms));
+        // The taker doesn't need to make up for missed intervals, the idea is for it to be
+        // stochastic behavior. The desired behavior here is to skip missed ticks.
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         let profile = ActivityProfile {
-            interval: tokio::time::interval(Duration::from_millis(self.interval_ms)),
+            interval,
             lambda_quiet: self.lambda_quiet,
             lambda_burst: self.lambda_burst,
             burst_entry_prob: self.burst_entry_prob,
