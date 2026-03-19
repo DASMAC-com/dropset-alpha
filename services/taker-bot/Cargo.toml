@@ -8,7 +8,7 @@ anyhow.workspace = true
 client = { path = "../../client" }
 dropset-interface = { path = "../../interface" }
 dropset-services-shared = { path = "../shared" }
-price = { path = "../../price" }
+price = { path = "../../price", features = ["client"] }
 rand_distr.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
