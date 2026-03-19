@@ -514,8 +514,8 @@ mod tests {
             .program_result
             .is_ok());
 
-        checker.num_asks(10);
-        checker.num_bids(10);
+        checker.num_asks(MAX_ORDERS_USIZE);
+        checker.num_bids(MAX_ORDERS_USIZE);
         checker.num_seats(1);
 
         // Spawn the taker tasks and have them fill orders for a period of time, then print out
