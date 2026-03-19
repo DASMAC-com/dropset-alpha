@@ -89,30 +89,27 @@ impl ActivityProfile {
 }
 
 pub struct TakerStrategy {
-    pub activity_profile: ActivityProfile,
-    /// The median order size in atoms. A developer-friendly representation of `mu`.
-    pub median_size: u64,
-    /// The spread multiplier for order sizes, based around the [TakerStrategy::median_size].
-    /// A value of 2 here would mean that order sizes range roughly from median/2 to median*2.
-    /// A developer-friendly representation of `sigma`.
-    pub spread_multiplier: f64,
+    /// Controls burst/quiet switching, arrival rates, and tick interval.
+    activity_profile: ActivityProfile,
     /// Probability this taker's next order is a buy. Always in [0.0, 1.0].
     buy_bias: f64,
     /// Fraction by which `buy_bias` reverts toward 0.5 each step. Always in [0.0, 1.0].
     bias_reversion: f64,
-
-    /// `mu` parameter for the underlying normal distribution.
-    /// This is just the natural logarithm of [TakerStrategy::median_size].
+    /// `mu` for the LogNormal order size distribution. Computed as `ln(median_size)`.
     size_mu: f64,
-    /// `sigma` parameter for the underlying normal distribution.
-    /// This is just the natural logarithm of [TakerStrategy::spread_multiplier].
+    /// `sigma` for the LogNormal order size distribution. Computed as `ln(spread_multiplier)`.
+    /// A `spread_multiplier` of 2 means sizes range roughly from `median/2` to `median*2`.
     size_sigma: f64,
-
+    /// Whether the taker is currently in an active burst period.
     in_burst: bool,
+    /// Random number generator, seeded from config or randomly at startup.
     rng: StdRng,
 }
 
 impl TakerStrategy {
+    /// `median_size` is the median order size in base atoms (`mu = ln(median_size)`).
+    /// `spread_multiplier` controls the width of the size distribution: a value of 2 means
+    /// sizes range roughly from `median/2` to `median*2` (`sigma = ln(spread_multiplier)`).
     pub fn new(
         activity_profile: ActivityProfile,
         median_size: u64,
@@ -165,8 +162,6 @@ impl TakerStrategy {
 
         Ok(Self {
             activity_profile,
-            median_size,
-            spread_multiplier,
             buy_bias,
             bias_reversion: 0.05,
             size_mu,
@@ -174,6 +169,10 @@ impl TakerStrategy {
             in_burst: false,
             rng: StdRng::seed_from_u64(seed.unwrap_or(random::<u64>())),
         })
+    }
+
+    pub async fn tick(&mut self) {
+        self.activity_profile.interval.tick().await;
     }
 
     /// A single moment of market activity between idle intervals.

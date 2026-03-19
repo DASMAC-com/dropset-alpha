@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
     let mut strategy = cfg.taker_strategy;
 
     loop {
-        strategy.activity_profile.interval.tick().await;
+        strategy.tick().await;
         for fill in strategy.step() {
             match taker_ctx.submit_fill(&fill).await {
                 Ok(_) => {}
