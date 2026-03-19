@@ -13,7 +13,7 @@ strum = { workspace = true, optional = true }
 strum_macros = { workspace = true, optional = true }
 
 [dev-dependencies]
-rust_decimal = { workspace = true }
+rust_decimal = { workspace = true, features = ["maths"] }
 strum.workspace = true
 strum_macros.workspace = true
 
