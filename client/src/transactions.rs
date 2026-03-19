@@ -269,16 +269,17 @@ async fn send_transaction_with_config(
                 .collect_vec();
 
             if matches!(config.debug_logs, Some(true)) {
-                println!(
-                    "{}",
-                    PrettyTransaction {
-                        sender: payer.pubkey(),
-                        signature,
-                        indent_size: 2,
-                        transaction: &parsed_transaction,
-                        instruction_filter: &config.program_id_filter,
-                    }
-                );
+                let pretty = PrettyTransaction {
+                    sender: payer.pubkey(),
+                    signature,
+                    indent_size: 2,
+                    transaction: &parsed_transaction,
+                    instruction_filter: &config.program_id_filter,
+                }
+                .to_string();
+                if !pretty.is_empty() {
+                    println!("{pretty}");
+                }
 
                 for event in dropset_events.iter() {
                     println!("{event:?}");
