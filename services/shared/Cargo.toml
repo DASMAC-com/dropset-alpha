@@ -7,6 +7,7 @@ edition.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 client = { path = "../../client" }
+colored.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 solana-address.workspace = true

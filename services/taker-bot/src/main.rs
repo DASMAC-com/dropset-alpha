@@ -10,6 +10,7 @@ use client::transactions::{
     TransactionSubmitError,
 };
 use dropset_interface::error::DropsetError;
+use dropset_services_shared::debug_logs::format_timestamped_log;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
@@ -35,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         )),
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(true),
+            debug_logs: Some(cfg.debug_logs),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
@@ -51,7 +52,10 @@ async fn main() -> anyhow::Result<()> {
                 Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {
-                        eprintln!("fill returned zero amount, book likely empty — skipping");
+                        let log_msg = format_timestamped_log(
+                            "ERROR: Fill returned zero amount, book likely empty — skipping",
+                        );
+                        eprintln!("{log_msg}");
                     }
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },

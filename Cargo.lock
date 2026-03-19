@@ -1607,6 +1607,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "client",
+ "colored",
  "dropset-interface",
  "reqwest 0.13.2",
  "rust_decimal",

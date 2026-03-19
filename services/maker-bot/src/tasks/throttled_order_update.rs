@@ -10,9 +10,9 @@ use client::{
         CustomRpcClient,
         TransactionSubmitError,
     },
-    LogColor,
 };
 use dropset_interface::error::DropsetError;
+use dropset_services_shared::debug_logs::format_timestamped_log;
 use solana_keypair::Signer;
 use tokio::sync::watch;
 
@@ -37,11 +37,8 @@ pub async fn throttled_order_update(
         // Wait until the value has changed. Not equality wise, but a sender posting a new value.
         rx.changed().await?;
 
-        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
-        let msg = format!("[{timestamp}]");
         let update = *rx.borrow();
-        // Log the incoming task update.
-        let log_msg = fmt_kv!(msg, update, LogColor::Gray, LogColor::Debug);
+        let log_msg = format_timestamped_log(update);
         maker_ctx.try_borrow_mut()?.logger.log(log_msg);
 
         // Then cancel all orders and post new ones.

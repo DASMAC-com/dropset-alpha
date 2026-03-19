@@ -5,6 +5,9 @@ quote_mint = ""
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"
 
+# Whether or not to print the parsed transaction data logs.
+debug_logs = true
+
 [strategy]
 # Milliseconds between ticks of the interval loop.
 interval_ms       = 750

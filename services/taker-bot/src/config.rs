@@ -16,6 +16,7 @@ const SERVICE: Service = Service::Taker;
 
 pub struct ValidTakerConfig {
     pub shared: ValidSharedConfig,
+    pub debug_logs: bool,
     pub taker_strategy: TakerStrategy,
 }
 
@@ -24,6 +25,7 @@ pub struct TakerConfigInput {
     pub base_mint: String,
     pub quote_mint: String,
     pub rpc_url: String,
+    pub debug_logs: bool,
     pub strategy: TakerStrategyConfig,
 }
 
@@ -81,6 +83,7 @@ pub async fn validate_config_and_endpoint(
         base_mint,
         quote_mint,
         rpc_url,
+        debug_logs,
         strategy,
     } = input;
 
@@ -95,6 +98,7 @@ pub async fn validate_config_and_endpoint(
 
     Ok(ValidTakerConfig {
         shared,
+        debug_logs,
         taker_strategy,
     })
 }
