@@ -167,6 +167,7 @@ impl MakerContext {
         let mid_price =
             get_normalized_mid_price(initial_price_feed_response, &oanda_args.pair, &market_ctx)?;
         let maker_address = keypair.pubkey();
+        // Maker may temporarily show as `0` balance until the balance fetch succeeds.
         let sol_lamports = rpc.client.get_balance(&maker_address).await.unwrap_or(0);
 
         let mut ctx = Self {
