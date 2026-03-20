@@ -1,6 +1,22 @@
-# Token mint addresses for the market.
-base_mint  = ""
-quote_mint = ""
-
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"
+
+# SPL token mint addresses. Patched by the initialization helper.
+base_mint = ""
+quote_mint = ""
+
+# Port the faucet HTTP server listens on.
+port = 9090
+
+# Per-address cooldown in seconds before the same address can request again.
+cooldown_secs = 10
+
+# Maximum number of whole tokens a non-whitelisted address receives per request.
+# Multiplied by 10^decimals at runtime based on the requested mint.
+max_public_tokens = 10
+
+# Maximum number of whole tokens a whitelisted address receives per request.
+max_whitelist_tokens = 1000
+
+# Addresses that receive the elevated cap.
+whitelist = []

@@ -71,7 +71,9 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
     // Mint the initial amounts to each account.
-    let e2e = E2e::new_users_and_market_with_mint_decimals(
+    // Pass the faucet keypair as the mint authority so the faucet service
+    // can mint tokens on demand.
+    let e2e = E2e::new_users_and_market_with_options(
         Some(rpc),
         [
             User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
@@ -80,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
         ],
         Some(6),
         Some(6),
+        Some(faucet),
     )
     .await?;
 

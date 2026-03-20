@@ -5,9 +5,16 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+axum.workspace = true
 client = { path = "../../client" }
-dropset-interface = { path = "../../interface" }
+dashmap.workspace = true
 dropset-services-shared = { path = "../shared" }
 serde.workspace = true
+serde_json.workspace = true
+solana-address.workspace = true
+reqwest.workspace = true
 solana-client.workspace = true
-tokio.workspace = true
+solana-cluster-type.workspace = true
+solana-keypair.workspace = true
+solana-sdk.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "time", "net", "sync"] }

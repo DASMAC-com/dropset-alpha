@@ -28,6 +28,8 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+axum = "0.8"
+dashmap = "6"
 bincode = "1.3.3"
 borsh = { version = "1", default-features = false, features = ["derive"] }
 bytemuck = { version = "1.23.2", features = ["derive"] }
@@ -47,7 +49,7 @@ pinocchio-token = { version = "0.5.0" }
 pinocchio-token-2022 = { version = "0.2.0" }
 rand = "0.10.0"
 regex = "1.12.2"
-reqwest = "0.13.1"
+reqwest = { version = "0.13.1", features = ["json"] }
 rand_distr = "0.6.0"
 rust_decimal = { version = "1.40.0", features = ["macros"] }
 serde = { version = "1.0.0", features = ["derive"] }
@@ -56,6 +58,7 @@ solana-account = "3.3.0"
 solana-account-view = "1.0"
 solana-address = "2.0.0"
 solana-client = "3.1.6"
+solana-cluster-type = "3.1.0"
 solana-commitment-config = "3.1.0"
 solana-cpi = "3.1.0"
 solana-compute-budget-interface = "3.0.0"

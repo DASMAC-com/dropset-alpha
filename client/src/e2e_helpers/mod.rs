@@ -76,14 +76,15 @@ impl E2e {
         rpc: Option<CustomRpcClient>,
         users: impl AsRef<[User<'_>]>,
     ) -> anyhow::Result<Self> {
-        E2e::new_users_and_market_with_mint_decimals(rpc, users, None, None).await
+        E2e::new_users_and_market_with_options(rpc, users, None, None, None).await
     }
 
-    pub async fn new_users_and_market_with_mint_decimals(
+    pub async fn new_users_and_market_with_options(
         rpc: Option<CustomRpcClient>,
         users: impl AsRef<[User<'_>]>,
         base_mint_decimals: Option<u8>,
         quote_mint_decimals: Option<u8>,
+        mint_authority: Option<&Keypair>,
     ) -> anyhow::Result<Self> {
         let rpc = rpc.unwrap_or_default();
 
@@ -95,8 +96,10 @@ impl E2e {
         // Create new random base/quote tokens and derive the market context from them.
         let base_decimals = base_mint_decimals.unwrap_or(8);
         let quote_decimals = quote_mint_decimals.unwrap_or(8);
-        let (base, base_mint_authority) = create_token(&rpc, None, base_decimals).await?;
-        let (quote, quote_mint_authority) = create_token(&rpc, None, quote_decimals).await?;
+        let (base, base_mint_authority) =
+            create_token(&rpc, None, base_decimals, mint_authority).await?;
+        let (quote, quote_mint_authority) =
+            create_token(&rpc, None, quote_decimals, mint_authority).await?;
         let market = MarketContext::new(base, quote);
 
         let register_market_txn = market
@@ -166,12 +169,24 @@ impl E2e {
 }
 
 /// Creates a new token mint on-chain. Returns the [`TokenContext`] and the mint authority keypair.
+///
+/// If `mint_authority` is provided, it is used as the mint authority (and funded if needed).
+/// Otherwise a fresh keypair is generated.
 async fn create_token(
     rpc: &CustomRpcClient,
     token_program: Option<Address>,
     mint_decimals: u8,
+    mint_authority: Option<&Keypair>,
 ) -> anyhow::Result<(TokenContext, Keypair)> {
-    let authority = rpc.fund_new_account().await?;
+    let authority = match mint_authority {
+        Some(kp) => {
+            if !account_exists(&rpc.client, &kp.pubkey()).await? {
+                rpc.fund_account(&kp.pubkey()).await?;
+            }
+            kp.insecure_clone()
+        }
+        None => rpc.fund_new_account().await?,
+    };
     let mint = Keypair::new();
     let token_program = token_program.unwrap_or(spl_token_interface::ID);
 

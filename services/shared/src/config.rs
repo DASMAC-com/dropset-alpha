@@ -10,7 +10,7 @@ use client::transactions::CustomRpcClient;
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use solana_address::Address;
-use solana_keypair::Keypair;
+use solana_keypair::{Keypair, Signer};
 
 fn services_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("services")
@@ -87,6 +87,23 @@ impl ValidSharedConfig {
             quote_mint,
             rpc_url,
         })
+    }
+
+    /// Builds a [`ValidSharedConfig`] directly from a [`Service`]'s config.toml and keypair.json.
+    pub async fn from_service(service: Service) -> anyhow::Result<Self> {
+        #[derive(serde::Deserialize)]
+        struct SharedFields {
+            rpc_url: String,
+            base_mint: String,
+            quote_mint: String,
+        }
+
+        let cfg: SharedFields = deserialize_service_config(service)?;
+        Self::new(service.keypair_path(), cfg.base_mint, cfg.quote_mint, cfg.rpc_url).await
+    }
+
+    pub fn address(&self) -> Address {
+        self.keypair.pubkey()
     }
 }
 
