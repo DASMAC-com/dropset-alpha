@@ -1,51 +1,39 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::HashSet,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{
+            AtomicBool,
+            Ordering,
+        },
         Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use anyhow::Context;
-use client::{context::token::TokenContext, transactions::CustomRpcClient};
+use client::{
+    context::token::TokenContext,
+    transactions::CustomRpcClient,
+};
 use dashmap::DashMap;
 use solana_address::Address;
 use solana_client::rpc_config::CommitmentConfig;
 use solana_cluster_type::ClusterType;
-use solana_keypair::{Keypair, Signer};
+use solana_keypair::{
+    Keypair,
+    Signer,
+};
 use solana_sdk::message::Instruction;
-use tokio::sync::{mpsc, oneshot};
+use tokio::{
+    sync::{
+        mpsc,
+        oneshot,
+    },
+    time::Instant,
+};
 
-/// Solana public RPC rate limits (devnet & testnet):
-///   - 100 requests per 10s per IP (all RPCs combined)
-///   - 40 requests per 10s per IP for a single RPC method
-///   - 40 concurrent connections per IP
-///   - 100 MB per 30s
-///
-/// The binding constraint for us is **40 requests per 10s for a single RPC**
-/// (the `sendTransaction` call), i.e. 4 req/s sustained, ~240/min.
-///
-/// We track a 60-second sliding window of processed requests to decide
-/// fast vs. slow mode.
-const WINDOW_DURATION: Duration = Duration::from_secs(60);
+use crate::rate_window::RateWindow;
 
-/// Enter slow (batched) mode when the 60s window exceeds this many requests.
-/// 200/min is approaching the 240/min hard limit, leaving ~17% headroom.
-const HIGH_WATERMARK: usize = 200;
-
-/// Exit slow mode once the window drops below this. Provides hysteresis so
-/// we don't thrash between modes at the boundary.
-const LOW_WATERMARK: usize = 100;
-
-/// In slow mode, the processor sleeps this long between drain cycles to
-/// accumulate requests into batches.
-const DRAIN_INTERVAL: Duration = Duration::from_millis(2500);
-
-/// Maximum number of mint requests packed into a single Solana transaction.
-/// Each request uses ~2 instructions (create_ata_idempotent + mint_to_checked).
-/// Conservative limit to stay well within the 1232-byte transaction size cap.
-const MAX_BATCH_SIZE: usize = 4;
 
 pub struct FaucetRequest {
     pub address: Address,
@@ -69,6 +57,10 @@ pub struct FaucetState {
     pub cooldowns: DashMap<(Address, Address), Instant>,
     /// Whether the processor is currently in slow (batched) mode.
     pub slow_mode: AtomicBool,
+    /// Maximum mint requests per Solana transaction.
+    pub max_batch_size: usize,
+    /// Minimum delay between consecutive `sendTransaction` RPC calls.
+    pub min_tx_interval: Duration,
     /// Channel for submitting requests to the processor.
     pub tx: mpsc::UnboundedSender<FaucetRequest>,
 }
@@ -176,8 +168,11 @@ impl FaucetState {
 
 /// Runs the processor loop. Reads requests from `rx`, decides fast vs. slow
 /// mode based on the sliding window, and submits transactions.
-pub async fn processor_loop(state: Arc<FaucetState>, mut rx: mpsc::UnboundedReceiver<FaucetRequest>) {
-    let mut window: VecDeque<Instant> = VecDeque::new();
+pub async fn processor_loop(
+    state: Arc<FaucetState>,
+    mut rx: mpsc::UnboundedReceiver<FaucetRequest>,
+) {
+    let mut rate = RateWindow::from_interval(state.min_tx_interval.as_millis() as u64);
 
     loop {
         // Wait for at least one request.
@@ -188,20 +183,12 @@ pub async fn processor_loop(state: Arc<FaucetState>, mut rx: mpsc::UnboundedRece
 
         let mut batch = vec![first];
 
-        // Prune the window and check mode.
-        let now = Instant::now();
-        window.retain(|t| now.duration_since(*t) < WINDOW_DURATION);
+        rate.prune();
 
-        if state.slow_mode.load(Ordering::Relaxed) {
-            // In slow mode: sleep to accumulate more requests.
-            tokio::time::sleep(DRAIN_INTERVAL).await;
-
-            // Check if we can exit slow mode.
-            let now = Instant::now();
-            window.retain(|t| now.duration_since(*t) < WINDOW_DURATION);
-            if window.len() < LOW_WATERMARK {
-                state.slow_mode.store(false, Ordering::Relaxed);
-            }
+        if rate.is_slow() {
+            // Sleep to accumulate more requests, then re-evaluate.
+            tokio::time::sleep(rate.drain_interval()).await;
+            rate.try_exit_slow();
         }
 
         // Drain all pending requests from the channel.
@@ -209,22 +196,20 @@ pub async fn processor_loop(state: Arc<FaucetState>, mut rx: mpsc::UnboundedRece
             batch.push(req);
         }
 
-        // Record this batch in the window.
-        let now = Instant::now();
-        for _ in 0..batch.len() {
-            window.push_back(now);
-        }
-
-        // Check if we should enter slow mode.
-        if !state.slow_mode.load(Ordering::Relaxed) && window.len() > HIGH_WATERMARK {
-            state.slow_mode.store(true, Ordering::Relaxed);
-        }
+        // Record this batch and update mode.
+        let slow = rate.record(batch.len());
+        state.slow_mode.store(slow, Ordering::Relaxed);
 
         // Process in sub-batches to stay within transaction size limits.
-        // Drain into owned chunks since process_batch needs ownership of the oneshot senders.
+        // Delay between sub-batches to respect the Solana RPC rate limit.
         let mut remaining = batch;
+        let mut first_chunk = true;
         while !remaining.is_empty() {
-            let take = remaining.len().min(MAX_BATCH_SIZE);
+            if !first_chunk {
+                tokio::time::sleep(state.min_tx_interval).await;
+            }
+            first_chunk = false;
+            let take = remaining.len().min(state.max_batch_size);
             let chunk: Vec<FaucetRequest> = remaining.drain(..take).collect();
             process_batch(&state, chunk).await;
         }
@@ -291,10 +276,7 @@ async fn process_batch(state: &FaucetState, batch: Vec<FaucetRequest>) {
 
     match result {
         Ok(parsed) => {
-            let sig = parsed
-                .parsed_transaction
-                .signature
-                .to_string();
+            let sig = parsed.parsed_transaction.signature.to_string();
             for tx in responders {
                 let _ = tx.send(Ok(sig.clone()));
             }

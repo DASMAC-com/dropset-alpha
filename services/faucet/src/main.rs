@@ -1,4 +1,5 @@
 pub mod config;
+pub mod rate_window;
 pub mod state;
 
 use std::{
@@ -95,6 +96,8 @@ async fn main() -> anyhow::Result<()> {
         mint_cache: DashMap::new(),
         cooldowns: DashMap::new(),
         slow_mode: false.into(),
+        max_batch_size: cfg.max_batch_size,
+        min_tx_interval: std::time::Duration::from_millis(cfg.min_tx_interval_ms),
         tx,
     });
 
