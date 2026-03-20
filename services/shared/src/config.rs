@@ -13,6 +13,7 @@ use client::{
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use solana_address::Address;
+use solana_cluster_type::ClusterType;
 use solana_keypair::{
     Keypair,
     Signer,
@@ -57,6 +58,7 @@ pub struct ValidSharedConfig {
     pub base: TokenContext,
     pub quote: TokenContext,
     pub rpc_url: Url,
+    pub cluster: ClusterType,
 }
 
 impl ValidSharedConfig {
@@ -105,11 +107,19 @@ impl ValidSharedConfig {
         let kp_bytes: Vec<u8> = serde_json::from_reader(kp_file)?;
         let keypair = Keypair::try_from(kp_bytes.as_slice())?;
 
+        let cluster = rpc.resolve_cluster().await?;
+        anyhow::ensure!(
+            cluster != ClusterType::MainnetBeta,
+            "Refusing to operate against mainnet-beta. \
+             The faucet is only for testnet/devnet/localnet."
+        );
+
         Ok(Self {
             keypair,
             base,
             quote,
             rpc_url,
+            cluster,
         })
     }
 

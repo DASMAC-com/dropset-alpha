@@ -1645,6 +1645,7 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-address 2.0.0",
+ "solana-cluster-type",
  "solana-keypair",
  "solana-sdk",
  "strum",
