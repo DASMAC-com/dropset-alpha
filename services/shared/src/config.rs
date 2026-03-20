@@ -6,11 +6,17 @@ use std::{
 };
 
 use anyhow::Context;
-use client::transactions::CustomRpcClient;
+use client::{
+    context::token::TokenContext,
+    transactions::CustomRpcClient,
+};
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use solana_address::Address;
-use solana_keypair::{Keypair, Signer};
+use solana_keypair::{
+    Keypair,
+    Signer,
+};
 
 fn services_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("services")
@@ -48,8 +54,8 @@ impl Service {
 /// Validated config inputs.
 pub struct ValidSharedConfig {
     pub keypair: Keypair,
-    pub base_mint: Address,
-    pub quote_mint: Address,
+    pub base: TokenContext,
+    pub quote: TokenContext,
     pub rpc_url: Url,
 }
 
@@ -60,6 +66,13 @@ impl ValidSharedConfig {
         quote_mint: String,
         rpc_url: String,
     ) -> Result<Self, anyhow::Error> {
+        let rpc_url =
+            Url::try_from(rpc_url.as_str()).context(format!("Invalid RPC url: {}", rpc_url))?;
+
+        let rpc = CustomRpcClient::new_from_url(rpc_url.as_str(), Default::default());
+
+        rpc.validate_endpoint().await?;
+
         let base_mint = Address::from_str(&base_mint).context(anyhow::anyhow!(
             "Couldn't convert base mint `{}` to address",
             &base_mint
@@ -69,22 +82,33 @@ impl ValidSharedConfig {
             &quote_mint
         ))?;
 
+        let base_msg = format!("Couldn't find base mint account on-chain: {base_mint}");
+        let base_account = rpc
+            .client
+            .get_account(&base_mint)
+            .await
+            .with_context(|| base_msg)?;
+        let base =
+            TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
+
+        let quote_msg = format!("Couldn't find quote mint account on-chain: {quote_mint}");
+        let quote_account = rpc
+            .client
+            .get_account(&quote_mint)
+            .await
+            .with_context(|| quote_msg)?;
+        let quote =
+            TokenContext::from_account_data(quote_mint, quote_account.owner, &quote_account.data)?;
+
         let kp_file = fs::File::open(&keypair_path)
             .with_context(|| anyhow::anyhow!("Couldn't open keypair file: {:#?}", keypair_path))?;
         let kp_bytes: Vec<u8> = serde_json::from_reader(kp_file)?;
         let keypair = Keypair::try_from(kp_bytes.as_slice())?;
 
-        let rpc_url =
-            Url::try_from(rpc_url.as_str()).context(format!("Invalid RPC url: {}", rpc_url))?;
-
-        CustomRpcClient::new_from_url(rpc_url.as_str(), Default::default())
-            .validate_endpoint()
-            .await?;
-
         Ok(Self {
             keypair,
-            base_mint,
-            quote_mint,
+            base,
+            quote,
             rpc_url,
         })
     }
@@ -99,7 +123,13 @@ impl ValidSharedConfig {
         }
 
         let cfg: SharedFields = deserialize_service_config(service)?;
-        Self::new(service.keypair_path(), cfg.base_mint, cfg.quote_mint, cfg.rpc_url).await
+        Self::new(
+            service.keypair_path(),
+            cfg.base_mint,
+            cfg.quote_mint,
+            cfg.rpc_url,
+        )
+        .await
     }
 
     pub fn address(&self) -> Address {
