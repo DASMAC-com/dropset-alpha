@@ -10,10 +10,7 @@ use rand_distr::{
     LogNormal,
     Poisson,
 };
-use tokio::time::{
-    Interval,
-    MissedTickBehavior,
-};
+use tokio::time::Interval;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Side {
@@ -53,7 +50,7 @@ impl ActivityProfile {
     /// A passive, slow taker: rare, small pokes.
     pub fn passive() -> Self {
         Self {
-            interval: tokio::time::interval(Duration::from_millis(3000)),
+            interval: tokio::time::interval(Duration::from_millis(4000)),
             lambda_quiet: 0.2,
             lambda_burst: 2.5,
             burst_entry_prob: 0.05,
@@ -64,7 +61,7 @@ impl ActivityProfile {
     /// A normal retail taker: occasional bursts.
     pub fn retail() -> Self {
         Self {
-            interval: tokio::time::interval(Duration::from_millis(750)),
+            interval: tokio::time::interval(Duration::from_millis(2000)),
             lambda_quiet: 0.5,
             lambda_burst: 5.0,
             burst_entry_prob: 0.1,
@@ -74,12 +71,8 @@ impl ActivityProfile {
 
     /// An aggressive taker: frequent, intense bursts.
     pub fn aggressive() -> Self {
-        // This taker takes so often in the tests that it needs to skip missed ticks since `mollusk`
-        // instruction processing is bottlenecked by the single-threaded runtime.
-        let mut interval = tokio::time::interval(Duration::from_millis(100));
-        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Self {
-            interval,
+            interval: tokio::time::interval(Duration::from_millis(750)),
             lambda_quiet: 1.0,
             lambda_burst: 12.0,
             burst_entry_prob: 0.2,
@@ -244,6 +237,8 @@ impl TakerStrategy {
 }
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic;
+
     use client::{
         e2e_helpers::test_accounts,
         mollusk_helpers::{
@@ -420,9 +415,12 @@ mod tests {
         println!("Total fills: {}", fills.len());
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn poisson_takers_dropset_market() -> anyhow::Result<()> {
-        const TEST_DURATION: u64 = 5;
+        // This isn't a literal duration; with the `tokio` flag `start_paused = true`, each
+        // sleep is simulated by lurching the wall clock forward instead of literally waiting.
+        // The real test duration should be less than a few seconds.
+        const TEST_DURATION: u64 = 20;
 
         let maker_keypair = test_accounts::acc_1111();
         let taker_keypairs = [
@@ -545,12 +543,16 @@ mod tests {
         let taker_4 = Taker::new(test_accounts::acc_CCCC().pubkey(), whale(15000, 9001));
         let taker_5 = Taker::new(test_accounts::acc_FFFF().pubkey(), sniper(3000, 31337));
 
+        let num_takes = atomic::AtomicU64::new(0);
+        let increment = || num_takes.fetch_add(1, atomic::Ordering::Relaxed);
+
         tokio::select! {
             _ = taker_1.strategy.interval_loop(|TakerFill { side, size }| {
                 let res = mollusk.process_instruction(&market_ctx.market_order(
                     taker_1.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                increment();
                 assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_2.strategy.interval_loop(|TakerFill { side, size }| {
@@ -558,6 +560,7 @@ mod tests {
                     taker_2.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                increment();
                 assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_3.strategy.interval_loop(|TakerFill { side, size }| {
@@ -565,6 +568,7 @@ mod tests {
                     taker_3.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                increment();
                 assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_4.strategy.interval_loop(|TakerFill { side, size }| {
@@ -572,6 +576,7 @@ mod tests {
                     taker_4.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                increment();
                 assert!(res.program_result.is_ok());
             }) => {},
             _ = taker_5.strategy.interval_loop(|TakerFill { side, size }| {
@@ -579,10 +584,15 @@ mod tests {
                     taker_5.address,
                     MarketOrderInstructionData::new(size, side.is_buy(), true),
                 ));
+                increment();
                 assert!(res.program_result.is_ok());
             }) => {},
             _ = tokio::time::sleep(Duration::from_secs(TEST_DURATION)) => { println!("Test complete!") },
         }
+
+        // Ensure the `start_paused` `tokio` feature works as expected by checking that the number
+        // of takes is some reasonably large amount.
+        assert!(num_takes.into_inner() > 100);
 
         Ok(())
     }

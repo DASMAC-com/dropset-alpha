@@ -21,3 +21,4 @@ tokio.workspace = true
 
 [dev-dependencies]
 solana-account.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
