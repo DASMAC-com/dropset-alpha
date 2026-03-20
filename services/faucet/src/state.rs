@@ -108,11 +108,6 @@ impl FaucetState {
         *self.recent_blockhash.read().unwrap()
     }
 
-    /// Returns `true` if the mint is one of the configured base/quote mints.
-    pub fn is_known_mint(&self, mint: &Address) -> bool {
-        *mint == self.base.mint_address || *mint == self.quote.mint_address
-    }
-
     /// Resolves which Solana cluster the RPC is connected to by matching
     /// the genesis hash. Refuses to operate against mainnet-beta.
     ///

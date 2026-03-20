@@ -1,5 +1,6 @@
+//! See the tests for this crate at [dropset_services_shared::faucet_client].
+
 pub mod config;
-pub mod rate_window;
 pub mod state;
 
 use std::{
@@ -23,10 +24,11 @@ use client::transactions::{
     CustomRpcClient,
     SendTransactionConfig,
 };
-use serde::{
-    Deserialize,
-    Serialize,
+use dropset_services_shared::faucet_client::{
+    MintRequest,
+    MintResponse,
 };
+use serde::Serialize;
 use solana_address::Address;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
@@ -38,21 +40,6 @@ use crate::{
     config::get_validated_config,
     state::FaucetState,
 };
-
-#[derive(Deserialize)]
-struct MintRequest {
-    /// Recipient address.
-    address: String,
-    /// Mint address of the token to dispense.
-    mint: String,
-    /// Amount in whole tokens (will be multiplied by 10^mint_decimals).
-    #[serde(default = "default_amount")]
-    amount: u64,
-}
-
-fn default_amount() -> u64 {
-    1
-}
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -133,32 +120,6 @@ async fn faucet_handler(
         }
     };
 
-    let mint: Address = match req.mint.parse() {
-        Ok(m) => m,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("Invalid mint: {}", req.mint),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    if !state.is_known_mint(&mint) {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: format!(
-                    "Unknown mint: {mint}. Known mints: base={}, quote={}",
-                    state.base.mint_address, state.quote.mint_address
-                ),
-            }),
-        )
-            .into_response();
-    }
-
     if req.amount == 0 {
         return (
             StatusCode::BAD_REQUEST,
@@ -169,10 +130,8 @@ async fn faucet_handler(
             .into_response();
     }
 
-    let is_base = mint == state.base.mint_address;
-
-    match state.create_signed_transfer(&address, is_base, req.amount) {
-        Ok(tx) => Json(tx).into_response(),
+    match state.create_signed_transfer(&address, req.is_base, req.amount) {
+        Ok(tx) => Json(MintResponse { transaction: tx }).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
