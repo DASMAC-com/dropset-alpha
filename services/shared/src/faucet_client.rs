@@ -1,5 +1,8 @@
 use reqwest::Url;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use solana_address::Address;
 
 #[derive(Serialize)]
@@ -54,7 +57,10 @@ pub async fn request_tokens(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Service, ValidSharedConfig};
+    use crate::config::{
+        Service,
+        ValidSharedConfig,
+    };
 
     /// Integration test that requires a running faucet and localnet.
     /// Reads everything from the faucet's config.toml and keypair.json — no env vars needed.
@@ -70,7 +76,7 @@ mod tests {
         let faucet_url = Url::parse("http://localhost:9090").unwrap();
         let address = shared.address();
 
-        let sig = request_tokens(&faucet_url, &address, &shared.base_mint, 5)
+        let sig = request_tokens(&faucet_url, &address, &shared.base, 5)
             .await
             .expect("Faucet request should succeed");
 
