@@ -52,10 +52,11 @@ async fn main() -> anyhow::Result<()> {
                 Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {
-                        let log_msg = format_timestamped_log(
-                            "ERROR: Fill returned zero amount, book likely empty — skipping",
-                        );
-                        eprintln!("{log_msg}");
+                        let log_message =
+                            "ERROR: Fill returned zero amount, book likely empty — skipping";
+                        if cfg.verbose {
+                            eprintln!("{}", format_timestamped_log(log_message));
+                        }
                     }
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },
