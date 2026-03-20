@@ -5,9 +5,15 @@ use std::{
 };
 
 use client::{
-    print_kv,
-    transactions::CustomRpcClient,
+    fmt_kv,
+    transactions::{
+        CustomRpcClient,
+        TransactionSubmitError,
+    },
 };
+use dropset_interface::error::DropsetError;
+use dropset_services_shared::debug_logs::format_timestamped_log;
+use solana_keypair::Signer;
 use tokio::sync::watch;
 
 use crate::{
@@ -31,21 +37,43 @@ pub async fn throttled_order_update(
         // Wait until the value has changed. Not equality wise, but a sender posting a new value.
         rx.changed().await?;
 
-        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
-        let msg = format!("[{timestamp}]");
-        print_kv!(msg, *rx.borrow());
+        let update = *rx.borrow();
+        let log_msg = format_timestamped_log(update);
+        maker_ctx.try_borrow_mut()?.logger.log(log_msg);
 
         // Then cancel all orders and post new ones.
         let (maker_keypair, instructions) = {
-            let ctx = maker_ctx.try_borrow()?;
+            let mut ctx = maker_ctx.try_borrow_mut()?;
             let maker_keypair = ctx.keypair.insecure_clone();
-            let instructions = ctx.create_cancel_and_post_instructions()?;
+            let instructions = ctx.create_update_book_instructions()?;
             (maker_keypair, instructions)
         };
 
         if !instructions.is_empty() {
-            rpc.send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
-                .await?;
+            match rpc
+                .send_and_confirm_txn(&maker_keypair, &[&maker_keypair], &instructions)
+                .await
+            {
+                Ok(_) => {
+                    let balance = rpc.client.get_balance(&maker_keypair.pubkey()).await;
+                    let mut ctx = maker_ctx.try_borrow_mut()?;
+                    ctx.needs_expand = false;
+                    if let Ok(balance) = balance {
+                        ctx.update_sol_balance(balance);
+                    }
+                    ctx.render_chart();
+                }
+                Err(TransactionSubmitError::Dropset(DropsetError::NoFreeSectorsRemaining)) => {
+                    let mut ctx = maker_ctx.try_borrow_mut()?;
+                    ctx.logger.log(fmt_kv!(
+                        "Expanding market",
+                        "no free sectors remaining",
+                        client::LogColor::Info,
+                    ));
+                    ctx.needs_expand = true;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
 
         // Sleep for the throttle window in milliseconds before doing work again.

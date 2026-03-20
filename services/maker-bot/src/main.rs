@@ -2,6 +2,7 @@
 //! [`crate::model::calculate_spreads`].
 
 pub mod config;
+pub mod logger;
 pub mod maker_context;
 pub mod maker_state;
 pub mod model;
@@ -13,6 +14,7 @@ pub mod utils;
 use std::{
     cell::RefCell,
     collections::HashSet,
+    fmt,
     rc::Rc,
 };
 
@@ -23,11 +25,11 @@ use client::transactions::{
 use dropset_services_shared::oanda_types::CandlestickGranularity;
 use maker_state::*;
 use order_flow::*;
+use rust_decimal::Decimal;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
 };
-use strum_macros::Display;
 use tokio::sync::watch;
 
 use crate::{
@@ -38,10 +40,19 @@ use crate::{
 pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
 pub const NUM_CANDLES: u64 = 1;
 
-#[derive(Debug, Copy, Clone, Display)]
+#[derive(Debug, Copy, Clone)]
 pub enum TaskUpdate {
     MakerState,
-    Price,
+    Price(Decimal),
+}
+
+impl fmt::Display for TaskUpdate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TaskUpdate::MakerState => write!(f, "Orders filled"),
+            TaskUpdate::Price(p) => write!(f, "Price feed update — {p}"),
+        }
+    }
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -64,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
         )),
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(true),
+            debug_logs: Some(!cfg.visualize),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );

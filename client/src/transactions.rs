@@ -269,16 +269,17 @@ async fn send_transaction_with_config(
                 .collect_vec();
 
             if matches!(config.debug_logs, Some(true)) {
-                print!(
-                    "{}",
-                    PrettyTransaction {
-                        sender: payer.pubkey(),
-                        signature,
-                        indent_size: 2,
-                        transaction: &parsed_transaction,
-                        instruction_filter: &config.program_id_filter,
-                    }
-                );
+                let pretty = PrettyTransaction {
+                    sender: payer.pubkey(),
+                    signature,
+                    indent_size: 2,
+                    transaction: &parsed_transaction,
+                    instruction_filter: &config.program_id_filter,
+                }
+                .to_string();
+                if !pretty.is_empty() {
+                    println!("{pretty}");
+                }
 
                 for event in dropset_events.iter() {
                     println!("{event:?}");
@@ -291,10 +292,13 @@ async fn send_transaction_with_config(
             })
         }
         Err(error) => {
-            PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
-                print!("{err}");
-                print_kv!("Payer", payer.pubkey(), LogColor::Error);
-            });
+            if matches!(config.debug_logs, Some(true)) {
+                PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
+                    print!("{err}");
+                    print_kv!("Sender", payer.pubkey(), LogColor::Gray);
+                    println!();
+                });
+            }
             match DropsetError::from_client_error(&error, final_instructions) {
                 Some(dropset_err) => Err(TransactionSubmitError::Dropset(dropset_err)),
                 None => Err(TransactionSubmitError::Other(

@@ -1,6 +1,9 @@
 # Market taker bot *(experimental)*
 
-A taker bot that periodically sends random market orders to a `dropset` market. Intended for experimentation and local testing, not production use.
+A prototype taker bot that generates realistic order flow against a `dropset`
+market. Order arrival is modeled as a Poisson process with two states (quiet /
+burst), and order sizes are drawn from a LogNormal distribution. Intended for
+experimentation and local testing, not production use.
 
 ## Running
 

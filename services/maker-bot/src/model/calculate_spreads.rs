@@ -2,7 +2,7 @@
 //! Avellaneda-Stoikov paper here: <https://people.orie.cornell.edu/sfs33/LimitOrderBook.pdf>
 //!
 //! Tune the model parameters to your specific market's characteristics in
-//! [`crate::model_parameters`].
+//! [`crate::model::parameters`].
 
 use std::sync::LazyLock;
 

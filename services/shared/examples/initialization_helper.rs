@@ -26,14 +26,18 @@ use solana_keypair::Keypair;
 use solana_sdk::signer::Signer;
 use toml_edit::DocumentMut;
 
+// If you change these amounts, make sure the corresponding `config.toml` files still make sense.
+// Inventory targets, order sizes, and similar parameters are expressed in base/quote atoms, so
+// they need to be consistent with the amounts deposited here. For example, if the maker deposits
+// 10_000_000_000 base atoms but `target_base` is still 100_000, it will be heavily sell-biased.
 const FAUCET_INITIAL_BASE: u64 = 100_000_000_000;
 const FAUCET_INITIAL_QUOTE: u64 = 100_000_000_000;
 
-const MAKER_INITIAL_BASE: u64 = 100_000;
-const MAKER_INITIAL_QUOTE: u64 = 100_000;
+const MAKER_INITIAL_BASE: u64 = 10_000_000_000;
+const MAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 
-const TAKER_INITIAL_BASE: u64 = 100_000;
-const TAKER_INITIAL_QUOTE: u64 = 100_000;
+const TAKER_INITIAL_BASE: u64 = 1_000_000_000_000;
+const TAKER_INITIAL_QUOTE: u64 = 1_000_000_000_000;
 
 /// A helper example to bootstrap a market and a market maker on a localnet validator.
 ///
@@ -41,8 +45,9 @@ const TAKER_INITIAL_QUOTE: u64 = 100_000;
 ///
 /// - Creates a market from two new tokens.
 /// - Mints initial base/quote amounts to the faucet, maker, and taker.
-/// - For the maker and taker, the base/quote amounts are deposited to the `dropset` market,
-///   creating a new seat.
+/// - For the maker, the base/quote amounts are deposited to the `dropset` market, creating a seat.
+/// - The taker keeps their balance in their associated token accounts, since the MarketOrder
+///   instruction expects the balance to be in their ATA, not their seat.
 /// - Writes the maker, taker, and faucet's keypair to their appropriate, respective keypair files.
 /// - Patches `base_mint` and `quote_mint` into the appropriate config files.
 #[tokio::main]
@@ -51,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
         None,
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(false),
+            debug_logs: Some(true),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
@@ -66,19 +71,21 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
     // Mint the initial amounts to each account.
-    let e2e = E2e::new_users_and_market(
+    let e2e = E2e::new_users_and_market_with_mint_decimals(
         Some(rpc),
         [
             User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
             User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
             User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
         ],
+        Some(6),
+        Some(6),
     )
     .await?;
 
-    // Create the maker and taker's market seats by depositing their base and quote.
+    // Create the maker market seat by depositing base and quote. Note that the taker does not need
+    // a market seat and must have the base/quote token in their token accounts, not market seats.
     deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
-    deposit_base_and_quote_to_market(taker, &e2e, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE).await?;
 
     // Write each keypair to the appropriate file.
     write_keypair_to_file(Service::Faucet, faucet)?;

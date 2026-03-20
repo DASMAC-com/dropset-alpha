@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 
 use crate::{
-    client_helpers::decimal_pow10_i16,
+    client_helpers::decimal_pow10,
     EncodedPrice,
     OrderInfoError,
     ValidatedPriceMantissa,
@@ -74,7 +74,7 @@ impl TryFrom<DecodedPrice> for Decimal {
                 price_mantissa,
             } => {
                 let mantissa = Decimal::from(price_mantissa.as_u32());
-                let res = decimal_pow10_i16(mantissa, price_exponent_biased as i16 - BIAS as i16);
+                let res = decimal_pow10(mantissa, price_exponent_biased as i64 - BIAS as i64)?;
                 Ok(res)
             }
         }

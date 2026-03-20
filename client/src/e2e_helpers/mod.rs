@@ -76,6 +76,15 @@ impl E2e {
         rpc: Option<CustomRpcClient>,
         users: impl AsRef<[User<'_>]>,
     ) -> anyhow::Result<Self> {
+        E2e::new_users_and_market_with_mint_decimals(rpc, users, None, None).await
+    }
+
+    pub async fn new_users_and_market_with_mint_decimals(
+        rpc: Option<CustomRpcClient>,
+        users: impl AsRef<[User<'_>]>,
+        base_mint_decimals: Option<u8>,
+        quote_mint_decimals: Option<u8>,
+    ) -> anyhow::Result<Self> {
         let rpc = rpc.unwrap_or_default();
 
         let default_payer = test_accounts::default_payer().insecure_clone();
@@ -84,8 +93,10 @@ impl E2e {
         }
 
         // Create new random base/quote tokens and derive the market context from them.
-        let (base, base_mint_authority) = create_token(&rpc, None).await?;
-        let (quote, quote_mint_authority) = create_token(&rpc, None).await?;
+        let base_decimals = base_mint_decimals.unwrap_or(8);
+        let quote_decimals = quote_mint_decimals.unwrap_or(8);
+        let (base, base_mint_authority) = create_token(&rpc, None, base_decimals).await?;
+        let (quote, quote_mint_authority) = create_token(&rpc, None, quote_decimals).await?;
         let market = MarketContext::new(base, quote);
 
         let register_market_txn = market
@@ -158,11 +169,11 @@ impl E2e {
 async fn create_token(
     rpc: &CustomRpcClient,
     token_program: Option<Address>,
+    mint_decimals: u8,
 ) -> anyhow::Result<(TokenContext, Keypair)> {
     let authority = rpc.fund_new_account().await?;
     let mint = Keypair::new();
     let token_program = token_program.unwrap_or(spl_token_interface::ID);
-    let decimals = 10;
 
     let mint_rent = rpc
         .client
@@ -173,7 +184,7 @@ async fn create_token(
         &authority.pubkey(),
         &mint.pubkey(),
         mint_rent,
-        decimals,
+        mint_decimals,
         &token_program,
     )?;
 
@@ -188,7 +199,7 @@ async fn create_token(
         Some(authority.pubkey()),
         mint.pubkey(),
         token_program,
-        decimals,
+        mint_decimals,
     );
     Ok((token, authority))
 }

@@ -8,6 +8,17 @@ anyhow.workspace = true
 client = { path = "../../client" }
 dropset-interface = { path = "../../interface" }
 dropset-services-shared = { path = "../shared" }
+price = { path = "../../price", features = ["client"] }
+rand_distr.workspace = true
+rust_decimal.workspace = true
 serde.workspace = true
+solana-address.workspace = true
 solana-client.workspace = true
+solana-instruction.workspace = true
+solana-keypair.workspace = true
+rand.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+solana-account.workspace = true
+tokio = { workspace = true, features = ["test-util"] }

@@ -3,25 +3,12 @@ use std::{
     hash::Hash,
 };
 
-use client::{
-    context::market::MarketContext,
-    print_kv,
-};
-use dropset_interface::instructions::{
-    CancelOrderInstructionData,
-    PostOrderInstructionData,
-};
+use client::context::market::MarketContext;
 use dropset_services_shared::oanda_types::{
     CurrencyPair,
     OandaCandlestickResponse,
 };
-use price::{
-    client_helpers::{
-        decimal_pow10_i16,
-        try_encoded_u32_to_decoded_decimal,
-    },
-    to_order_info,
-};
+use price::client_helpers::normalize_non_atoms_price;
 use rust_decimal::Decimal;
 
 pub fn get_normalized_mid_price(
@@ -57,20 +44,7 @@ pub fn get_normalized_mid_price(
         latest_price,
         market_ctx.base.mint_decimals,
         market_ctx.quote.mint_decimals,
-    ))
-}
-
-/// Converts a token price not denominated in atoms to a token price denominated in atoms using
-/// exponentiation based on the base and quote token's decimals.
-pub fn normalize_non_atoms_price(
-    non_atoms_price: Decimal,
-    base_decimals: u8,
-    quote_decimals: u8,
-) -> Decimal {
-    decimal_pow10_i16(
-        non_atoms_price,
-        quote_decimals as i16 - base_decimals as i16,
-    )
+    )?)
 }
 
 /// Returns values from each hashmap whose keys don't exist in the other.
@@ -100,55 +74,9 @@ pub fn split_symmetric_difference<'a, K: Eq + Hash, V1, V2>(
     (a_uniques, b_uniques)
 }
 
-pub fn log_orders(
-    posts: &[PostOrderInstructionData],
-    cancels: &[CancelOrderInstructionData],
-) -> anyhow::Result<()> {
-    for cancel in cancels.iter() {
-        let side = if cancel.is_bid { "bid" } else { "ask" };
-        let decimal_price = try_encoded_u32_to_decoded_decimal(cancel.encoded_price)?;
-        print_kv!(format!("Canceling {side} at"), format!("{decimal_price}"),);
-    }
-
-    for post in posts.iter() {
-        let side = if post.is_bid { "bid" } else { "ask" };
-        let encoded_price = to_order_info(post.order_info_args.clone())?.encoded_price;
-        let decimal_price = try_encoded_u32_to_decoded_decimal(encoded_price.as_u32())?;
-        print_kv!(format!("Posting {side} at"), format!("{decimal_price}"));
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    use rust_decimal::dec;
-
     use super::*;
-
-    #[test]
-    fn varying_decimal_pair() {
-        // Equal decimals => do nothing.
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 6), dec!(1.27));
-
-        // 10 ^ (quote - base) == 10 ^ 1 == multiply by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 5, 6), dec!(12.7));
-
-        // 10 ^ (quote - base) == 10 ^ -1 == divide by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 5), dec!(0.127));
-
-        // 10 ^ (quote - base) == 10 ^ (19 - 11) == multiply by 10 ^ 8
-        assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 11, 19),
-            dec!(127_000_000)
-        );
-
-        // 10 ^ (quote - base) == 10 ^ (11 - 19) = divide by 10 ^ 8
-        assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 19, 11),
-            dec!(0.0000000127)
-        );
-    }
 
     #[test]
     fn split_symmetric_difference_doc_example() {

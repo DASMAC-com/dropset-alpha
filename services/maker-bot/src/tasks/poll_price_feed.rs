@@ -4,7 +4,6 @@ use std::{
     time::Duration,
 };
 
-use client::print_kv;
 use tokio::sync::watch;
 
 use crate::{
@@ -19,7 +18,7 @@ use crate::{
 /// The indefinite task loop for polling the price feed endpoint.
 ///
 /// On each loop iteration, it updates the maker context price info and notifies the
-/// [`throttled_order_update`] task of a [`TaskUpdate::Price`] update.
+/// `throttled_order_update` task of a [`TaskUpdate::Price`] update.
 pub async fn poll_price_feed(
     maker_ctx: Rc<RefCell<MakerContext>>,
     sender: watch::Sender<TaskUpdate>,
@@ -39,8 +38,8 @@ pub async fn poll_price_feed(
                 maker_ctx
                     .try_borrow_mut()?
                     .update_price_from_candlestick(response)?;
-                sender.send(TaskUpdate::Price)?;
-                print_kv!("New mid price", maker_ctx.try_borrow()?.mid_price());
+                let mid = maker_ctx.try_borrow()?.get_mid_price_atoms();
+                sender.send(TaskUpdate::Price(mid))?;
             }
             Err(e) => eprintln!("Price feed error: {e:#?}"),
         }

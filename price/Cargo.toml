@@ -8,12 +8,12 @@ instruction-macros = { path = "../instruction-macros/crates/instruction-macros" 
 pinocchio.workspace = true
 solana-program-error.workspace = true
 static_assertions.workspace = true
-rust_decimal = { workspace = true, optional = true }
+rust_decimal = { workspace = true, optional = true, features = ["maths"] }
 strum = { workspace = true, optional = true }
 strum_macros = { workspace = true, optional = true }
 
 [dev-dependencies]
-rust_decimal = { workspace = true }
+rust_decimal = { workspace = true, features = ["maths"] }
 strum.workspace = true
 strum_macros.workspace = true
 
