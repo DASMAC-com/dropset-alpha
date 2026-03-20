@@ -5,7 +5,7 @@ use std::{
 
 use tokio::time::Instant;
 
-/// Tracks a 60-second sliding window of processed requests and uses hysteresis
+/// Tracks a [WINDOW_DURATION] second sliding window of processed requests and uses hysteresis
 /// to switch between fast (inline) and slow (batched) mode.
 ///
 /// Thresholds are derived from the configured `min_tx_interval_ms`:
@@ -13,8 +13,8 @@ use tokio::time::Instant;
 ///   - `exit_slow`: half of `enter_slow` (hysteresis gap)
 ///   - `drain_interval`: 10x `min_tx_interval` (accumulation period in slow mode)
 ///
-/// For example, with the Solana public RPC defaults (`min_tx_interval_ms = 300`):
-///   - max txns/60s = 200, enter_slow = 166, exit_slow = 83, drain_interval = 3s
+/// For example, with the Solana public RPC defaults (`min_tx_interval_ms = 300`);
+///   - max txns/[WINDOW_DURATION]s = 200, enter_slow = 166, exit_slow = 83, drain_interval = 3s
 pub struct RateWindow {
     window: VecDeque<Instant>,
     slow_mode: bool,
@@ -36,39 +36,32 @@ impl RateWindow {
     /// For the Solana public RPC (devnet/testnet), the binding constraint is:
     ///   **40 requests per 10s per IP for a single RPC method**
     ///   → 4 req/s → 250ms minimum interval.
-    ///   We default to 300ms for ~17% headroom.
+    ///   Default to 300ms for ~17% headroom.
     ///
     /// ## Derivation
     ///
     /// Given `min_tx_interval_ms`:
     ///
-    /// 1. **`max_per_window`** = `60_000 / min_tx_interval_ms`
-    ///    The theoretical maximum number of transactions we can submit within
-    ///    the 60-second sliding window without exceeding the RPC rate limit.
-    ///    e.g. 300ms interval → 60_000 / 300 = 200 txns/min.
+    /// 1. **`max_per_window`** = [`WINDOW_DURATION`]`* 1000 / min_tx_interval_ms` The theoretical
+    ///    maximum number of transactions that can be submitted  within the [WINDOW_DURATION] second
+    ///    sliding window without exceeding the RPC rate limit. For example, with a 300ms interval:
+    ///    [WINDOW_DURATION] * 1000 / 300 = 200 txns/min.
     ///
-    /// 2. **`enter_slow`** = `max_per_window * 83%`
-    ///    We enter slow (batched) mode at 83% of the theoretical max, leaving
-    ///    17% headroom so we don't slam into the hard limit. The remaining
-    ///    capacity absorbs in-flight requests that were queued before the mode
-    ///    switch takes effect.
-    ///    e.g. 200 * 0.83 = 166 txns.
+    /// 2. **`enter_slow`** = `max_per_window * 83%` The slow slow (batched) mode is entered at 83%
+    ///    of the theoretical max, leaving 17% headroom so the hard limit isn't reached abruptly.
+    ///    The remaining capacity absorbs in-flight requests that were queued before the mode switch
+    ///    takes effect. e.g. 200 * 0.83 = 166 txns.
     ///
-    /// 3. **`exit_slow`** = `enter_slow / 2`
-    ///    We only exit slow mode once the window drops to half the entry
-    ///    threshold. This hysteresis gap prevents rapid oscillation between
-    ///    modes when load hovers near the boundary. The wider the gap, the
-    ///    more stable the mode — at the cost of staying in slow mode longer
-    ///    than strictly necessary.
-    ///    e.g. 166 / 2 = 83 txns.
+    /// 3. **`exit_slow`** = `enter_slow / 2` Slow mode is exited once the window drops to half the
+    ///    entry threshold. This hysteresis gap prevents rapid oscillation between modes when load
+    ///    hovers near the boundary. The wider the gap, the more stable the mode — at the cost of
+    ///    staying in slow mode longer than strictly necessary. e.g. 166 / 2 = 83 txns.
     ///
-    /// 4. **`drain_interval`** = `min_tx_interval_ms * 10`
-    ///    In slow mode, we sleep this long before draining the queue. This
-    ///    lets multiple requests accumulate so we can batch them into fewer
-    ///    transactions. 10x the tx interval means each drain cycle can pack
-    ///    up to ~10 transactions' worth of requests (bounded by
-    ///    `max_batch_size`), significantly reducing RPC call volume.
-    ///    e.g. 300ms * 10 = 3s drain interval.
+    /// 4. **`drain_interval`** = `min_tx_interval_ms * 10` In slow mode, this is the time delay
+    ///    before draining the queue. This lets multiple requests accumulate so they can be batched
+    ///    into fewer transactions. 10x the tx interval means each drain cycle can pack up to ~10
+    ///    transactions' worth of requests (bounded by `max_batch_size`), significantly reducing RPC
+    ///    call volume. e.g. 300ms * 10 = 3s drain interval.
     pub fn from_interval(min_tx_interval_ms: u64) -> Self {
         let max_per_window = (WINDOW_DURATION.as_millis() as u64) / min_tx_interval_ms.max(1);
         let enter_slow = ((max_per_window * 83) / 100) as usize;
@@ -196,7 +189,7 @@ mod tests {
         assert!(rate.is_slow());
 
         // 30s later: all entries are still within the 60s window.
-        // Count > exit threshold, so we stay in slow mode.
+        // Count > exit threshold, so stay in slow mode.
         time::advance(Duration::from_secs(30)).await;
         rate.try_exit_slow();
         assert!(rate.is_slow());
@@ -263,7 +256,7 @@ mod tests {
 
         // No new requests arrive. The processor drains every drain_interval.
         // After enough intervals (>60s total), the window fully expires
-        // and we drop below exit threshold → exits slow mode.
+        // and the lower exit threshold is crossed → exit slow mode.
         for _ in 0..25 {
             time::advance(rate.drain_interval()).await;
             rate.try_exit_slow();
@@ -271,7 +264,10 @@ mod tests {
                 break;
             }
         }
-        assert!(!rate.is_slow(), "Should have exited slow mode after window expired");
+        assert!(
+            !rate.is_slow(),
+            "Should have exited slow mode after window expired"
+        );
 
         // Normal low traffic resumes → stays fast.
         rate.record(10);
