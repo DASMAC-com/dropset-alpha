@@ -1647,6 +1647,7 @@ dependencies = [
  "solana-address 2.0.0",
  "solana-cluster-type",
  "solana-keypair",
+ "solana-rpc-client",
  "solana-sdk",
  "strum",
  "strum_macros",
