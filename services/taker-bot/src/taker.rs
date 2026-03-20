@@ -590,8 +590,8 @@ mod tests {
             _ = tokio::time::sleep(Duration::from_secs(TEST_DURATION)) => { println!("Test complete!") },
         }
 
-        // Ensure the `start_paused` `tokio` feature works as expected by checking that the number
-        // of takes is some reasonably large amount.
+        // Ensure the `start_paused` `tokio` feature works with the taker bot activity profile
+        // intervals as expected by checking that the number of takes is a reasonably large amount.
         assert!(num_takes.into_inner() > 100);
 
         Ok(())
