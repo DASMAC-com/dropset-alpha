@@ -1,9 +1,6 @@
 use anyhow::Context;
 use client::{
-    context::{
-        market::MarketContext,
-        token::TokenContext,
-    },
+    context::market::MarketContext,
     fmt_kv,
     transactions::CustomRpcClient,
 };
@@ -129,26 +126,10 @@ impl MakerContext {
 
         let ValidSharedConfig {
             keypair,
-            base_mint,
-            quote_mint,
+            base,
+            quote,
             ..
         } = shared;
-
-        let base_account = rpc
-            .client
-            .get_account(&base_mint)
-            .await
-            .context("Couldn't find base mint account on-chain")?;
-        let base =
-            TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
-
-        let quote_account = rpc
-            .client
-            .get_account(&quote_mint)
-            .await
-            .context("Couldn't find quote mint account on-chain")?;
-        let quote =
-            TokenContext::from_account_data(quote_mint, quote_account.owner, &quote_account.data)?;
 
         let market_ctx = MarketContext::new(base, quote);
 
