@@ -14,6 +14,8 @@ pub struct ValidFaucetConfig {
     pub max_public_tokens: u64,
     pub max_whitelist_tokens: u64,
     pub whitelist: HashSet<Address>,
+    pub max_batch_size: usize,
+    pub min_tx_interval_ms: u64,
 }
 
 #[derive(Deserialize)]
@@ -31,6 +33,10 @@ pub struct FaucetConfigInput {
     pub max_whitelist_tokens: u64,
     #[serde(default)]
     pub whitelist: Vec<String>,
+    #[serde(default = "default_max_batch_size")]
+    pub max_batch_size: usize,
+    #[serde(default = "default_min_tx_interval_ms")]
+    pub min_tx_interval_ms: u64,
 }
 
 fn default_port() -> u16 {
@@ -44,6 +50,16 @@ fn default_max_public() -> u64 {
 }
 fn default_max_whitelist() -> u64 {
     1000
+}
+/// Solana public RPC: 1232-byte tx limit. Each faucet request ≈ 2 instructions
+/// (~250 bytes). 4 requests per tx is conservative but safe.
+fn default_max_batch_size() -> usize {
+    4
+}
+/// Solana public RPC: 40 requests per 10s per RPC method = 4 req/s.
+/// 300ms between calls ≈ 3.3 req/s, ~17% headroom.
+fn default_min_tx_interval_ms() -> u64 {
+    300
 }
 
 async fn validate_config(input: FaucetConfigInput) -> anyhow::Result<ValidFaucetConfig> {
@@ -71,6 +87,8 @@ async fn validate_config(input: FaucetConfigInput) -> anyhow::Result<ValidFaucet
         max_public_tokens: input.max_public_tokens,
         max_whitelist_tokens: input.max_whitelist_tokens,
         whitelist,
+        max_batch_size: input.max_batch_size,
+        min_tx_interval_ms: input.min_tx_interval_ms,
     })
 }
 
