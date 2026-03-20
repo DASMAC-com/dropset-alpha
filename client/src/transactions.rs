@@ -11,6 +11,7 @@ use dropset_interface::error::DropsetError;
 use itertools::Itertools;
 use solana_address::Address;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_cluster_type::ClusterType;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
@@ -119,6 +120,29 @@ impl CustomRpcClient {
             .with_context(|| format!("Failed to connect to Solana RPC at {}", self.client.url()))?;
 
         Ok(())
+    }
+
+    /// Resolves which Solana cluster the RPC is connected to by matching the genesis hash returned
+    /// from the RPC.
+    ///
+    /// Returns the detected [`ClusterType`].
+    pub async fn resolve_cluster(&self) -> anyhow::Result<ClusterType> {
+        let genesis = self
+            .client
+            .get_genesis_hash()
+            .await
+            .context("Failed to fetch genesis hash")?;
+
+        let cluster = [
+            ClusterType::MainnetBeta,
+            ClusterType::Testnet,
+            ClusterType::Devnet,
+        ]
+        .into_iter()
+        .find(|c| c.get_genesis_hash().is_some_and(|h| h == genesis))
+        .unwrap_or(ClusterType::Development);
+
+        Ok(cluster)
     }
 
     pub async fn fund_account(&self, address: &Address) -> anyhow::Result<()> {
