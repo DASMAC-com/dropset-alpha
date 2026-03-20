@@ -1004,6 +1004,7 @@ dependencies = [
  "solana-account-view",
  "solana-address 2.0.0",
  "solana-client",
+ "solana-cluster-type",
  "solana-commitment-config",
  "solana-compute-budget-interface",
  "solana-cpi",
