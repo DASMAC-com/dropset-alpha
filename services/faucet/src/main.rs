@@ -5,27 +5,38 @@ pub mod state;
 use std::{
     collections::HashSet,
     net::SocketAddr,
-    sync::{atomic::Ordering, Arc},
+    sync::Arc,
 };
 
 use axum::{
     extract::State,
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
-    Json, Router,
+    routing::{
+        get,
+        post,
+    },
+    Json,
+    Router,
 };
-use client::transactions::{CustomRpcClient, SendTransactionConfig};
-use dashmap::DashMap;
-use serde::{Deserialize, Serialize};
+use client::transactions::{
+    CustomRpcClient,
+    SendTransactionConfig,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use solana_address::Address;
-use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::CommitmentConfig};
+use solana_client::{
+    nonblocking::rpc_client::RpcClient,
+    rpc_config::CommitmentConfig,
+};
 use solana_keypair::Signer;
-use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     config::get_validated_config,
-    state::{cooldown_eviction_loop, processor_loop, FaucetRequest, FaucetState},
+    state::FaucetState,
 };
 
 #[derive(Deserialize)]
@@ -34,18 +45,13 @@ struct MintRequest {
     address: String,
     /// Mint address of the token to dispense.
     mint: String,
-    /// Amount in whole tokens (will be multiplied by 10^decimals).
+    /// Amount in whole tokens (will be multiplied by 10^mint_decimals).
     #[serde(default = "default_amount")]
     amount: u64,
 }
 
 fn default_amount() -> u64 {
     1
-}
-
-#[derive(Serialize)]
-struct MintResponse {
-    signature: String,
 }
 
 #[derive(Serialize)]
@@ -57,7 +63,6 @@ struct ErrorResponse {
 struct HealthResponse {
     status: &'static str,
     cluster: String,
-    slow_mode: bool,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -68,11 +73,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let shared = cfg.shared;
+    let port = cfg.port;
 
-    let rpc = CustomRpcClient::new(
+    let rpc = Arc::new(CustomRpcClient::new(
         Some(RpcClient::new_with_commitment(
-            shared.rpc_url.to_string(),
+            cfg.shared.rpc_url.to_string(),
             CommitmentConfig::confirmed(),
         )),
         Some(SendTransactionConfig {
@@ -80,53 +85,24 @@ async fn main() -> anyhow::Result<()> {
             debug_logs: Some(true),
             program_id_filter: HashSet::new(),
         }),
-    );
+    ));
 
-    let (tx, rx) = mpsc::unbounded_channel::<FaucetRequest>();
-
-    let state = Arc::new(FaucetState {
-        keypair: Arc::new(shared.keypair),
-        rpc,
-        base_mint: shared.base_mint,
-        quote_mint: shared.quote_mint,
-        cooldown: std::time::Duration::from_secs(cfg.cooldown_secs),
-        max_public_tokens: cfg.max_public_tokens,
-        max_whitelist_tokens: cfg.max_whitelist_tokens,
-        whitelist: cfg.whitelist,
-        mint_cache: DashMap::new(),
-        cooldowns: DashMap::new(),
-        slow_mode: false.into(),
-        max_batch_size: cfg.max_batch_size,
-        min_tx_interval: std::time::Duration::from_millis(cfg.min_tx_interval_ms),
-        tx,
-    });
+    let state = Arc::new(FaucetState::new(cfg, rpc).await?);
 
     let cluster = state.resolve_cluster().await?;
     println!("Faucet starting on cluster: {cluster:?}");
     println!("Faucet address: {}", state.keypair.pubkey());
-    println!("Base mint: {}", state.base_mint);
-    println!("Quote mint: {}", state.quote_mint);
-
-    // Eagerly resolve both mints at startup to verify authority.
-    state.resolve_mint(&state.base_mint).await?;
-    state.resolve_mint(&state.quote_mint).await?;
-    println!("Mint authority verified for both mints.");
-
-    println!("Listening on port {}", cfg.port);
-
-    // Spawn the processor and cooldown eviction tasks.
-    let processor_state = Arc::clone(&state);
-    tokio::spawn(async move { processor_loop(processor_state, rx).await });
-
-    let eviction_state = Arc::clone(&state);
-    tokio::spawn(async move { cooldown_eviction_loop(eviction_state).await });
+    println!("Base mint: {}", state.base.mint_address);
+    println!("Quote mint: {}", state.quote.mint_address);
+    println!("Listening on port {port}");
+    println!("Cluster {:#?}", state.cluster);
 
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/faucet", post(faucet_handler))
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
@@ -136,8 +112,7 @@ async fn main() -> anyhow::Result<()> {
 async fn health_handler(State(state): State<Arc<FaucetState>>) -> impl IntoResponse {
     Json(HealthResponse {
         status: "ok",
-        cluster: format!("{:?}", "unknown"), // TODO: cache cluster at startup
-        slow_mode: state.slow_mode.load(Ordering::Relaxed),
+        cluster: format!("{:?}", state.cluster),
     })
 }
 
@@ -177,7 +152,7 @@ async fn faucet_handler(
             Json(ErrorResponse {
                 error: format!(
                     "Unknown mint: {mint}. Known mints: base={}, quote={}",
-                    state.base_mint, state.quote_mint
+                    state.base.mint_address, state.quote.mint_address
                 ),
             }),
         )
@@ -194,47 +169,14 @@ async fn faucet_handler(
             .into_response();
     }
 
-    // Check cooldown before queuing.
-    if let Err(e) = state.check_cooldown(&address, &mint) {
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            Json(ErrorResponse {
-                error: e.to_string(),
-            }),
-        )
-            .into_response();
-    }
+    let is_base = mint == state.base.mint_address;
 
-    let (respond_tx, respond_rx) = oneshot::channel();
-
-    let faucet_req = FaucetRequest {
-        address,
-        mint,
-        amount: req.amount,
-        respond: respond_tx,
-    };
-
-    if state.tx.send(faucet_req).is_err() {
-        return (
+    match state.create_signed_transfer(&address, is_base, req.amount) {
+        Ok(tx) => Json(tx).into_response(),
+        Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Faucet processor is down".into(),
-            }),
-        )
-            .into_response();
-    }
-
-    match respond_rx.await {
-        Ok(Ok(signature)) => (StatusCode::OK, Json(MintResponse { signature })).into_response(),
-        Ok(Err(err)) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse { error: err }),
-        )
-            .into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: "Request dropped".into(),
+                error: format!("Failed to create transaction: {e}"),
             }),
         )
             .into_response(),

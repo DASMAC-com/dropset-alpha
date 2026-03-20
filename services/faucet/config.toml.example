@@ -11,12 +11,12 @@ port = 9090
 # Per-address cooldown in seconds before the same address can request again.
 cooldown_secs = 10
 
-# Maximum number of whole tokens a non-whitelisted address receives per request.
+# Maximum number of whole tokens a non-allowlisted address receives per request.
 # Multiplied by 10^decimals at runtime based on the requested mint.
 max_public_tokens = 10
 
-# Maximum number of whole tokens a whitelisted address receives per request.
-max_whitelist_tokens = 1000
+# Maximum number of whole tokens a allowlisted address receives per request.
+max_allowlist_tokens = 1000
 
 # Addresses that receive the elevated cap.
-whitelist = []
+allowlist = []
