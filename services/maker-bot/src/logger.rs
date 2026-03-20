@@ -80,15 +80,14 @@ impl Logger {
     }
 
     fn redraw(&mut self) {
-        // Don't render anything until we have at least one log line — avoids showing
+        // Don't render anything until there's at least one log line — avoids showing
         // empty dividers and padding before the bot has produced any output.
         if self.log_buffer.is_empty() && self.chart.is_empty() {
             return;
         }
         if self.log_buffer.is_empty() {
             // Chart is present but no logs yet — skip the log section entirely so no
-            // empty dividers appear. We haven't rendered anything yet so there's
-            // nothing to overwrite.
+            // empty dividers appear. Nothing has been rendered yet so there's nothing to overwrite.
             return;
         }
 

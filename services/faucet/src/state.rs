@@ -34,7 +34,6 @@ use tokio::{
 
 use crate::rate_window::RateWindow;
 
-
 pub struct FaucetRequest {
     pub address: Address,
     pub mint: Address,
@@ -255,7 +254,7 @@ async fn process_batch(state: &FaucetState, batch: Vec<FaucetRequest>) {
         match ctx.mint_to_user(&req.address, amount) {
             Ok(ix) => instructions.push(ix),
             Err(e) => {
-                // Remove the create_ata instruction we just pushed.
+                // Remove the create_ata instruction that was just pushed.
                 instructions.pop();
                 let _ = req.respond.send(Err(e.to_string()));
                 continue;

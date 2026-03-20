@@ -535,7 +535,7 @@ mod tests {
         assert!(order_sectors.bids.iter().all(|bid| !bid.is_free()));
 
         const ELEMENT_REMOVED: usize = 1;
-        // Get the sector index and price at the element we are removing.
+        // Get the sector index and price at the element being removed.
         let (old_sector_index, old_price) =
             *index_and_encoded_price_pairs.get(ELEMENT_REMOVED).unwrap();
 
