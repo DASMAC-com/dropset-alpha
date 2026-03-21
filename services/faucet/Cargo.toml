@@ -15,7 +15,7 @@ solana-client.workspace = true
 solana-cluster-type.workspace = true
 solana-keypair.workspace = true
 solana-sdk.workspace = true
-tokio = { workspace = true, features = ["macros", "rt", "time", "net", "sync"] }
+tokio = { workspace = true, features = ["time", "net"] }
 tower-http = { workspace = true, features = ["trace"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }

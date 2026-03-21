@@ -17,7 +17,7 @@ solana-client.workspace = true
 solana-instruction.workspace = true
 solana-keypair.workspace = true
 rand.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["time"] }
 
 [dev-dependencies]
 solana-account.workspace = true
