@@ -1,5 +1,4 @@
 use std::{
-    self,
     collections::HashSet,
     sync::{
         Arc,
