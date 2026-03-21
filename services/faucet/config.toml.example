@@ -9,10 +9,11 @@ quote_mint = ""
 port = 9090
 
 # Maximum number of whole tokens a non-allowlisted address receives per request.
-# Multiplied by 10^decimals at runtime based on the requested mint.
+# Multiplied by 10^mint_decimals at runtime based on the requested mint.
 max_public_tokens = 10
 
-# Maximum number of whole tokens a allowlisted address receives per request.
+# Maximum number of whole tokens an allowlisted address receives per request.
+# Multiplied by 10^mint_decimals at runtime based on the requested mint.
 max_allowlist_tokens = 1000
 
 # Addresses that receive the elevated cap.
