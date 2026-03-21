@@ -55,7 +55,7 @@ struct HealthResponse {
     cluster: String,
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let health_check = std::env::args().any(|a| a == "--health-check");
     let cfg = get_validated_config().await?;
