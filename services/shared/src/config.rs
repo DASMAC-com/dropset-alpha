@@ -111,7 +111,7 @@ impl ValidSharedConfig {
         anyhow::ensure!(
             cluster != ClusterType::MainnetBeta,
             "Refusing to operate against mainnet-beta. \
-             The faucet is only for testnet/devnet/localnet."
+             These services are only for testnet/devnet/localnet."
         );
 
         Ok(Self {
