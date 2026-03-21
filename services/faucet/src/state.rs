@@ -151,7 +151,7 @@ impl FaucetState {
         } else {
             self.quote.mint_decimals
         } as u32;
-        capped.saturating_mul(10u64.pow(decimals))
+        capped.saturating_mul(10u64.saturating_pow(decimals))
     }
 
     /// Build and partially sign a transaction that mints tokens to the receiver.

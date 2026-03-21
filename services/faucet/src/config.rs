@@ -4,7 +4,6 @@ use std::{
 };
 
 use anyhow::Context;
-use client::context::token::TokenContext;
 use dropset_services_shared::config::{
     deserialize_service_config,
     Service,
