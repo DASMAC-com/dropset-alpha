@@ -28,7 +28,7 @@ pub struct MintResponse {
 
 /// Requests base tokens from a running faucet service.
 ///
-/// Returns the transaction signature on success.
+/// Returns a [Transaction] on success, partially signed by the faucet keypair.
 pub async fn request_base(
     faucet_url: &Url,
     address: &Address,
@@ -39,7 +39,7 @@ pub async fn request_base(
 
 /// Requests quote tokens from a running faucet service.
 ///
-/// Returns the transaction signature on success.
+/// Returns a [Transaction] on success, partially signed by the faucet keypair.
 pub async fn request_quote(
     faucet_url: &Url,
     address: &Address,
@@ -50,7 +50,7 @@ pub async fn request_quote(
 
 /// Requests base or quote tokens from a running faucet service.
 ///
-/// Returns the transaction signature on success.
+/// Returns a [Transaction] on success, partially signed by the faucet keypair.
 async fn request_tokens(
     faucet_url: &Url,
     address: &Address,
