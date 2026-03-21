@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Context;
 use client::{
     context::token::TokenContext,
     transactions::CustomRpcClient,
@@ -22,12 +21,6 @@ use solana_sdk::{
 };
 
 use crate::config::ValidFaucetConfig;
-
-pub struct FaucetRequest {
-    pub receiver: Address,
-    pub mint: Address,
-    pub amount: u64,
-}
 
 pub struct FaucetState {
     pub keypair: Keypair,
