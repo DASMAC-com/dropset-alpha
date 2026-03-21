@@ -83,13 +83,12 @@ async fn main() -> anyhow::Result<()> {
 
     let state = Arc::new(FaucetState::new(cfg, rpc).await?);
 
-    let cluster = state.resolve_cluster().await?;
-    println!("Faucet starting on cluster: {cluster:?}");
-    println!("Faucet address: {}", state.keypair.pubkey());
-    println!("Base mint: {}", state.base.mint_address);
-    println!("Quote mint: {}", state.quote.mint_address);
-    println!("Listening on port {port}");
-    println!("Cluster {:#?}", state.cluster);
+    tracing::info!(port);
+    tracing::info!(rpc_url = state.rpc.client.url());
+    tracing::info!(cluster = ?state.cluster);
+    tracing::info!(mint_authority = %state.keypair.pubkey());
+    tracing::info!(base_mint = %state.base.mint_address);
+    tracing::info!(quote_mint = %state.quote.mint_address);
 
     let app = Router::new()
         .route("/health", get(health_handler))

@@ -84,7 +84,7 @@ impl FaucetState {
                             *blockhash.write().unwrap() = hash;
                         }
                         Err(e) => {
-                            eprintln!("Failed to refresh blockhash: {e}");
+                            tracing::error!("Failed to refresh blockhash: {e}");
                         }
                     }
                 }
