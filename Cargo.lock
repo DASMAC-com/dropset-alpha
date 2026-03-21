@@ -1382,20 +1382,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dashmap"
-version = "6.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
-dependencies = [
- "cfg-if",
- "crossbeam-utils",
- "hashbrown 0.14.5",
- "lock_api",
- "once_cell",
- "parking_lot_core",
-]
-
-[[package]]
 name = "data-encoding"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1563,9 +1549,7 @@ dependencies = [
  "anyhow",
  "axum",
  "client",
- "dashmap 6.1.0",
  "dropset-services-shared",
- "reqwest 0.13.2",
  "serde",
  "serde_json",
  "solana-address 2.0.0",
@@ -2219,7 +2203,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68a7f542ee6b35af73b06abc0dad1c1bae89964e4e253bc4b587b91c9637867b"
 dependencies = [
  "cfg-if",
- "dashmap 5.5.3",
+ "dashmap",
  "futures",
  "futures-timer",
  "no-std-compat",
@@ -5062,7 +5046,7 @@ checksum = "6ee8a02f1f8646d456d75a0ca3aa3c8aee3e06b1f22a5b25dfcbdc8d87855aa5"
 dependencies = [
  "async-trait",
  "bincode",
- "dashmap 5.5.3",
+ "dashmap",
  "futures",
  "futures-util",
  "indexmap",
@@ -5652,7 +5636,7 @@ dependencies = [
  "bincode",
  "bytes",
  "cfg-if",
- "dashmap 5.5.3",
+ "dashmap",
  "itertools 0.12.1",
  "log",
  "nix",
@@ -6433,7 +6417,7 @@ dependencies = [
  "arc-swap",
  "bytes",
  "crossbeam-channel",
- "dashmap 5.5.3",
+ "dashmap",
  "futures",
  "futures-util",
  "governor",
