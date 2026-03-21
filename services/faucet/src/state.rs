@@ -154,9 +154,11 @@ impl FaucetState {
         capped.saturating_mul(10u64.saturating_pow(decimals))
     }
 
-    /// Build and partially sign a transaction that mints tokens to the receiver.
-    /// The receiver is set as the fee payer. Returns the serialized transaction
-    /// bytes — the receiver must add their signature and submit.
+    /// Build and partially sign a transaction that mints tokens to the receiver, where the receiver
+    /// is set as the fee payer.
+    ///
+    /// Returns the partially signed [Transaction] that the receiver must add their signature to and
+    /// submit.
     pub fn create_signed_transfer(
         &self,
         receiver: &Address,
