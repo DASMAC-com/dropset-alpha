@@ -39,7 +39,7 @@ spl-token-2022-interface.workspace = true
 static_assertions.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["time"] }
 transaction-parser = { path = "../transaction-parser" }
 
 [dev-dependencies]
