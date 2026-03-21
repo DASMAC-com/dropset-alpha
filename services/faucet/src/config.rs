@@ -4,6 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
+use client::context::token::TokenContext;
 use dropset_services_shared::config::{
     deserialize_service_config,
     Service,
@@ -11,6 +12,7 @@ use dropset_services_shared::config::{
 };
 use serde::Deserialize;
 use solana_address::Address;
+use solana_keypair::Signer;
 
 const SERVICE: Service = Service::Faucet;
 
@@ -68,6 +70,8 @@ async fn validate_config_and_endpoint(
         _ => input.max_allowlist_tokens,
     };
 
+    validate_mint_authorities(&shared)?;
+
     let allowlist = input
         .allowlist
         .iter()
@@ -81,6 +85,28 @@ async fn validate_config_and_endpoint(
         max_allowlist_tokens,
         allowlist,
     })
+}
+
+fn validate_mint_authorities(shared: &ValidSharedConfig) -> anyhow::Result<()> {
+    for is_base in [true, false] {
+        let token = if is_base { &shared.base } else { &shared.quote };
+        let token_type = if is_base { "Base" } else { "Quote" };
+
+        match token.mint_authority {
+            Some(ma) => anyhow::ensure!(
+                ma == shared.keypair.pubkey(),
+                "{token_type} token mint authority {:#?} doesn't match faucet address {:#?}",
+                token.mint_authority,
+                shared.keypair.pubkey(),
+            ),
+            None => anyhow::bail!(
+                "Faucet {} token doesn't have a mint authority",
+                token_type.to_lowercase()
+            ),
+        };
+    }
+
+    Ok(())
 }
 
 pub async fn get_validated_config() -> anyhow::Result<ValidFaucetConfig> {
