@@ -70,10 +70,14 @@ impl FaucetState {
                 interval.tick().await; // skip immediate first tick
                 loop {
                     interval.tick().await;
-                    let current = *blockhash.read().unwrap();
+                    let current = *blockhash
+                        .read()
+                        .expect("Blockhash lock should not be poisoned");
                     match rpc.client.get_new_latest_blockhash(&current).await {
                         Ok(hash) => {
-                            *blockhash.write().unwrap() = hash;
+                            *blockhash
+                                .write()
+                                .expect("Blockhash lock should not be poisoned") = hash;
                         }
                         Err(e) => {
                             tracing::error!("Failed to refresh blockhash: {e}");
@@ -97,7 +101,10 @@ impl FaucetState {
     }
 
     pub fn recent_blockhash(&self) -> solana_sdk::hash::Hash {
-        *self.recent_blockhash.read().unwrap()
+        *self
+            .recent_blockhash
+            .read()
+            .expect("Blockhash lock should not be poisoned")
     }
 
     /// Caps the requested amount based on allowlist membership.
