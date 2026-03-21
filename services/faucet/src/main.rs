@@ -132,10 +132,10 @@ async fn faucet_handler(
     }
 
     match state.create_signed_transfer(&address, req.is_base, req.amount) {
-        Ok(tx) => {
+        Ok(transaction) => {
             let token = if req.is_base { "base" } else { "quote" };
-            tracing::info!(%address, token, amount = req.amount, "Minted");
-            Json(MintResponse { transaction: tx }).into_response()
+            tracing::info!(%address, token, amount = req.amount, "Signed mint transaction");
+            Json(MintResponse { transaction }).into_response()
         }
         Err(e) => respond_err(
             StatusCode::INTERNAL_SERVER_ERROR,
