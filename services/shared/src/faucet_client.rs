@@ -173,6 +173,10 @@ mod tests {
         Ok(())
     }
 
+    fn faucet_url() -> Url {
+        Url::parse("http://localhost:9090").unwrap()
+    }
+
     /// Integration test that requires a running faucet and localnet.
     /// Reads everything from the faucet's config.toml and keypair.json.
     ///
@@ -194,14 +198,24 @@ mod tests {
         );
         let user = rpc.fund_new_account().await?;
 
-        let faucet_url = Url::parse("http://localhost:9090").unwrap();
-
         let base_amount = 5;
         let quote_amount = 6;
 
-        request_tokens_check(&rpc, &faucet_url, &shared, &user, true, base_amount).await?;
-        request_tokens_check(&rpc, &faucet_url, &shared, &user, false, quote_amount).await?;
+        request_tokens_check(&rpc, &faucet_url(), &shared, &user, true, base_amount).await?;
+        request_tokens_check(&rpc, &faucet_url(), &shared, &user, false, quote_amount).await?;
 
         Ok(())
+    }
+
+    /// Integration test for the expected failures from the faucet.
+    ///
+    /// Run with: cargo test -p dropset-services-shared -- --ignored faucet
+    #[tokio::test]
+    #[ignore]
+    async fn request_tokens_from_local_faucet_failure() {
+        let res = request_base(&faucet_url(), &Address::new_unique(), 0).await;
+
+        #[rustfmt::skip]
+        assert!(res.is_err(), "Faucet should return an error when the amount is zero");
     }
 }

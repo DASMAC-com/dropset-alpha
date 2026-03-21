@@ -10,6 +10,7 @@ use std::{
 };
 
 use axum::{
+    body::Body,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
@@ -35,6 +36,8 @@ use solana_client::{
     rpc_config::CommitmentConfig,
 };
 use solana_keypair::Signer;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::get_validated_config,
@@ -59,6 +62,10 @@ async fn main() -> anyhow::Result<()> {
     if health_check {
         return Ok(());
     }
+
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
     let port = cfg.port;
 
@@ -87,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/faucet", post(faucet_handler))
+        .layer(TraceLayer::new_for_http())
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -110,34 +118,40 @@ async fn faucet_handler(
     let address: Address = match req.address.parse() {
         Ok(a) => a,
         Err(_) => {
-            return (
+            return respond_err(
                 StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("Invalid address: {}", req.address),
-                }),
-            )
-                .into_response();
+                format!("Invalid address: {}", req.address),
+            );
         }
     };
 
     if req.amount == 0 {
-        return (
+        return respond_err(
             StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Amount must be greater than zero".into(),
-            }),
-        )
-            .into_response();
+            "Amount must be greater than zero".to_string(),
+        );
     }
 
     match state.create_signed_transfer(&address, req.is_base, req.amount) {
-        Ok(tx) => Json(MintResponse { transaction: tx }).into_response(),
-        Err(e) => (
+        Ok(tx) => {
+            let token = if req.is_base { "base" } else { "quote" };
+            tracing::info!(%address, token, amount = req.amount, "Minted");
+            Json(MintResponse { transaction: tx }).into_response()
+        }
+        Err(e) => respond_err(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: format!("Failed to create transaction: {e}"),
-            }),
-        )
-            .into_response(),
+            format!("Failed to create transaction: {e}"),
+        ),
     }
+}
+
+fn respond_err(status: StatusCode, error_msg: impl ToString) -> axum::http::Response<Body> {
+    let body = ErrorResponse {
+        error: error_msg.to_string(),
+    };
+
+    if !status.is_success() {
+        tracing::warn!(%status, body = %serde_json::to_string(&body).unwrap_or_default());
+    }
+    (status, Json(body)).into_response()
 }

@@ -8,9 +8,6 @@ quote_mint = ""
 # Port the faucet HTTP server listens on.
 port = 9090
 
-# Per-address cooldown in seconds before the same address can request again.
-cooldown_secs = 10
-
 # Maximum number of whole tokens a non-allowlisted address receives per request.
 # Multiplied by 10^decimals at runtime based on the requested mint.
 max_public_tokens = 10
