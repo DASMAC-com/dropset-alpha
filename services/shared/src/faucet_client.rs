@@ -30,28 +30,31 @@ pub struct MintResponse {
 ///
 /// Returns a [Transaction] on success, partially signed by the faucet keypair.
 pub async fn request_base(
+    client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
     amount: u64,
 ) -> anyhow::Result<Transaction> {
-    request_tokens(faucet_url, address, amount, true).await
+    request_tokens(client, faucet_url, address, amount, true).await
 }
 
 /// Requests quote tokens from a running faucet service.
 ///
 /// Returns a [Transaction] on success, partially signed by the faucet keypair.
 pub async fn request_quote(
+    client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
     amount: u64,
 ) -> anyhow::Result<Transaction> {
-    request_tokens(faucet_url, address, amount, false).await
+    request_tokens(client, faucet_url, address, amount, false).await
 }
 
 /// Requests base or quote tokens from a running faucet service.
 ///
 /// Returns a [Transaction] on success, partially signed by the faucet keypair.
 async fn request_tokens(
+    client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
     amount: u64,
@@ -59,7 +62,7 @@ async fn request_tokens(
 ) -> anyhow::Result<Transaction> {
     let url = faucet_url.join("/faucet")?;
 
-    let resp = reqwest::Client::new()
+    let resp = client
         .post(url)
         .json(&MintRequest {
             address: address.to_string(),
@@ -103,6 +106,7 @@ mod tests {
     };
 
     async fn request_tokens_check(
+        client: &reqwest::Client,
         rpc: &CustomRpcClient,
         faucet_url: &Url,
         shared: &ValidSharedConfig,
@@ -114,9 +118,9 @@ mod tests {
         let token = if is_base { &shared.base } else { &shared.quote };
 
         let mut txn = if is_base {
-            request_base(faucet_url, &user_address, requested).await
+            request_base(client, faucet_url, &user_address, requested).await
         } else {
-            request_quote(faucet_url, &user_address, requested).await
+            request_quote(client, faucet_url, &user_address, requested).await
         }
         .expect("Faucet request should succeed");
 
@@ -198,11 +202,12 @@ mod tests {
         );
         let user = rpc.fund_new_account().await?;
 
-        let base_amount = 5;
-        let quote_amount = 6;
+        let base_amt = 5;
+        let quote_amt = 6;
 
-        request_tokens_check(&rpc, &faucet_url(), &shared, &user, true, base_amount).await?;
-        request_tokens_check(&rpc, &faucet_url(), &shared, &user, false, quote_amount).await?;
+        let req = reqwest::Client::new();
+        request_tokens_check(&req, &rpc, &faucet_url(), &shared, &user, true, base_amt).await?;
+        request_tokens_check(&req, &rpc, &faucet_url(), &shared, &user, false, quote_amt).await?;
 
         Ok(())
     }
@@ -213,7 +218,8 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn request_tokens_from_local_faucet_failure() {
-        let res = request_base(&faucet_url(), &Address::new_unique(), 0).await;
+        let req = reqwest::Client::new();
+        let res = request_base(&req, &faucet_url(), &Address::new_unique(), 0).await;
 
         #[rustfmt::skip]
         assert!(res.is_err(), "Faucet should return an error when the amount is zero");
