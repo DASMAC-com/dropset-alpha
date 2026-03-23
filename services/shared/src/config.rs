@@ -69,8 +69,8 @@ impl ValidSharedConfig {
         quote_mint: String,
         rpc_url: String,
     ) -> Result<Self, anyhow::Error> {
-        let rpc_url =
-            Url::try_from(rpc_url.as_str()).context(format!("Invalid RPC url: {}", rpc_url))?;
+        let rpc_url = Url::try_from(rpc_url.as_str())
+            .with_context(|| format!("Invalid RPC url: {}", rpc_url))?;
 
         let rpc = CustomRpcClient::new_from_url(rpc_url.as_str(), Default::default());
 
