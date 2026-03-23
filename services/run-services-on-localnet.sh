@@ -3,7 +3,20 @@
 set -euo pipefail
 
 if ! command -v pnpm &>/dev/null; then
-  echo "pnpm is not installed. Please install it: https://pnpm.io/installation"
+  echo "\`pnpm\` is not installed. Please install it: " \
+       "https://pnpm.io/installation"
+  exit 1
+fi
+
+if ! command -v solana &>/dev/null; then
+  echo "\`solana\` is not installed. Please install it: " \
+       "https://docs.anza.xyz/cli/install"
+  exit 1
+fi
+
+if ! command -v docker &>/dev/null; then
+  echo "\`docker\` is not installed. Please install it: " \
+       "https://docs.docker.com/get-started/get-docker"
   exit 1
 fi
 
