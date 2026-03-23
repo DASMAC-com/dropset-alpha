@@ -10,7 +10,6 @@ use client::transactions::{
     TransactionSubmitError,
 };
 use dropset_interface::error::DropsetError;
-use dropset_services_shared::debug_logs::format_timestamped_log;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
@@ -36,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
         )),
         Some(SendTransactionConfig {
             compute_budget: Some(2000000),
-            debug_logs: Some(cfg.verbose),
+            debug_logs: Some(cfg.pretty_transaction_logs),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
     );
@@ -50,13 +49,12 @@ async fn main() -> anyhow::Result<()> {
             match taker_ctx.submit_fill(&fill).await {
                 Ok(_) => {}
                 Err(TransactionSubmitError::Dropset(err)) => match err {
+                    // Taker is out of tokens. Request more from the faucet.
+                    DropsetError::InsufficientUserBalance => {}
                     // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {
-                        let log_message =
-                            "ERROR: Fill returned zero amount, book likely empty — skipping";
-                        if cfg.verbose {
-                            eprintln!("{}", format_timestamped_log(log_message));
-                        }
+                        let msg = "DropsetError::AmountCannotBeZero — book likely empty, skipping.";
+                        tracing::info!(msg);
                     }
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),
                 },

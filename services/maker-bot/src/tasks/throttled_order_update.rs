@@ -12,7 +12,6 @@ use client::{
     },
 };
 use dropset_interface::error::DropsetError;
-use dropset_services_shared::debug_logs::format_timestamped_log;
 use solana_keypair::Signer;
 use tokio::sync::watch;
 
@@ -38,7 +37,7 @@ pub async fn throttled_order_update(
         rx.changed().await?;
 
         let update = *rx.borrow();
-        let log_msg = format_timestamped_log(update);
+        let log_msg = format!("{update}");
         maker_ctx.try_borrow_mut()?.logger.log(log_msg);
 
         // Then cancel all orders and post new ones.

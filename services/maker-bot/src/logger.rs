@@ -11,6 +11,7 @@ use colored::{
     Color,
     Colorize,
 };
+use dropset_services_shared::debug_logs::format_timestamped_log;
 
 /// Number of recent log lines kept above the depth chart.
 const LOG_LINES: usize = 8;
@@ -56,13 +57,16 @@ impl Logger {
         }
     }
 
-    /// Append a log line. In visualize mode this redraws the fixed block; otherwise plain println.
+    /// Append a log line. In visualize mode this redraws the fixed block after prepending a
+    /// timestamp to the message and adding it to the log buffer; otherwise, it logs the line
+    /// with [tracing].
     pub fn log(&mut self, line: String) {
         if !self.visualize {
-            println!("{line}");
+            tracing::info!("{line}");
             return;
         }
-        self.log_buffer.push_back(line);
+        let timestamped_line = format_timestamped_log(line);
+        self.log_buffer.push_back(timestamped_line);
         if self.log_buffer.len() > LOG_LINES {
             self.log_buffer.pop_front();
         }

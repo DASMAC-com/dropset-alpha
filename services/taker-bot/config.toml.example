@@ -5,8 +5,8 @@ quote_mint = ""
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"
 
-# Whether or not to print the prettified, verbose parsed transaction data logs.
-verbose = false
+# Whether or not to print the prettified parsed transaction data logs.
+pretty_transaction_logs = false
 
 [strategy]
 # Milliseconds between ticks of the interval loop.
