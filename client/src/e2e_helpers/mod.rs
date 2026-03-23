@@ -180,9 +180,7 @@ async fn create_token(
 ) -> anyhow::Result<(TokenContext, Keypair)> {
     let authority = match mint_authority {
         Some(kp) => {
-            if !account_exists(&rpc.client, &kp.pubkey()).await? {
-                rpc.fund_account(&kp.pubkey()).await?;
-            }
+            rpc.fund_account(&kp.pubkey()).await?;
             kp.insecure_clone()
         }
         None => rpc.fund_new_account().await?,
