@@ -188,6 +188,8 @@ async fn create_token(
                 if balance < DEFAULT_FUND_AMOUNT {
                     rpc.fund_account(&kp.pubkey()).await?;
                 }
+            } else {
+                rpc.fund_account(&kp.pubkey()).await?;
             }
             kp.insecure_clone()
         }
