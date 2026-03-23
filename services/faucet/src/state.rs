@@ -129,7 +129,7 @@ impl FaucetState {
     ///
     /// Returns the partially signed [Transaction] that the receiver must add their signature to and
     /// submit.
-    pub fn create_signed_transfer(
+    pub fn create_signed_mint_to_user_txn(
         &self,
         receiver: &Address,
         is_base: bool,
