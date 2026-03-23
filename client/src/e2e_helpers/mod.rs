@@ -27,6 +27,7 @@ use crate::{
         account_exists,
         CustomRpcClient,
         ParsedTransactionWithEvents,
+        DEFAULT_FUND_AMOUNT,
     },
 };
 
@@ -180,7 +181,14 @@ async fn create_token(
 ) -> anyhow::Result<(TokenContext, Keypair)> {
     let authority = match mint_authority {
         Some(kp) => {
-            rpc.fund_account(&kp.pubkey()).await?;
+            if account_exists(&rpc.client, &kp.pubkey()).await? {
+                let balance = rpc.client.get_balance(&kp.pubkey()).await?;
+                // Only airdrop lamports if the account needs it. Otherwise this will fail with
+                // an overflow error after multiple airdrops because the amount is huge.
+                if balance < DEFAULT_FUND_AMOUNT {
+                    rpc.fund_account(&kp.pubkey()).await?;
+                }
+            }
             kp.insecure_clone()
         }
         None => rpc.fund_new_account().await?,
