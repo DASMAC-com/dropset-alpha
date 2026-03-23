@@ -131,7 +131,7 @@ async fn faucet_handler(
         );
     }
 
-    match state.create_signed_transfer(&address, req.is_base, req.amount) {
+    match state.create_signed_mint_to_user_txn(&address, req.is_base, req.amount) {
         Ok(transaction) => {
             let token = if req.is_base { "base" } else { "quote" };
             tracing::info!(%address, token, amount = req.amount, "Signed mint transaction");
