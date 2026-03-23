@@ -15,6 +15,7 @@ use serde::de::DeserializeOwned;
 use solana_address::Address;
 use solana_cluster_type::ClusterType;
 use solana_keypair::{
+    read_keypair_file,
     Keypair,
     Signer,
 };
@@ -102,10 +103,9 @@ impl ValidSharedConfig {
         let quote =
             TokenContext::from_account_data(quote_mint, quote_account.owner, &quote_account.data)?;
 
-        let kp_file = fs::File::open(&keypair_path)
-            .with_context(|| anyhow::anyhow!("Couldn't open keypair file: {:#?}", keypair_path))?;
-        let kp_bytes: Vec<u8> = serde_json::from_reader(kp_file)?;
-        let keypair = Keypair::try_from(kp_bytes.as_slice())?;
+        let keypair = read_keypair_file(&keypair_path).map_err(|e| {
+            anyhow::anyhow!("Couldn't open keypair file: {keypair_path:#?}, err: ({e})",)
+        })?;
 
         let cluster = rpc.resolve_cluster().await?;
         anyhow::ensure!(

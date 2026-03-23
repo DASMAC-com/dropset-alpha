@@ -22,7 +22,10 @@ use dropset_services_shared::config::{
     load_raw_service_config,
     Service,
 };
-use solana_keypair::Keypair;
+use solana_keypair::{
+    read_keypair_file,
+    Keypair,
+};
 use solana_sdk::signer::Signer;
 use toml_edit::DocumentMut;
 
@@ -112,12 +115,28 @@ async fn main() -> anyhow::Result<()> {
 
 fn write_keypair_to_file(service: Service, kp: &Keypair) -> anyhow::Result<()> {
     let kp_path = service.keypair_path();
-    if std::fs::exists(kp_path.clone())? && !should_force_overwrite() {
-        anyhow::bail!(
-            "{:#?} already exists. Pass `--force` to overwrite it.",
-            kp_path.clone(),
-        );
+    if std::fs::exists(kp_path.clone())? {
+        let existing_keypair = read_keypair_file(&kp_path).map_err(|e| {
+            anyhow::anyhow!("Couldn't open existing keypair file: {kp_path:#?}, err: ({e})")
+        })?;
+
+        if existing_keypair == *kp {
+            return Ok(());
+        }
+
+        // If the keypair already exists and doesn't match the one passed in, throw an error if a
+        // forced overwrite flag wasn't passed. Otherwise, just write it.
+        if !should_force_overwrite() {
+            let existing_pub = existing_keypair.pubkey();
+            let new_pub = kp.pubkey();
+            anyhow::bail!(
+                "{kp_path:#?} already exists.\n\
+                 Pass `--force` to overwrite the existing keypair \
+                 for {existing_pub} with the keypair for {new_pub}"
+            );
+        }
     }
+
     Ok(std::fs::write(
         kp_path,
         serde_json::to_string(&kp.to_bytes().to_vec())?,
