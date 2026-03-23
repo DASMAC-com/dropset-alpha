@@ -10,6 +10,8 @@ pair = "EUR_USD"
 batch_replace = true
 
 # Render an ASCII order book visualization when posting orders.
+# Turn this off to emit simpler logs; for example, you probably want to
+# set this to `false` when running as a `docker` service.
 visualize = true
 
 # Token mint addresses for the market.
