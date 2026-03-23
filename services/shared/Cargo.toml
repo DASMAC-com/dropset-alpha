@@ -22,7 +22,6 @@ toml.workspace = true
 
 [dev-dependencies]
 dropset-interface = { path = "../../interface" }
-solana-sdk.workspace = true
 solana-rpc-client.workspace = true
 tokio.workspace = true
 toml_edit.workspace = true
