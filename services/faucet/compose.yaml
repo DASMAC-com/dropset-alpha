@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./config.toml:/app/services/faucet/config.toml:ro
+      - ../shared/config.toml:/app/services/shared/config.toml:ro
       - ./keypair.json:/app/services/faucet/keypair.json:ro
     healthcheck:
       test: ["CMD", "/app/service", "--health-check"]

@@ -11,7 +11,6 @@ use client::{
     context::token::TokenContext,
     transactions::CustomRpcClient,
 };
-use dropset_services_shared::config::ValidSharedConfig;
 use solana_address::Address;
 use solana_cluster_type::ClusterType;
 use solana_keypair::Keypair;
@@ -37,20 +36,15 @@ pub struct FaucetState {
 impl FaucetState {
     pub async fn new(config: ValidFaucetConfig, rpc: Arc<CustomRpcClient>) -> anyhow::Result<Self> {
         let ValidFaucetConfig {
-            shared,
+            keypair,
+            base,
+            quote,
+            cluster,
             max_public_tokens,
             max_allowlist_tokens,
             allowlist,
             ..
         } = config;
-
-        let ValidSharedConfig {
-            keypair,
-            base,
-            quote,
-            cluster,
-            ..
-        } = shared;
 
         let (initial_blockhash, _) = rpc
             .client

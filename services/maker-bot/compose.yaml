@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
+      - ../shared/config.toml:/app/services/shared/config.toml:ro
       - ./config.toml:/app/services/maker-bot/config.toml:ro
       - ./keypair.json:/app/services/maker-bot/keypair.json:ro
     healthcheck:

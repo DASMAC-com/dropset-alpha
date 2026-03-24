@@ -59,9 +59,9 @@ pnpm run deploy
 # patches the base and quote mints into their respective toml config files.
 cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_FLAG
 
+pnpm run services:faucet:docker
 pnpm run services:maker:docker
 pnpm run services:taker:docker
-pnpm run services:faucet:docker
 
 echo "Waiting to see if services are healthy..."
 sleep 3

@@ -4,7 +4,7 @@ use anyhow::Context;
 use dropset_services_shared::{
     config::{
         deserialize_service_config,
-        Service,
+        ServiceConfig,
         ValidSharedConfig,
     },
     oanda_types::{
@@ -24,7 +24,7 @@ use crate::{
     NUM_CANDLES,
 };
 
-const SERVICE: Service = Service::Maker;
+const SERVICE: ServiceConfig = ServiceConfig::Maker;
 
 pub struct ValidMakerConfig {
     pub shared: ValidSharedConfig,
@@ -46,11 +46,8 @@ pub struct MakerConfigInput {
     pub pair: CurrencyPair,
     pub target_base: u64,
     pub batch_replace: bool,
-    pub base_mint: String,
-    pub quote_mint: String,
     pub ask_order_size: u64,
     pub bid_order_size: u64,
-    pub rpc_url: String,
     pub ws_url: String,
     pub price_feed_poll_interval: u64,
     pub order_update_throttle_window: u64,
@@ -67,11 +64,8 @@ pub async fn validate_config_and_endpoint(
         pair,
         target_base,
         batch_replace,
-        base_mint: base_mint_input,
-        quote_mint: quote_mint_input,
         ask_order_size,
         bid_order_size,
-        rpc_url: rpc_url_input,
         ws_url: ws_url_input,
         price_feed_poll_interval,
         order_update_throttle_window,
@@ -100,13 +94,7 @@ pub async fn validate_config_and_endpoint(
     let ws_url = Url::try_from(ws_url_input.as_str())
         .context(format!("Invalid WS url: {}", ws_url_input))?;
 
-    let shared = ValidSharedConfig::new(
-        SERVICE.keypair_path(),
-        base_mint_input,
-        quote_mint_input,
-        rpc_url_input,
-    )
-    .await?;
+    let shared = ValidSharedConfig::new_validated(SERVICE).await?;
 
     Ok(ValidMakerConfig {
         shared,

@@ -22,8 +22,49 @@ fn default_amount() -> u64 {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct HealthResponse {
+    pub status: String,
+    pub cluster: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct MintResponse {
     pub transaction: Transaction,
+}
+
+pub enum FaucetEndpoint {
+    Health,
+    Faucet,
+}
+
+impl FaucetEndpoint {
+    pub fn route(&self) -> &'static str {
+        match self {
+            FaucetEndpoint::Health => "/health",
+            FaucetEndpoint::Faucet => "/faucet",
+        }
+    }
+}
+
+/// Calls the health endpoint for the faucet.
+///
+/// Returns a [HealthResponse] on success.
+pub async fn get_health(
+    client: &reqwest::Client,
+    faucet_url: &Url,
+) -> anyhow::Result<HealthResponse> {
+    let url = faucet_url.join(FaucetEndpoint::Health.route())?;
+
+    let resp = client.get(url).send().await?;
+
+    if resp.status().is_success() {
+        let body: HealthResponse = resp.json().await?;
+        Ok(body)
+    } else {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("Faucet health check failed: ({status}): {body}");
+    }
 }
 
 /// Requests base tokens from a running faucet service.
@@ -60,7 +101,7 @@ async fn request_tokens(
     amount: u64,
     is_base: bool,
 ) -> anyhow::Result<Transaction> {
-    let url = faucet_url.join("/faucet")?;
+    let url = faucet_url.join(FaucetEndpoint::Faucet.route())?;
 
     let resp = client
         .post(url)
@@ -101,7 +142,7 @@ mod tests {
 
     use super::*;
     use crate::config::{
-        Service,
+        ServiceConfig,
         ValidSharedConfig,
     };
 
@@ -188,7 +229,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn request_tokens_from_local_faucet() -> anyhow::Result<()> {
-        let shared = ValidSharedConfig::from_service(Service::Faucet)
+        let shared = ValidSharedConfig::new_validated(ServiceConfig::Faucet)
             .await
             .expect("Faucet config should be valid");
 

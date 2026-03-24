@@ -5,8 +5,12 @@ rpc_url = "http://localhost:8899"
 base_mint = ""
 quote_mint = ""
 
+# The base faucet URL (without the port).
+# Defaults to `http://localhost` if nothing is provided.
+faucet_base_url = ""
+
 # Port the faucet HTTP server listens on.
-port = 9090
+faucet_port = 9090
 
 # Maximum number of whole tokens a non-allowlisted address receives per request.
 # Multiplied by 10^mint_decimals at runtime based on the requested mint.

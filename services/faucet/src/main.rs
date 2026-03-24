@@ -26,6 +26,8 @@ use client::transactions::{
     SendTransactionConfig,
 };
 use dropset_services_shared::faucet_client::{
+    FaucetEndpoint,
+    HealthResponse,
     MintRequest,
     MintResponse,
 };
@@ -49,12 +51,6 @@ struct ErrorResponse {
     error: String,
 }
 
-#[derive(Serialize)]
-struct HealthResponse {
-    status: &'static str,
-    cluster: String,
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let health_check = std::env::args().any(|a| a == "--health-check");
@@ -63,15 +59,15 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+    // Default to `info`.
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let port = cfg.port;
+    let port = cfg.faucet_port;
 
     let rpc = Arc::new(CustomRpcClient::new(
         Some(RpcClient::new_with_commitment(
-            cfg.shared.rpc_url.to_string(),
+            cfg.rpc_url.to_string(),
             CommitmentConfig::confirmed(),
         )),
         Some(SendTransactionConfig {
@@ -91,8 +87,8 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(quote_mint = %state.quote.mint_address);
 
     let app = Router::new()
-        .route("/health", get(health_handler))
-        .route("/faucet", post(faucet_handler))
+        .route(FaucetEndpoint::Health.route(), get(health_handler))
+        .route(FaucetEndpoint::Faucet.route(), post(faucet_handler))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -105,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn health_handler(State(state): State<Arc<FaucetState>>) -> impl IntoResponse {
     Json(HealthResponse {
-        status: "ok",
+        status: "ok".to_string(),
         cluster: format!("{:?}", state.cluster),
     })
 }
