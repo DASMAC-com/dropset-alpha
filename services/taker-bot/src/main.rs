@@ -15,9 +15,11 @@ use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
 };
+use spl_token_2022_interface::error::TokenError;
 
 use crate::{
     config::get_validated_config,
+    taker::Side,
     taker_context::TakerContext,
 };
 
@@ -49,6 +51,39 @@ async fn main() -> anyhow::Result<()> {
         for fill in strategy.step() {
             match taker_ctx.submit_fill(&fill).await {
                 Ok(_) => {}
+                Err(TransactionSubmitError::Token { error, .. }) => match error {
+                    // Taker has run out of tokens. Airdrop more if the faucet client exists.
+                    // Note that this is a match on the token program error, not dropset error,
+                    // because taker's balances don't go through their seats, they go directly
+                    // through the token program.
+                    TokenError::InsufficientFunds => {
+                        if let Some(ref faucet_client) = taker_ctx.faucet_client {
+                            match fill.side {
+                                Side::Buy => {
+                                    faucet_client
+                                        .request_quote_sign_and_submit(
+                                            &taker_ctx.address(),
+                                            &taker_ctx.keypair,
+                                            &taker_ctx.rpc,
+                                            None,
+                                        )
+                                        .await?;
+                                }
+                                Side::Sell => {
+                                    faucet_client
+                                        .request_base_sign_and_submit(
+                                            &taker_ctx.address(),
+                                            &taker_ctx.keypair,
+                                            &taker_ctx.rpc,
+                                            None,
+                                        )
+                                        .await?;
+                                }
+                            }
+                        }
+                    }
+                    _ => return Err(error.into()),
+                },
                 Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {

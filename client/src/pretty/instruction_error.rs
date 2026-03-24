@@ -3,7 +3,6 @@
 use std::fmt::Display;
 
 use dropset_interface::{
-    client_error::transaction_error_from_client,
     error::DropsetError,
     instructions::DropsetInstruction,
 };
@@ -14,6 +13,7 @@ use solana_transaction_error::TransactionError;
 
 use crate::{
     fmt_kv,
+    transactions::transaction_error_from_client,
     LogColor,
 };
 

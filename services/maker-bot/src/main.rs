@@ -22,7 +22,10 @@ use client::transactions::{
     CustomRpcClient,
     SendTransactionConfig,
 };
-use dropset_services_shared::oanda_types::CandlestickGranularity;
+use dropset_services_shared::{
+    faucet_client::FaucetClient,
+    oanda_types::CandlestickGranularity,
+};
 use maker_state::*;
 use order_flow::*;
 use rust_decimal::Decimal;
@@ -81,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let oanda_args = cfg.oanda_args.clone();
+    let faucet_client = FaucetClient::new(&cfg.shared).await;
     let ctx = MakerContext::init(&rpc, cfg).await?;
     let maker_ctx = Rc::new(RefCell::new(ctx));
 
@@ -95,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
         r2 = tasks::poll_price_feed(maker_ctx.clone(), sender.clone(), reqwest_client, &oanda_args, poll_interval) => {
             println!("Price feed poll loop terminated: {r2:#?}");
         },
-        r3 = tasks::throttled_order_update(maker_ctx.clone(), receiver, &rpc, throttle_window) => {
+        r3 = tasks::throttled_order_update(maker_ctx.clone(), receiver, &rpc, throttle_window, faucet_client) => {
             println!("Throttled order update loop terminated: {r3:#?}");
         }
     }

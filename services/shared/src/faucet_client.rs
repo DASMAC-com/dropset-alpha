@@ -1,10 +1,64 @@
+use client::transactions::CustomRpcClient;
 use reqwest::Url;
 use serde::{
     Deserialize,
     Serialize,
 };
 use solana_address::Address;
+use solana_keypair::{
+    Keypair,
+    Signature,
+};
 use solana_sdk::transaction::Transaction;
+
+use crate::config::ValidSharedConfig;
+
+pub struct FaucetClient {
+    client: reqwest::Client,
+    faucet_url: Url,
+}
+
+impl FaucetClient {
+    pub async fn new(shared: &ValidSharedConfig) -> Option<FaucetClient> {
+        let client = reqwest::Client::new();
+        let faucet_url = shared.faucet_url();
+        get_health(&client, &faucet_url)
+            .await
+            .is_ok()
+            .then(|| Self { client, faucet_url })
+    }
+
+    /// Wrapper for [get_health].
+    pub async fn get_health(&self) -> anyhow::Result<HealthResponse> {
+        get_health(&self.client, &self.faucet_url).await
+    }
+
+    /// Wrapper for passing the result of [request_base] into [sign_faucet_transaction_and_submit].
+    pub async fn request_base_sign_and_submit(
+        &self,
+        to: &Address,
+        keypair: &Keypair,
+        rpc: &CustomRpcClient,
+        amount: Option<u64>,
+    ) -> anyhow::Result<Signature> {
+        let txn = request_base(&self.client, &self.faucet_url, to, amount).await?;
+        sign_faucet_transaction_and_submit(txn, keypair, rpc).await
+    }
+
+    /// Wrapper for passing the result of [request_quote] into [sign_faucet_transaction_and_submit].
+    pub async fn request_quote_sign_and_submit(
+        &self,
+        to: &Address,
+        keypair: &Keypair,
+        rpc: &CustomRpcClient,
+        amount: Option<u64>,
+    ) -> anyhow::Result<Signature> {
+        let txn = request_quote(&self.client, &self.faucet_url, to, amount).await?;
+        sign_faucet_transaction_and_submit(txn, keypair, rpc).await
+    }
+}
+
+pub const DEFAULT_FAUCET_AMOUNT: u64 = 1;
 
 #[derive(Serialize, Deserialize)]
 pub struct MintRequest {
@@ -13,12 +67,7 @@ pub struct MintRequest {
     /// Whether or not this is the `base` token. If false: it's the `quote` token.
     pub is_base: bool,
     /// Amount in whole tokens (will be multiplied by 10^mint_decimals).
-    #[serde(default = "default_amount")]
-    pub amount: u64,
-}
-
-fn default_amount() -> u64 {
-    1
+    pub amount: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -74,7 +123,7 @@ pub async fn request_base(
     client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
-    amount: u64,
+    amount: Option<u64>,
 ) -> anyhow::Result<Transaction> {
     request_tokens(client, faucet_url, address, amount, true).await
 }
@@ -86,7 +135,7 @@ pub async fn request_quote(
     client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
-    amount: u64,
+    amount: Option<u64>,
 ) -> anyhow::Result<Transaction> {
     request_tokens(client, faucet_url, address, amount, false).await
 }
@@ -98,7 +147,7 @@ async fn request_tokens(
     client: &reqwest::Client,
     faucet_url: &Url,
     address: &Address,
-    amount: u64,
+    amount: Option<u64>,
     is_base: bool,
 ) -> anyhow::Result<Transaction> {
     let url = faucet_url.join(FaucetEndpoint::Faucet.route())?;
@@ -121,6 +170,20 @@ async fn request_tokens(
         let body = resp.text().await.unwrap_or_default();
         anyhow::bail!("Faucet request failed: ({status}): {body}");
     }
+}
+
+/// Handles signing and submitting the received [Transaction] from [request_tokens].
+async fn sign_faucet_transaction_and_submit(
+    mut faucet_transaction: Transaction,
+    keypair: &Keypair,
+    rpc: &CustomRpcClient,
+) -> anyhow::Result<Signature> {
+    faucet_transaction.sign(&[keypair], faucet_transaction.message.recent_blockhash);
+
+    Ok(rpc
+        .client
+        .send_and_confirm_transaction(&faucet_transaction)
+        .await?)
 }
 
 #[cfg(test)]
@@ -153,7 +216,7 @@ mod tests {
         shared: &ValidSharedConfig,
         user: &Keypair,
         is_base: bool,
-        requested: u64,
+        requested: Option<u64>,
     ) -> anyhow::Result<()> {
         let user_address = user.pubkey();
         let token = if is_base { &shared.base } else { &shared.quote };
@@ -212,7 +275,7 @@ mod tests {
 
         rpc.client.send_and_confirm_transaction(&txn).await?;
         let balance = rpc.client.get_token_account_balance(&ata).await?;
-        let expected_amount_str = requested.to_string();
+        let expected_amount_str = requested.unwrap_or(DEFAULT_FAUCET_AMOUNT).to_string();
         assert_eq!(balance.ui_amount_string, expected_amount_str);
 
         Ok(())
@@ -243,8 +306,8 @@ mod tests {
         );
         let user = rpc.fund_new_account().await?;
 
-        let base_amt = 5;
-        let quote_amt = 6;
+        let base_amt = Some(5);
+        let quote_amt = Some(6);
 
         let req = reqwest::Client::new();
         request_tokens_check(&req, &rpc, &faucet_url(), &shared, &user, true, base_amt).await?;
@@ -260,9 +323,43 @@ mod tests {
     #[ignore]
     async fn request_tokens_from_local_faucet_failure() {
         let req = reqwest::Client::new();
-        let res = request_base(&req, &faucet_url(), &Address::new_unique(), 0).await;
+        let res = request_base(&req, &faucet_url(), &Address::new_unique(), Some(0)).await;
 
         #[rustfmt::skip]
         assert!(res.is_err(), "Faucet should return an error when the amount is zero");
+    }
+
+    /// Integration test for the default fund amount and the [sign_faucet_transaction_and_submit]
+    /// helper function.
+    ///
+    /// Run with: cargo test -p dropset-services-shared -- --ignored faucet
+    #[tokio::test]
+    #[ignore]
+    async fn request_default_amount() -> anyhow::Result<()> {
+        let shared = ValidSharedConfig::new_validated(ServiceConfig::Faucet)
+            .await
+            .expect("Faucet config should be valid");
+
+        let rpc = CustomRpcClient::new_from_url(
+            shared.rpc_url.as_str(),
+            SendTransactionConfig {
+                compute_budget: None,
+                debug_logs: Some(true),
+                program_id_filter: HashSet::new(),
+            },
+        );
+
+        let req = reqwest::Client::new();
+        let user = Keypair::new();
+        let user_address = user.pubkey();
+        rpc.fund_account(&user_address).await?;
+        let txn = request_base(&req, &faucet_url(), &user_address, None).await?;
+        sign_faucet_transaction_and_submit(txn, &user, &rpc).await?;
+
+        let ata = shared.base.get_ata_for(&user_address);
+        let balance = rpc.client.get_token_account_balance(&ata).await?;
+        assert_eq!(balance.ui_amount_string, DEFAULT_FAUCET_AMOUNT.to_string());
+
+        Ok(())
     }
 }

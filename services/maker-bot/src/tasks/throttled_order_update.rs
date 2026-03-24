@@ -12,7 +12,10 @@ use client::{
     },
 };
 use dropset_interface::error::DropsetError;
-use dropset_services_shared::debug_logs::format_timestamped_log;
+use dropset_services_shared::{
+    debug_logs::format_timestamped_log,
+    faucet_client::FaucetClient,
+};
 use solana_keypair::Signer;
 use tokio::sync::watch;
 
@@ -32,6 +35,7 @@ pub async fn throttled_order_update(
     mut rx: watch::Receiver<TaskUpdate>,
     rpc: &CustomRpcClient,
     throttle_window_ms: u64,
+    faucet_client: Option<FaucetClient>,
 ) -> anyhow::Result<()> {
     loop {
         // Wait until the value has changed. Not equality wise, but a sender posting a new value.
@@ -71,6 +75,23 @@ pub async fn throttled_order_update(
                         client::LogColor::Info,
                     ));
                     ctx.needs_expand = true;
+                }
+                Err(TransactionSubmitError::Dropset(DropsetError::InsufficientUserBalance)) => {
+                    let (kp, ask_size, bid_size) = {
+                        let ctx = maker_ctx.try_borrow_mut()?;
+                        let kp = ctx.keypair.insecure_clone();
+                        let (ask_size, bid_size) = (ctx.ask_order_size, ctx.bid_order_size);
+                        (kp, ask_size, bid_size)
+                    };
+                    let addr = &kp.pubkey();
+                    if let Some(ref faucet_client) = faucet_client {
+                        faucet_client
+                            .request_quote_sign_and_submit(addr, &kp, rpc, Some(bid_size))
+                            .await?;
+                        faucet_client
+                            .request_base_sign_and_submit(addr, &kp, rpc, Some(ask_size))
+                            .await?;
+                    }
                 }
                 Err(e) => return Err(e.into()),
             }

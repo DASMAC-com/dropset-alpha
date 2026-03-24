@@ -1,13 +1,14 @@
 //! Lightweight, nonblocking RPC client utilities for funding accounts, sending transactions,
 //! and pretty-printing `dropset`-related transaction logs.
 
+mod transaction_submit_error;
+
 use std::collections::HashSet;
 
 use anyhow::{
     bail,
     Context,
 };
-use dropset_interface::error::DropsetError;
 use itertools::Itertools;
 use solana_address::Address;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -38,6 +39,7 @@ use transaction_parser::{
     events::dropset_event::DropsetEvent,
     ParseDropsetEvents,
 };
+pub use transaction_submit_error::*;
 
 use crate::{
     pretty::{
@@ -47,30 +49,6 @@ use crate::{
     print_kv,
     LogColor,
 };
-
-/// Error returned by transaction submission. Distinguishes dropset program errors (which callers
-/// may want to match on) from all other failures.
-pub enum TransactionSubmitError {
-    /// The transaction failed with a known dropset program error.
-    Dropset(DropsetError),
-    /// Any other failure (RPC, signing, parsing, etc).
-    Other(anyhow::Error),
-}
-
-impl From<TransactionSubmitError> for anyhow::Error {
-    fn from(e: TransactionSubmitError) -> Self {
-        match e {
-            TransactionSubmitError::Dropset(e) => anyhow::anyhow!("{e:?}"),
-            TransactionSubmitError::Other(e) => e,
-        }
-    }
-}
-
-impl From<anyhow::Error> for TransactionSubmitError {
-    fn from(e: anyhow::Error) -> Self {
-        TransactionSubmitError::Other(e)
-    }
-}
 
 pub struct CustomRpcClient {
     pub client: RpcClient,
@@ -323,12 +301,11 @@ async fn send_transaction_with_config(
                     println!();
                 });
             }
-            match DropsetError::from_client_error(&error, final_instructions) {
-                Some(dropset_err) => Err(TransactionSubmitError::Dropset(dropset_err)),
-                None => Err(TransactionSubmitError::Other(
-                    anyhow::Error::from(error).context("Failed transaction submission"),
-                )),
-            }
+
+            Err(TransactionSubmitError::from_client_error(
+                error,
+                final_instructions,
+            ))
         }
     }
 }

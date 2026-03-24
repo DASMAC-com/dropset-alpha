@@ -30,6 +30,7 @@ use dropset_services_shared::faucet_client::{
     HealthResponse,
     MintRequest,
     MintResponse,
+    DEFAULT_FAUCET_AMOUNT,
 };
 use serde::Serialize;
 use solana_address::Address;
@@ -120,17 +121,18 @@ async fn faucet_handler(
         }
     };
 
-    if req.amount == 0 {
+    let amount = req.amount.unwrap_or(DEFAULT_FAUCET_AMOUNT);
+    if amount == 0 {
         return respond_err(
             StatusCode::BAD_REQUEST,
             "Amount must be greater than zero".to_string(),
         );
     }
 
-    match state.create_signed_mint_to_user_txn(&address, req.is_base, req.amount) {
+    match state.create_signed_mint_to_user_txn(&address, req.is_base, amount) {
         Ok(transaction) => {
             let token = if req.is_base { "base" } else { "quote" };
-            tracing::info!(%address, token, amount = req.amount, "Signed mint transaction");
+            tracing::info!(%address, token, amount = amount, "Signed mint transaction");
             Json(MintResponse { transaction }).into_response()
         }
         Err(e) => respond_err(

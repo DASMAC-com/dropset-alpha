@@ -7,7 +7,10 @@ use client::{
     },
 };
 use dropset_interface::instructions::MarketOrderInstructionData;
-use dropset_services_shared::config::ValidSharedConfig;
+use dropset_services_shared::{
+    config::ValidSharedConfig,
+    faucet_client::FaucetClient,
+};
 use solana_address::Address;
 use solana_keypair::{
     Keypair,
@@ -20,22 +23,26 @@ pub struct TakerContext {
     pub rpc: CustomRpcClient,
     pub keypair: Keypair,
     pub market_ctx: MarketContext,
+    pub faucet_client: Option<FaucetClient>,
 }
 
 impl TakerContext {
     pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
+        let faucet_client = FaucetClient::new(&shared).await;
         let ValidSharedConfig {
             keypair,
             base,
             quote,
             ..
         } = shared;
+
         let market_ctx = MarketContext::new(base, quote);
 
         Ok(Self {
             rpc,
             keypair,
             market_ctx,
+            faucet_client,
         })
     }
 

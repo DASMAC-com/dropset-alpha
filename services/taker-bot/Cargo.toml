@@ -16,6 +16,8 @@ solana-address.workspace = true
 solana-client.workspace = true
 solana-instruction.workspace = true
 solana-keypair.workspace = true
+solana-program-error.workspace = true
+spl-token-2022-interface.workspace = true
 rand.workspace = true
 tokio = { workspace = true, features = ["time"] }
 
