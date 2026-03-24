@@ -8,7 +8,7 @@ use dropset_services_shared::oanda_types::{
     CurrencyPair,
     OandaCandlestickResponse,
 };
-use price::client_helpers::normalize_non_atoms_price;
+use price::client_helpers::ui_price_to_atoms_price;
 use rust_decimal::Decimal;
 
 pub fn get_normalized_mid_price(
@@ -40,7 +40,7 @@ pub fn get_normalized_mid_price(
         None => anyhow::bail!("There are zero candlesticks in the candlestick response"),
     };
 
-    Ok(normalize_non_atoms_price(
+    Ok(ui_price_to_atoms_price(
         latest_price,
         market_ctx.base.mint_decimals,
         market_ctx.quote.mint_decimals,

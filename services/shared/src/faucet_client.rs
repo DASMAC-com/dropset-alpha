@@ -1,5 +1,15 @@
-use client::transactions::CustomRpcClient;
+use anyhow::Context;
+use client::{
+    context::token::TokenContext,
+    transactions::{
+        CustomRpcClient,
+        ParsedTransactionWithEvents,
+        TransactionSubmitError,
+    },
+};
+use price::client_helpers::atoms_to_ui_amount;
 use reqwest::Url;
+use rust_decimal::prelude::ToPrimitive;
 use serde::{
     Deserialize,
     Serialize,
@@ -7,7 +17,7 @@ use serde::{
 use solana_address::Address;
 use solana_keypair::{
     Keypair,
-    Signature,
+    Signer,
 };
 use solana_sdk::transaction::Transaction;
 
@@ -16,6 +26,8 @@ use crate::config::ValidSharedConfig;
 pub struct FaucetClient {
     client: reqwest::Client,
     faucet_url: Url,
+    base: TokenContext,
+    quote: TokenContext,
 }
 
 impl FaucetClient {
@@ -25,7 +37,12 @@ impl FaucetClient {
         get_health(&client, &faucet_url)
             .await
             .is_ok()
-            .then(|| Self { client, faucet_url })
+            .then(|| Self {
+                client,
+                faucet_url,
+                base: shared.base.clone(),
+                quote: shared.quote.clone(),
+            })
     }
 
     /// Wrapper for [get_health].
@@ -34,26 +51,46 @@ impl FaucetClient {
     }
 
     /// Wrapper for passing the result of [request_base] into [sign_faucet_transaction_and_submit].
+    ///
+    /// The `amount` passed in should be in atoms.
     pub async fn request_base_sign_and_submit(
         &self,
         to: &Address,
         keypair: &Keypair,
         rpc: &CustomRpcClient,
         amount: Option<u64>,
-    ) -> anyhow::Result<Signature> {
-        let txn = request_base(&self.client, &self.faucet_url, to, amount).await?;
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+        let ui_amount = if let Some(atoms) = amount {
+            atoms_to_ui_amount(atoms, self.base.mint_decimals)
+                .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
+                .to_u64()
+        } else {
+            None
+        };
+
+        let txn = request_base(&self.client, &self.faucet_url, to, ui_amount).await?;
         sign_faucet_transaction_and_submit(txn, keypair, rpc).await
     }
 
     /// Wrapper for passing the result of [request_quote] into [sign_faucet_transaction_and_submit].
+    ///
+    /// The `amount` passed in should be in atoms.
     pub async fn request_quote_sign_and_submit(
         &self,
         to: &Address,
         keypair: &Keypair,
         rpc: &CustomRpcClient,
         amount: Option<u64>,
-    ) -> anyhow::Result<Signature> {
-        let txn = request_quote(&self.client, &self.faucet_url, to, amount).await?;
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+        let ui_amount = if let Some(atoms) = amount {
+            atoms_to_ui_amount(atoms, self.quote.mint_decimals)
+                .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
+                .to_u64()
+        } else {
+            None
+        };
+
+        let txn = request_quote(&self.client, &self.faucet_url, to, ui_amount).await?;
         sign_faucet_transaction_and_submit(txn, keypair, rpc).await
     }
 }
@@ -177,13 +214,13 @@ async fn sign_faucet_transaction_and_submit(
     mut faucet_transaction: Transaction,
     keypair: &Keypair,
     rpc: &CustomRpcClient,
-) -> anyhow::Result<Signature> {
-    faucet_transaction.sign(&[keypair], faucet_transaction.message.recent_blockhash);
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+    faucet_transaction
+        .try_partial_sign(&[keypair], faucet_transaction.message.recent_blockhash)
+        .context("Couldn't partially sign faucet transaction")?;
 
-    Ok(rpc
-        .client
-        .send_and_confirm_transaction(&faucet_transaction)
-        .await?)
+    rpc.submit_and_confirm_transaction(keypair.pubkey(), faucet_transaction)
+        .await
 }
 
 #[cfg(test)]

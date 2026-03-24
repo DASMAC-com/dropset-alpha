@@ -211,7 +211,7 @@ async fn create_token(
         &token_program,
     )?;
 
-    rpc.send_and_confirm_txn(
+    rpc.sign_and_submit_instructions(
         &authority,
         &[&mint],
         &[create_mint_account, initialize_mint],
@@ -234,7 +234,7 @@ async fn create_ata(
     user: &Keypair,
 ) -> anyhow::Result<Address> {
     let ix = token.create_ata(&user.pubkey(), &user.pubkey());
-    rpc.send_and_confirm_txn(user, &[], &[ix]).await?;
+    rpc.sign_and_submit_instructions(user, &[], &[ix]).await?;
     Ok(token.get_ata_for(&user.pubkey()))
 }
 
@@ -247,7 +247,7 @@ async fn mint_to(
     amount: u64,
 ) -> anyhow::Result<()> {
     let ix = token.mint_to_user(&user.pubkey(), amount)?;
-    rpc.send_and_confirm_txn(user, &[mint_authority], &[ix])
+    rpc.sign_and_submit_instructions(user, &[mint_authority], &[ix])
         .await?;
     Ok(())
 }

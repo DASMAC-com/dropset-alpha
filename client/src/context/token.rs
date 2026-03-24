@@ -17,6 +17,7 @@ use spl_token_2022_interface::{
 };
 use spl_token_interface::state::Mint;
 
+#[derive(Clone)]
 pub struct TokenContext {
     pub mint_authority: Option<Address>,
     pub mint_address: Address,

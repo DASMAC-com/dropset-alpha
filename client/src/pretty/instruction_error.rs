@@ -7,13 +7,12 @@ use dropset_interface::{
     instructions::DropsetInstruction,
 };
 use solana_client::client_error::ClientError;
-use solana_instruction::Instruction;
 use solana_instruction_error::InstructionError as SolanaInstructionError;
 use solana_transaction_error::TransactionError;
 
 use crate::{
     fmt_kv,
-    transactions::transaction_error_from_client,
+    transactions::InstructionDataAtIndex,
     LogColor,
 };
 
@@ -31,21 +30,23 @@ enum InstructionError {
 pub struct PrettyInstructionError(InstructionError);
 
 impl PrettyInstructionError {
-    pub fn new(error: &ClientError, instructions: &[Instruction]) -> Option<Self> {
+    pub fn new(error: &ClientError, instructions: &impl InstructionDataAtIndex) -> Option<Self> {
         let TransactionError::InstructionError(instruction_index, instruction_error) =
-            transaction_error_from_client(error)?
+            error.get_transaction_error()?
         else {
             return None;
         };
 
-        let instruction = instructions
-            .get(instruction_index as usize)
+        let program_id = *instructions
+            .program_id(instruction_index as usize)
             .expect("Instruction index from error should be valid");
-        let instruction_tag = instruction.data[0];
+        let instruction_tag = instructions
+            .data(instruction_index as usize)
+            .expect("Instruction index from error should be valid")[0];
 
         let res = match instruction_error {
             SolanaInstructionError::Custom(code) => {
-                if instruction.program_id == dropset::ID {
+                if program_id == dropset::ID {
                     let dropset_code =
                         u8::try_from(code).expect("Dropset error codes should be valid u8 values");
                     let dropset_error =

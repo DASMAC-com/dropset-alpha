@@ -10,7 +10,10 @@ use dropset_interface::{
         BatchReplaceInstructionData,
         UnvalidatedOrders,
     },
-    state::user_order_sectors::MAX_ORDERS_USIZE,
+    state::{
+        sector::SectorIndex,
+        user_order_sectors::MAX_ORDERS_USIZE,
+    },
 };
 use dropset_services_shared::{
     config::ValidSharedConfig,
@@ -177,6 +180,11 @@ impl MakerContext {
         self.mid_price_atoms
     }
 
+    /// Helper function for the maker's seat index.
+    pub fn seat_index(&self) -> SectorIndex {
+        self.latest_state.seat.index
+    }
+
     /// In the A-S model `q` represents the base inventory as a reflection of the maker's net short
     /// (negative) or long (positive) position. The difference from the maker seat's current base
     /// to target base can thus be used as `q` to achieve the effect of always returning to the
@@ -234,7 +242,7 @@ impl MakerContext {
             self.latest_state.asks.clone(),
             bid_layers.clone(),
             ask_layers.clone(),
-            self.latest_state.seat.index,
+            self.seat_index(),
         )?;
 
         if self.batch_replace {
@@ -259,7 +267,7 @@ impl MakerContext {
             let ixn = self.market_ctx.batch_replace(
                 self.maker_address,
                 BatchReplaceInstructionData::new(
-                    self.latest_state.seat.index,
+                    self.seat_index(),
                     UnvalidatedOrders::new(bid_args),
                     UnvalidatedOrders::new(ask_args),
                 ),
@@ -283,6 +291,18 @@ impl MakerContext {
 
             Ok(ixns)
         }
+    }
+
+    /// Returns an [Instruction] to deposit base to the maker's market seat.
+    pub fn deposit_base(&self, amount: u64) -> Instruction {
+        self.market_ctx
+            .deposit_base(self.maker_address, amount, self.seat_index())
+    }
+
+    /// Returns an [Instruction] to deposit quote to the maker's market seat.
+    pub fn deposit_quote(&self, amount: u64) -> Instruction {
+        self.market_ctx
+            .deposit_quote(self.maker_address, amount, self.seat_index())
     }
 
     pub fn update_maker_state(&mut self, new_market_state: MarketViewAll) -> anyhow::Result<()> {

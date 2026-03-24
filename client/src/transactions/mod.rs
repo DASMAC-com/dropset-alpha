@@ -1,6 +1,7 @@
 //! Lightweight, nonblocking RPC client utilities for funding accounts, sending transactions,
 //! and pretty-printing `dropset`-related transaction logs.
 
+mod instruction_data_at_index;
 mod transaction_submit_error;
 
 use std::collections::HashSet;
@@ -9,12 +10,20 @@ use anyhow::{
     bail,
     Context,
 };
+pub use instruction_data_at_index::*;
 use itertools::Itertools;
 use solana_address::Address;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::{
+    nonblocking::rpc_client::RpcClient,
+    rpc_config::{
+        RpcSendTransactionConfig,
+        RpcSimulateTransactionConfig,
+    },
+};
 use solana_cluster_type::ClusterType;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
+use solana_instruction_error::InstructionError;
 use solana_sdk::{
     message::{
         Instruction,
@@ -27,6 +36,7 @@ use solana_sdk::{
     },
     transaction::Transaction,
 };
+use solana_transaction_error::TransactionError;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta,
     UiTransactionEncoding,
@@ -134,8 +144,8 @@ impl CustomRpcClient {
         Ok(kp)
     }
 
-    /// Sends and confirms a single signer transaction with the signer passed in as the payer and
-    /// sole signer.
+    /// Signs, submits and confirms a single signer [Transaction] with the signer passed in as the
+    /// payer and sole signer.
     /// Instructions that require multiple signers should not be used here as they will obviously
     /// fail.
     pub async fn send_single_signer(
@@ -143,18 +153,32 @@ impl CustomRpcClient {
         signer: &Keypair,
         instructions: impl AsRef<[Instruction]>,
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-        self.send_and_confirm_txn(signer, &[signer], instructions.as_ref())
+        self.sign_and_submit_instructions(signer, &[signer], instructions.as_ref())
             .await
     }
 
-    /// Sends and confirms a transaction using [Self::config].
-    pub async fn send_and_confirm_txn(
+    /// Signs instructions and then creates, submits and confirms the resulting [Transaction].
+    pub async fn sign_and_submit_instructions(
         &self,
         payer: &Keypair,
         signers: &[&Keypair],
         instructions: &[Instruction],
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-        send_transaction_with_config(&self.client, payer, signers, instructions, &self.config).await
+        let transaction =
+            sign_transaction_with_config(&self.client, payer, signers, instructions, &self.config)
+                .await?;
+
+        self.submit_and_confirm_transaction(payer.pubkey(), transaction)
+            .await
+    }
+
+    /// Submits and confirms an already signed [Transaction].
+    pub async fn submit_and_confirm_transaction(
+        &self,
+        payer_addr: Address,
+        transaction: Transaction,
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+        send_transaction_with_config(&self.client, payer_addr, transaction, &self.config).await
     }
 }
 
@@ -216,13 +240,13 @@ pub struct ParsedTransactionWithEvents {
     pub events: Vec<DropsetEvent>,
 }
 
-async fn send_transaction_with_config(
+async fn sign_transaction_with_config(
     rpc: &RpcClient,
     payer: &Keypair,
     signers: &[&Keypair],
     instructions: &[Instruction],
     config: &SendTransactionConfig,
-) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+) -> anyhow::Result<Transaction> {
     let bh = rpc
         .get_latest_blockhash()
         .await
@@ -253,7 +277,35 @@ async fn send_transaction_with_config(
     )
     .expect("Should sign");
 
-    let res = rpc.send_and_confirm_transaction(&tx).await;
+    Ok(tx)
+}
+
+async fn send_transaction_with_config(
+    rpc: &RpcClient,
+    payer_addr: Address,
+    transaction: Transaction,
+    config: &SendTransactionConfig,
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+    println!("-------------------------------------------------------------------------");
+    println!("------------------------");
+    println!("------------------------");
+    let sim_res = rpc
+        .simulate_transaction_with_config(
+            &transaction,
+            RpcSimulateTransactionConfig {
+                inner_instructions: true,
+                ..RpcSimulateTransactionConfig::default()
+            },
+        )
+        .await;
+
+    println!("{sim_res:#?}");
+    println!("------------------------");
+    println!("------------------------");
+    println!("------------------------");
+    println!("------------------------");
+
+    let res = rpc.send_and_confirm_transaction(&transaction).await;
     match res {
         Ok(signature) => {
             let encoded = fetch_transaction_json(rpc, signature).await?;
@@ -272,7 +324,7 @@ async fn send_transaction_with_config(
 
             if matches!(config.debug_logs, Some(true)) {
                 let pretty = PrettyTransaction {
-                    sender: payer.pubkey(),
+                    sender: payer_addr,
                     signature,
                     indent_size: 2,
                     transaction: &parsed_transaction,
@@ -294,17 +346,28 @@ async fn send_transaction_with_config(
             })
         }
         Err(error) => {
+            if let solana_client::client_error::ClientErrorKind::RpcError(e) = error.kind() {}
+            println!("{error:#?}");
             if matches!(config.debug_logs, Some(true)) {
-                PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
+                let e = error.get_transaction_error();
+                if let Some(TransactionError::InstructionError(ixn_idx, _ixn_err)) = e {
+                    let ixn = transaction
+                        .message
+                        .instructions
+                        .get(ixn_idx as usize)
+                        .unwrap();
+                    println!("{ixn:?}");
+                }
+                PrettyInstructionError::new(&error, &transaction).inspect(|err| {
                     print!("{err}");
-                    print_kv!("Sender", payer.pubkey(), LogColor::Gray);
+                    print_kv!("Sender", payer_addr, LogColor::Gray);
                     println!();
                 });
             }
 
             Err(TransactionSubmitError::from_client_error(
                 error,
-                final_instructions,
+                &transaction,
             ))
         }
     }
