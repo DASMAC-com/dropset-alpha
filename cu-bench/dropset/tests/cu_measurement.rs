@@ -174,53 +174,20 @@ fn batch_replace_place(n: u64) -> u64 {
     let f = new_bench_fixture();
     expand_market(&f);
 
-    let cu = match n as usize {
-        1 => {
-            let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        5 => {
-            let asks: [OrderInfoArgs; 5] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        MAX_ORDERS_USIZE => {
-            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        _ => unreachable!(),
-    };
+    let asks: Vec<OrderInfoArgs> = (0..n as usize)
+        .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+        .collect();
+    let cu = measure_cu(
+        &f,
+        f.market_ctx.batch_replace(
+            f.maker,
+            BatchReplaceInstructionData::new(
+                f.seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(&asks).expect("n should be <= MAX_ORDERS_USIZE"),
+            ),
+        ),
+    );
 
     cu / n
 }
@@ -279,53 +246,20 @@ fn batch_replace_replace(n: u64) -> u64 {
     }
 
     // Measure: BatchReplace cancels the n existing asks and places n new ones.
-    let cu = match n as usize {
-        1 => {
-            let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        5 => {
-            let asks: [OrderInfoArgs; 5] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        MAX_ORDERS_USIZE => {
-            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        _ => unreachable!(),
-    };
+    let asks: Vec<OrderInfoArgs> = (0..n as usize)
+        .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+        .collect();
+    let cu = measure_cu(
+        &f,
+        f.market_ctx.batch_replace(
+            f.maker,
+            BatchReplaceInstructionData::new(
+                f.seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(&asks).expect("n should be <= MAX_ORDERS_USIZE"),
+            ),
+        ),
+    );
 
     cu / n
 }

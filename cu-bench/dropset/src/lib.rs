@@ -27,7 +27,7 @@ use solana_instruction::Instruction;
 pub const BASE_UNIT: u64 = 100_000_000;
 pub const QUOTE_UNIT: u64 = 100_000_000;
 
-const fn make_ask_prices<const N: usize>() -> [u32; N] {
+pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
@@ -37,7 +37,7 @@ const fn make_ask_prices<const N: usize>() -> [u32; N] {
     arr
 }
 
-const fn make_bid_prices<const N: usize>() -> [u32; N] {
+pub const fn make_bid_prices<const N: usize>() -> [u32; N] {
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
