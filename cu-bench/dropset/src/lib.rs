@@ -59,7 +59,7 @@ pub const ASK_PRICES: [u32; MAX_ORDERS_USIZE] = make_ask_prices();
 pub const BID_PRICES: [u32; MAX_ORDERS_USIZE] = make_bid_prices();
 
 /// Table width for formatted output.
-pub const W: usize = 44;
+pub const W: usize = 45;
 
 /// A fully initialized benchmark fixture: a market with a funded, seated maker.
 pub struct BenchFixture {
@@ -176,10 +176,11 @@ pub fn fmt_header(logs: &mut String, title: &str) {
 }
 
 /// Write a centered sub-table: column header, dashes, and data rows.
-pub fn fmt_subtable(logs: &mut String, col_left: &str, rows: &[(u64, u64)]) {
+pub fn fmt_subtable(logs: &mut String, col_left: &str, col_right: &str, rows: &[(u64, u64)]) {
     logs.push('\n');
-    wc(logs, &format!("{:<14}{:>9}", col_left, "Average CU"));
-    wc(logs, &"-".repeat(24));
+    let s = &format!("{:<14}{:>8}", col_left, format!("{col_right} CU"));
+    wc(logs, s);
+    wc(logs, &"-".repeat(26));
     for &(n, avg) in rows {
         let label = format!("{n:>7} ");
         wc(logs, &format!("{label:<14}  {avg:>6}  "));
