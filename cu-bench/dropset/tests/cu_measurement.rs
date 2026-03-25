@@ -1,3 +1,4 @@
+use client::mollusk_helpers::helper_trait::DropsetTestHelper;
 use cu_bench_dropset::{
     add_funded_maker,
     add_user,
@@ -5,11 +6,11 @@ use cu_bench_dropset::{
     fmt_header,
     fmt_subtable,
     make_ask_prices,
-    make_bid_prices,
     measure_cu,
     new_bench_fixture,
     ASK_PRICES,
     BASE_UNIT,
+    INIT_BASE,
     MAX_ORDERS_USIZE,
     MAX_PERMITTED_SECTOR_INCREASE,
 };
@@ -22,6 +23,7 @@ use dropset_interface::{
         PostOrderInstructionData,
         UnvalidatedOrders,
     },
+    state::sector::NIL,
 };
 use price::{
     client_helpers::{
@@ -31,6 +33,7 @@ use price::{
     to_order_info,
     OrderInfoArgs,
 };
+use solana_address::Address;
 
 /// Max orders per side in a single BatchReplace.
 const BATCH_AMOUNTS: &[u64] = &[1, 5, MAX_ORDERS_USIZE as u64];
@@ -47,12 +50,17 @@ fn cu_deposit() -> anyhow::Result<()> {
     let f = new_bench_fixture();
     expand_market(&f);
 
+    // Ensure the maker has enough.
+    let amount = 1000;
+    assert!(f
+        .ctx
+        .process_instruction(&f.market_ctx.base.mint_to_user(&f.maker, amount).unwrap(),)
+        .program_result
+        .is_ok());
+
     // Fixture already deposited base to create the seat; measure a subsequent
     // deposit — the hot path where the seat already exists.
-    let cu = measure_cu(
-        &f,
-        f.market_ctx.deposit_base(f.maker, BASE_UNIT, f.seat_index),
-    );
+    let cu = measure_cu(&f, f.market_ctx.deposit_base(f.maker, amount, f.seat_index));
 
     fmt_subtable(&mut logs, "Deposits", &[(1, cu)]);
     eprintln!("{logs}");
@@ -142,12 +150,33 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     let mut logs = String::new();
 
     // Place: book starts empty, BatchReplace inserts n new asks.
-    fmt_header(&mut logs, "BatchReplace (Place)");
+    fmt_header(&mut logs, "BatchReplace (Place, into 0 orders)");
     let mut rows = Vec::new();
     for &n in BATCH_AMOUNTS {
         rows.push((n, batch_replace_place(n)));
     }
     fmt_subtable(&mut logs, "Orders", &rows);
+
+    // Place: Sparse batch replace: book has n existing asks, BatchReplace sparsely inserts asks
+    // in between the existing ones on the book. See the function for more info.
+    const N_PRE_EXISTING_1: usize = 10;
+    const N_PRE_EXISTING_2: usize = 100;
+    const N_PRE_EXISTING_3: usize = 200;
+    const ORDERS: [usize; 3] = [N_PRE_EXISTING_1, N_PRE_EXISTING_2, N_PRE_EXISTING_3];
+    for (i, n_orders) in ORDERS.iter().enumerate() {
+        let header = &format!("BatchReplace (Place, into {} orders)", n_orders);
+        fmt_header(&mut logs, header);
+        let mut rows = Vec::new();
+        for &n in BATCH_AMOUNTS {
+            match i {
+                0 => rows.push((n, batch_replace_sparse::<N_PRE_EXISTING_1>(n as usize))),
+                1 => rows.push((n, batch_replace_sparse::<N_PRE_EXISTING_2>(n as usize))),
+                2 => rows.push((n, batch_replace_sparse::<N_PRE_EXISTING_3>(n as usize))),
+                _ => unreachable!(),
+            }
+        }
+        fmt_subtable(&mut logs, "Orders", &rows);
+    }
 
     // Cancel: book has n existing asks, BatchReplace replaces with empty.
     fmt_header(&mut logs, "BatchReplace (Cancel)");
@@ -166,26 +195,6 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     }
     // Each row is CU for 1 cancel + 1 place within a single BatchReplace, amortized over n.
     fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
-
-    const N_ORDERS_0: usize = 10;
-    const N_ORDERS_1: usize = 100;
-    const N_ORDERS_2: usize = 1000;
-    const ORDERS: [usize; 3] = [N_ORDERS_0, N_ORDERS_1, N_ORDERS_2];
-    for (i, n_orders) in ORDERS.iter().enumerate() {
-        // Sparse: book has n existing bids/asks, BatchReplace sparsely inserts bids/asks in between
-        // the existing ones on the book.
-        fmt_header(&mut logs, "BatchReplace (Sparse insert)");
-        let mut rows = Vec::new();
-        for &n in BATCH_AMOUNTS {
-            match i {
-                0 => rows.push((n, batch_replace_sparse::<N_ORDERS_0>(n as usize))),
-                1 => rows.push((n, batch_replace_sparse::<N_ORDERS_1>(n as usize))),
-                2 => rows.push((n, batch_replace_sparse::<N_ORDERS_2>(n as usize))),
-                _ => unreachable!(),
-            }
-        }
-        fmt_subtable(&mut logs, &format!("Sparse ({})", n_orders), &rows);
-    }
 
     eprintln!("{logs}");
     Ok(())
@@ -286,10 +295,19 @@ fn batch_replace_replace(n: u64) -> u64 {
     cu / n
 }
 
-/// Place `n` orders into an extremely dense orderbook; return amortized CU per order.
+/// Place `n` ask orders into an extremely dense orderbook; return amortized CU per order.
 ///
 /// This benchmark is intended to represent the traversal cost of inserting orders across the book
 /// in a sparse manner.
+///
+/// The knob worth paying attention to here is the number of pre-existing orders.
+/// This test is effectively amortizing the traversal cost and making it clear how expensive
+/// each traversal is in terms of CUs.
+///
+/// For example, with 100 vs 200 existing ask orders on the book, a new order insertion requires
+/// traversing twice as many orders before finding the proper insert point.
+///
+/// The insertion points are evenly interpolated throughout the book's asks.
 fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
     let f = new_bench_fixture();
     let total_pre_existing_orders = N_PRE_EXISTING_ORDERS_PER_SIDE * 2;
@@ -299,37 +317,37 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
     }
 
     // Setup: Place the desired amount of pre-existing orders on both sides (not measured).
-    let bid_prices = make_bid_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
     let ask_prices = make_ask_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
-    let bids = bid_prices.map(|price| OrderInfoArgs::new_unscaled(price, 1));
     let asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, 1));
 
-    for chunked_pairs in bids
-        .into_iter()
-        .zip(asks)
-        .collect::<Vec<_>>()
-        .chunks(MAX_ORDERS_USIZE)
-    {
-        let (bid_slice, ask_slice): (Vec<_>, Vec<_>) = chunked_pairs.iter().cloned().unzip();
+    for ask_slice in asks.chunks(MAX_ORDERS_USIZE) {
+        expand_market(&f);
+        // Create a new maker that will post the next 10 orders.
+        let user = Address::new_unique();
+        assert!(f
+            .ctx
+            .process_instruction_chain(&[
+                solana_system_interface::instruction::transfer(&f.maker, &user, 1_000_000_000),
+                f.market_ctx.base.create_ata(&user, &user),
+                f.market_ctx.base.mint_to_user(&user, INIT_BASE).unwrap(),
+                f.market_ctx.deposit_base(user, INIT_BASE, NIL),
+            ])
+            .program_result
+            .is_ok());
+
+        let seat_index = f.ctx.get_seat(f.market_ctx.market, user).index;
         let err_msg = "Chunked pairs length should be <= MAX_ORDERS_USIZE";
         let ixn = f.market_ctx.batch_replace(
-            f.maker,
+            user,
             BatchReplaceInstructionData::new(
-                f.seat_index,
-                UnvalidatedOrders::new_from_slice(&bid_slice).expect(err_msg),
-                UnvalidatedOrders::new_from_slice(&ask_slice).expect(err_msg),
+                seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(ask_slice).expect(err_msg),
             ),
         );
 
-        f.ctx.process_instruction(&ixn);
+        assert!(f.ctx.process_instruction(&ixn).program_result.is_ok());
     }
-
-    let inserted_bids = (0..n)
-        .map(|i| {
-            let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
-            OrderInfoArgs::new_unscaled(bid_prices[idx], 1)
-        })
-        .collect::<Vec<_>>();
 
     let inserted_asks = (0..n)
         .map(|i| {
@@ -348,12 +366,17 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
         f.maker,
         BatchReplaceInstructionData::new(
             f.seat_index,
-            UnvalidatedOrders::new_from_slice(&inserted_bids).expect(err_msg),
+            UnvalidatedOrders::new([]),
             UnvalidatedOrders::new_from_slice(&inserted_asks).expect(err_msg),
         ),
     );
 
-    measure_cu(&f, insert_ixn) / n as u64
+    let raw_cu = measure_cu(&f, insert_ixn);
+    let market = f.ctx.view_market(f.market_ctx.market);
+    assert_eq!(market.asks.len(), N_PRE_EXISTING_ORDERS_PER_SIDE + n);
+    assert_eq!(market.bids.len(), 0);
+
+    raw_cu / n as u64
 }
 
 // ── Individual-instruction comparison benchmarks ─────────────────────────────

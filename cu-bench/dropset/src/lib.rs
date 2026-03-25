@@ -27,6 +27,9 @@ use solana_instruction::Instruction;
 pub const BASE_UNIT: u64 = 100_000_000;
 pub const QUOTE_UNIT: u64 = 100_000_000;
 
+pub const INIT_BASE: u64 = 1_000 * BASE_UNIT;
+pub const INIT_QUOTE: u64 = 1_000_000 * QUOTE_UNIT;
+
 pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
     let mut arr = [0u32; N];
     let mut i = 0;
@@ -56,7 +59,7 @@ pub const ASK_PRICES: [u32; MAX_ORDERS_USIZE] = make_ask_prices();
 pub const BID_PRICES: [u32; MAX_ORDERS_USIZE] = make_bid_prices();
 
 /// Table width for formatted output.
-pub const W: usize = 40;
+pub const W: usize = 44;
 
 /// A fully initialized benchmark fixture: a market with a funded, seated maker.
 pub struct BenchFixture {
@@ -75,7 +78,7 @@ pub struct BenchFixture {
 /// without the cost of account reallocation.
 pub fn new_bench_fixture() -> BenchFixture {
     // Give the maker enough lamports to pay for market expansions.
-    let maker_mock = create_mock_user_account(Address::new_unique(), 10_000_000_000);
+    let maker_mock = create_mock_user_account(Address::new_unique(), 100_000_000_000_000);
     let maker = maker_mock.0;
     let (ctx, market_ctx) = new_dropset_mollusk_context_with_default_market(&[maker_mock]);
 
@@ -83,29 +86,19 @@ pub fn new_bench_fixture() -> BenchFixture {
     let res = ctx.process_instruction_chain(&[
         market_ctx.base.create_ata_idempotent(&maker, &maker),
         market_ctx.quote.create_ata_idempotent(&maker, &maker),
-        market_ctx
-            .base
-            .mint_to_user(&maker, 1_000 * BASE_UNIT)
-            .unwrap(),
-        market_ctx
-            .quote
-            .mint_to_user(&maker, 1_000_000 * QUOTE_UNIT)
-            .unwrap(),
+        market_ctx.base.mint_to_user(&maker, INIT_BASE).unwrap(),
+        market_ctx.quote.mint_to_user(&maker, INIT_QUOTE).unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "fixture ATA/mint setup failed");
 
     // First deposit_base with NIL creates the maker's seat.
-    let res =
-        ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL)]);
+    let res = ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, INIT_BASE, NIL)]);
     assert!(res.program_result.is_ok(), "fixture initial deposit failed");
 
     let seat_index = ctx.get_seat(MOLLUSK_DEFAULT_MARKET.market, maker).index;
 
-    let res = ctx.process_instruction_chain(&[market_ctx.deposit_quote(
-        maker,
-        500_000 * QUOTE_UNIT,
-        seat_index,
-    )]);
+    let res =
+        ctx.process_instruction_chain(&[market_ctx.deposit_quote(maker, INIT_QUOTE, seat_index)]);
     assert!(res.program_result.is_ok(), "fixture quote deposit failed");
 
     BenchFixture {
