@@ -30,7 +30,7 @@ program's equivalent instructions:
   withdraw, and placing or cancelling a single order).
 - **Batched**: a single instruction that processes N items (orders placed,
   cancels, or a combination). Total CU is divided by N to get the amortized
-  per-item cost. Run at several batch sizes, always including a single-item
+  per-item cost. Runs at several batch sizes, generally including a single-item
   baseline.
 - **Swap / market order**: N resting orders placed as setup (not measured),
   then a single taker instruction that crosses all of them. Total CU divided
