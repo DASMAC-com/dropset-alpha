@@ -4,6 +4,8 @@ use cu_bench_dropset::{
     expand_market,
     fmt_header,
     fmt_subtable,
+    make_ask_prices,
+    make_bid_prices,
     measure_cu,
     new_bench_fixture,
     ASK_PRICES,
@@ -165,6 +167,26 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     // Each row is CU for 1 cancel + 1 place within a single BatchReplace, amortized over n.
     fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
 
+    const N_ORDERS_0: usize = 10;
+    const N_ORDERS_1: usize = 100;
+    const N_ORDERS_2: usize = 1000;
+    const ORDERS: [usize; 3] = [N_ORDERS_0, N_ORDERS_1, N_ORDERS_2];
+    for (i, n_orders) in ORDERS.iter().enumerate() {
+        // Sparse: book has n existing bids/asks, BatchReplace sparsely inserts bids/asks in between
+        // the existing ones on the book.
+        fmt_header(&mut logs, "BatchReplace (Sparse insert)");
+        let mut rows = Vec::new();
+        for &n in BATCH_AMOUNTS {
+            match i {
+                0 => rows.push((n, batch_replace_sparse::<N_ORDERS_0>(n as usize))),
+                1 => rows.push((n, batch_replace_sparse::<N_ORDERS_1>(n as usize))),
+                2 => rows.push((n, batch_replace_sparse::<N_ORDERS_2>(n as usize))),
+                _ => unreachable!(),
+            }
+        }
+        fmt_subtable(&mut logs, &format!("Sparse ({})", n_orders), &rows);
+    }
+
     eprintln!("{logs}");
     Ok(())
 }
@@ -262,6 +284,76 @@ fn batch_replace_replace(n: u64) -> u64 {
     );
 
     cu / n
+}
+
+/// Place `n` orders into an extremely dense orderbook; return amortized CU per order.
+///
+/// This benchmark is intended to represent the traversal cost of inserting orders across the book
+/// in a sparse manner.
+fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
+    let f = new_bench_fixture();
+    let total_pre_existing_orders = N_PRE_EXISTING_ORDERS_PER_SIDE * 2;
+
+    for _ in 0..total_pre_existing_orders / MAX_PERMITTED_SECTOR_INCREASE {
+        expand_market(&f);
+    }
+
+    // Setup: Place the desired amount of pre-existing orders on both sides (not measured).
+    let bid_prices = make_bid_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
+    let ask_prices = make_ask_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
+    let bids = bid_prices.map(|price| OrderInfoArgs::new_unscaled(price, 1));
+    let asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, 1));
+
+    for chunked_pairs in bids
+        .into_iter()
+        .zip(asks)
+        .collect::<Vec<_>>()
+        .chunks(MAX_ORDERS_USIZE)
+    {
+        let (bid_slice, ask_slice): (Vec<_>, Vec<_>) = chunked_pairs.iter().cloned().unzip();
+        let err_msg = "Chunked pairs length should be <= MAX_ORDERS_USIZE";
+        let ixn = f.market_ctx.batch_replace(
+            f.maker,
+            BatchReplaceInstructionData::new(
+                f.seat_index,
+                UnvalidatedOrders::new_from_slice(&bid_slice).expect(err_msg),
+                UnvalidatedOrders::new_from_slice(&ask_slice).expect(err_msg),
+            ),
+        );
+
+        f.ctx.process_instruction(&ixn);
+    }
+
+    let inserted_bids = (0..n)
+        .map(|i| {
+            let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
+            OrderInfoArgs::new_unscaled(bid_prices[idx], 1)
+        })
+        .collect::<Vec<_>>();
+
+    let inserted_asks = (0..n)
+        .map(|i| {
+            let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
+            OrderInfoArgs::new_unscaled(ask_prices[idx], 1)
+        })
+        .collect::<Vec<_>>();
+
+    let err_msg = "n should be <= MAX_ORDERS_USIZE to fit in a single batch replace";
+    assert!(n <= MAX_ORDERS_USIZE, "{err_msg}");
+    expand_market(&f);
+
+    // Measure: BatchReplace where the inserted orders are sparsely inserted at different points
+    // in the book.
+    let insert_ixn = f.market_ctx.batch_replace(
+        f.maker,
+        BatchReplaceInstructionData::new(
+            f.seat_index,
+            UnvalidatedOrders::new_from_slice(&inserted_bids).expect(err_msg),
+            UnvalidatedOrders::new_from_slice(&inserted_asks).expect(err_msg),
+        ),
+    );
+
+    measure_cu(&f, insert_ixn) / n as u64
 }
 
 // ── Individual-instruction comparison benchmarks ─────────────────────────────
