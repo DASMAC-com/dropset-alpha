@@ -14,16 +14,20 @@ pub use instruction_data_at_index::*;
 use itertools::Itertools;
 use solana_address::Address;
 use solana_client::{
-    nonblocking::rpc_client::RpcClient,
-    rpc_config::{
-        RpcSendTransactionConfig,
-        RpcSimulateTransactionConfig,
+    client_error::{
+        ClientError,
+        ClientErrorKind,
     },
+    nonblocking::rpc_client::RpcClient,
+    rpc_request::{
+        RpcError,
+        RpcResponseErrorData,
+    },
+    rpc_response::RpcSimulateTransactionResult,
 };
 use solana_cluster_type::ClusterType;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
-use solana_instruction_error::InstructionError;
 use solana_sdk::{
     message::{
         Instruction,
@@ -36,13 +40,13 @@ use solana_sdk::{
     },
     transaction::Transaction,
 };
-use solana_transaction_error::TransactionError;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta,
     UiTransactionEncoding,
 };
 use transaction_parser::{
     client_rpc::{
+        find_inner_instruction_custom_error_info,
         parse_transaction,
         ParsedTransaction,
     },
@@ -53,8 +57,8 @@ pub use transaction_submit_error::*;
 
 use crate::{
     pretty::{
-        instruction_error::PrettyInstructionError,
         transaction::PrettyTransaction,
+        transaction_error::PrettyTransactionError,
     },
     print_kv,
     LogColor,
@@ -286,25 +290,6 @@ async fn send_transaction_with_config(
     transaction: Transaction,
     config: &SendTransactionConfig,
 ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-    println!("-------------------------------------------------------------------------");
-    println!("------------------------");
-    println!("------------------------");
-    let sim_res = rpc
-        .simulate_transaction_with_config(
-            &transaction,
-            RpcSimulateTransactionConfig {
-                inner_instructions: true,
-                ..RpcSimulateTransactionConfig::default()
-            },
-        )
-        .await;
-
-    println!("{sim_res:#?}");
-    println!("------------------------");
-    println!("------------------------");
-    println!("------------------------");
-    println!("------------------------");
-
     let res = rpc.send_and_confirm_transaction(&transaction).await;
     match res {
         Ok(signature) => {
@@ -346,29 +331,15 @@ async fn send_transaction_with_config(
             })
         }
         Err(error) => {
-            if let solana_client::client_error::ClientErrorKind::RpcError(e) = error.kind() {}
-            println!("{error:#?}");
+            let txn_submit_error = TransactionSubmitError::from_client_error(error, &transaction);
             if matches!(config.debug_logs, Some(true)) {
-                let e = error.get_transaction_error();
-                if let Some(TransactionError::InstructionError(ixn_idx, _ixn_err)) = e {
-                    let ixn = transaction
-                        .message
-                        .instructions
-                        .get(ixn_idx as usize)
-                        .unwrap();
-                    println!("{ixn:?}");
-                }
-                PrettyInstructionError::new(&error, &transaction).inspect(|err| {
-                    print!("{err}");
-                    print_kv!("Sender", payer_addr, LogColor::Gray);
-                    println!();
-                });
+                let err = PrettyTransactionError::new(&txn_submit_error);
+                print!("{err}");
+                print_kv!("Sender", payer_addr, LogColor::Gray);
+                println!();
             }
 
-            Err(TransactionSubmitError::from_client_error(
-                error,
-                &transaction,
-            ))
+            Err(txn_submit_error)
         }
     }
 }
@@ -397,4 +368,22 @@ pub async fn account_exists(rpc: &RpcClient, address: &Address) -> anyhow::Resul
         .context("Couldn't retrieve account data")?
         .value
         .is_some())
+}
+
+/// Returns the program ID and error code for the first inner instruction error, if the simulation
+/// resulted in one.
+pub fn inner_simulation_error(error: &ClientError) -> Option<(Address, u32)> {
+    if let ClientErrorKind::RpcError(RpcError::RpcResponseError {
+        data:
+            RpcResponseErrorData::SendTransactionPreflightFailure(RpcSimulateTransactionResult {
+                logs: Some(logs),
+                ..
+            }),
+        ..
+    }) = error.kind()
+    {
+        return find_inner_instruction_custom_error_info(logs);
+    }
+
+    None
 }

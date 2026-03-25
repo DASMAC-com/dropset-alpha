@@ -77,54 +77,39 @@ pub async fn throttled_order_update(
                     ctx.needs_expand = true;
                 }
                 Err(TransactionSubmitError::Dropset(DropsetError::InsufficientUserBalance)) => {
-                    let (kp, quote_amount, base_amount, deposits) = {
+                    let (kp, addr, quote_amount, base_amount, base_ata, quote_ata) = {
                         let ctx = maker_ctx.try_borrow_mut()?;
                         let kp = ctx.keypair.insecure_clone();
                         let (ask_size, bid_size) = (ctx.ask_order_size, ctx.bid_order_size);
                         let quote_amount = bid_size * 100;
                         let base_amount = ask_size * 100;
-                        let deposits = [
-                            ctx.deposit_base(base_amount),
-                            ctx.deposit_quote(quote_amount),
-                        ];
-                        (kp, quote_amount, base_amount, deposits)
+                        let addr = kp.pubkey();
+                        let base_ata = ctx.market_ctx.get_base_ata(&addr);
+                        let quote_ata = ctx.market_ctx.get_quote_ata(&addr);
+
+                        (kp, addr, quote_amount, base_amount, base_ata, quote_ata)
                     };
-                    let addr = &kp.pubkey();
+
                     if let Some(ref faucet_client) = faucet_client {
-                        let req_quote = faucet_client
-                            .request_quote_sign_and_submit(addr, &kp, rpc, Some(quote_amount))
-                            .await;
-                        let req_base = faucet_client
-                            .request_base_sign_and_submit(addr, &kp, rpc, Some(base_amount))
-                            .await;
-                        if let Err(e) = &req_quote {
-                            println!("{e:#?}")
-                        }
-                        if let Err(e) = &req_base {
-                            println!("{e:#?}")
-                        }
+                        faucet_client
+                            .request_quote_sign_and_submit(&addr, &kp, rpc, Some(quote_amount))
+                            .await?;
+                        faucet_client
+                            .request_base_sign_and_submit(&addr, &kp, rpc, Some(base_amount))
+                            .await?;
+                        let base_after = rpc.client.get_token_account_balance(&base_ata).await?;
+                        let quote_after = rpc.client.get_token_account_balance(&quote_ata).await?;
 
-                        req_quote?;
-                        req_base?;
+                        let deposits = {
+                            let ctx = maker_ctx.try_borrow_mut()?;
+                            [
+                                ctx.deposit_base(base_after.amount.parse::<u64>()?),
+                                ctx.deposit_quote(quote_after.amount.parse::<u64>()?),
+                            ]
+                        };
 
-                        let res = rpc
-                            .sign_and_submit_instructions(&kp, &[&kp], &deposits)
-                            .await;
-
-                        if let Err(e) = res {
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                            println!("{e:#?}");
-                        }
+                        rpc.sign_and_submit_instructions(&kp, &[&kp], &deposits)
+                            .await?;
                     }
                 }
                 Err(e) => return Err(e.into()),

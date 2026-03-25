@@ -42,6 +42,10 @@ pub struct GroupedParsedLogs {
 static COMPUTE_LOG_PATTERN: &lazy_regex::Lazy<lazy_regex::Regex> =
     regex!(r"Program (\S+) consumed (\d+) of (\d+) compute units");
 
+/// Example: `Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA failed: custom program error: 0x1`
+static PROGRAM_FAILED_PATTERN: &lazy_regex::Lazy<lazy_regex::Regex> =
+    regex!(r"Program (\S+) failed: custom program error: 0x([0-9a-fA-F]+)");
+
 /// Example: `Program TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q invoke [1]`
 static INVOKE_WITH_HEIGHT_PATTERN: &lazy_regex::Lazy<lazy_regex::Regex> =
     regex!(r"Program (\S+) invoke \[(\d+)\]");
@@ -103,6 +107,15 @@ fn parse_compute(log: &str) -> Option<(Address, u64, u64)> {
             .parse()
             .expect("Should parse compute allowance as a number");
         (program, used, allowance)
+    })
+}
+
+fn parse_custom_error(log: &str) -> Option<(Address, u32)> {
+    PROGRAM_FAILED_PATTERN.captures(log).map(|cap| {
+        let program = Address::from_str(&cap[1]).expect("Should be an address");
+        let code = u32::from_str_radix(&cap[2], 16).expect("Should parse hex error code");
+
+        (program, code)
     })
 }
 
@@ -295,4 +308,44 @@ pub fn add_infos_to_outer_instructions(
     }
 
     Ok(())
+}
+
+/// This function iterates over each log until it finds a matching `Program [...]
+/// failed: ...` log and then parses it and returns the associated program ID and error code.
+///
+/// ## Explanation
+/// If a program errors due to an inner instruction, the inner instruction's program ID and error
+/// code aren't properly bubbled upwards to the RPC client. The instruction index returned from an
+/// RPC client error will be the outermost parent instruction, not the actual inner instruction.
+///
+/// The only possible way to get the actual program ID for the failing inner instruction is by
+/// parsing the logs.
+pub fn find_inner_instruction_custom_error_info(
+    logs: &[impl AsRef<str>],
+) -> Option<(Address, u32)> {
+    logs.iter().find_map(|log| parse_custom_error(log.as_ref()))
+}
+
+#[test]
+fn inner_instruction_custom_err() {
+    let logs = vec![
+        "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+        "Program ComputeBudget111111111111111111111111111111 success",
+        "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+        "Program ComputeBudget111111111111111111111111111111 success",
+        "Program TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q invoke [1]",
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+        "Program log: Instruction: Transfer",
+        "Program log: Error: insufficient funds",
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4300 of 1398273 compute units",
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA failed: custom program error: 0x1",
+        "Program TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q consumed 5727 of 1399700 compute units",
+        "Program TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q failed: custom program error: 0x1"
+    ];
+
+    let program_id = Address::from_str_const("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    assert_eq!(
+        find_inner_instruction_custom_error_info(&logs),
+        Some((program_id, 1))
+    );
 }

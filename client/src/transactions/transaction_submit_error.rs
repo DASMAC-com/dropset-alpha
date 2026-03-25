@@ -4,9 +4,26 @@ use solana_client::client_error::ClientError;
 use solana_instruction_error::InstructionError;
 use solana_program_error::ProgramError;
 use solana_transaction_error::TransactionError;
-use spl_token_2022_interface::error::TokenError;
+use spl_token_2022_interface::error::TokenError as Token2022Error;
+use spl_token_interface::error::TokenError;
 
-use crate::transactions::InstructionDataAtIndex;
+use crate::transactions::{
+    inner_simulation_error,
+    InstructionDataAtIndex,
+};
+
+#[derive(Debug, Copy, Clone, strum_macros::FromRepr, strum_macros::AsRefStr)]
+#[repr(u8)]
+/// There's only one, and no other crates export it.
+pub enum AssociatedTokenAccountError {
+    InvalidOwner,
+}
+
+impl From<AssociatedTokenAccountError> for ProgramError {
+    fn from(e: AssociatedTokenAccountError) -> Self {
+        ProgramError::Custom(e as u32)
+    }
+}
 
 /// Error returned by transaction submission. Distinguishes dropset program errors (which callers
 /// may want to match on) from all other failures.
@@ -14,11 +31,12 @@ use crate::transactions::InstructionDataAtIndex;
 pub enum TransactionSubmitError {
     /// The transaction failed with a known dropset program error.
     Dropset(DropsetError),
-    /// The transaction failed with a known token program error. This could possible be token 2022.
-    Token {
-        program_id: Address,
-        error: TokenError,
-    },
+    /// The transaction failed with a known token program error.
+    Token(TokenError),
+    /// The transaction failed with a known token 2022 program error.
+    Token2022(Token2022Error),
+    /// The transaction failed with a known associated token account program error.
+    AssociatedTokenAccount(AssociatedTokenAccountError),
     /// The transaction failed with a generic program error.
     Program {
         program_id: Address,
@@ -29,10 +47,23 @@ pub enum TransactionSubmitError {
 }
 
 impl TransactionSubmitError {
+    /// The flow below explained:
+    ///
+    /// - First, try to parse it as an inner instruction simulation error. This is more accurate
+    ///   than the instruction info provided by [TransactionError::InstructionError], for reasons
+    ///   explained in [inner_simulation_error].
+    /// - Then, try to parse it as a transaction error, returning a [Self::Other] if it isn't one.
+    /// - If it's a transaction error, match on it being an [InstructionError::Custom] or a simply a
+    ///   generic [InstructionError].
+    /// - All other case fall back to a simple [Self::Other] error.
     pub fn from_client_error(
         error: ClientError,
         instructions: &impl InstructionDataAtIndex,
     ) -> Self {
+        if let Some((program_id, code)) = inner_simulation_error(&error) {
+            return TransactionSubmitError::from_custom_error_info(program_id, code);
+        }
+
         let Some(tx_err) = error.get_transaction_error() else {
             return Self::Other(error.into());
         };
@@ -42,30 +73,7 @@ impl TransactionSubmitError {
                 let program_id = *instructions
                     .program_id(idx as usize)
                     .expect("Transaction should have been parsed correctly");
-
-                match program_id {
-                    dropset_interface::program::ID => {
-                        let dropset_code = u8::try_from(code)
-                            .expect("Dropset error codes should be valid u8 values");
-                        match DropsetError::from_repr(dropset_code) {
-                            Some(e) => Self::Dropset(e),
-                            None => {
-                                Self::Other(anyhow::anyhow!("Unknown dropset error code: {code}"))
-                            }
-                        }
-                    }
-                    spl_token_interface::ID | spl_token_2022_interface::ID => {
-                        let error = TokenError::try_from(code);
-                        match error {
-                            Ok(e) => Self::Token {
-                                program_id,
-                                error: e,
-                            },
-                            Err(e) => Self::Other(e.into()),
-                        }
-                    }
-                    _ => Self::Other(error.into()),
-                }
+                TransactionSubmitError::from_custom_error_info(program_id, code)
             }
             TransactionError::InstructionError(idx, ixn_err) => {
                 let program_id = *instructions
@@ -83,15 +91,59 @@ impl TransactionSubmitError {
             _ => Self::Other(error.into()),
         }
     }
+
+    pub fn from_custom_error_info(program_id: Address, code: u32) -> TransactionSubmitError {
+        match program_id {
+            dropset_interface::program::ID => {
+                let dropset_code =
+                    u8::try_from(code).expect("Dropset error codes should be valid u8 values");
+                match DropsetError::from_repr(dropset_code) {
+                    Some(e) => Self::Dropset(e),
+                    None => Self::Other(anyhow::anyhow!("Unknown dropset error code: {code}")),
+                }
+            }
+            spl_token_interface::ID => {
+                let error = TokenError::try_from(code);
+                match error {
+                    Ok(e) => Self::Token(e),
+                    Err(e) => Self::Other(e.into()),
+                }
+            }
+            spl_token_2022_interface::ID => {
+                let error = Token2022Error::try_from(code);
+                match error {
+                    Ok(e) => Self::Token2022(e),
+                    Err(e) => Self::Other(e.into()),
+                }
+            }
+            spl_associated_token_account_interface::program::ID => {
+                let ata_code =
+                    u8::try_from(code).expect("ATA error codes should be valid u8 values");
+                match AssociatedTokenAccountError::from_repr(ata_code) {
+                    Some(e) => Self::AssociatedTokenAccount(e),
+                    None => Self::Other(anyhow::anyhow!("Unknown ATA error code: {code}")),
+                }
+            }
+            _ => Self::Program {
+                program_id,
+                error: ProgramError::Custom(code),
+            },
+        }
+    }
 }
 
 impl From<TransactionSubmitError> for anyhow::Error {
     fn from(e: TransactionSubmitError) -> Self {
         match e {
             TransactionSubmitError::Dropset(e) => anyhow::anyhow!("{e:?}"),
-            TransactionSubmitError::Token { error: e, .. } => anyhow::anyhow!("{e:?}"),
-            TransactionSubmitError::Program { error: e, .. } => {
-                anyhow::anyhow!("{e:?}")
+            TransactionSubmitError::Token(e) => anyhow::anyhow!("{e:?}"),
+            TransactionSubmitError::Token2022(e) => anyhow::anyhow!("{e:?}"),
+            TransactionSubmitError::AssociatedTokenAccount(e) => anyhow::anyhow!("{e:?}"),
+            TransactionSubmitError::Program {
+                error: e,
+                program_id,
+            } => {
+                anyhow::anyhow!("Generic program error, program id: {program_id}, err: {e:?}")
             }
             TransactionSubmitError::Other(e) => e,
         }

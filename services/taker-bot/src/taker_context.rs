@@ -17,7 +17,10 @@ use solana_keypair::{
     Signer,
 };
 
-use crate::taker::TakerFill;
+use crate::taker::{
+    Side,
+    TakerFill,
+};
 
 pub struct TakerContext {
     pub rpc: CustomRpcClient,
@@ -65,5 +68,38 @@ impl TakerContext {
                 )],
             )
             .await
+    }
+
+    pub async fn submit_faucet_request(
+        &self,
+        side: Side,
+    ) -> Result<Option<ParsedTransactionWithEvents>, TransactionSubmitError> {
+        if let Some(ref faucet_client) = self.faucet_client {
+            let res = match side {
+                Side::Buy => {
+                    faucet_client
+                        .request_quote_sign_and_submit(
+                            &self.address(),
+                            &self.keypair,
+                            &self.rpc,
+                            None,
+                        )
+                        .await?
+                }
+                Side::Sell => {
+                    faucet_client
+                        .request_base_sign_and_submit(
+                            &self.address(),
+                            &self.keypair,
+                            &self.rpc,
+                            None,
+                        )
+                        .await?
+                }
+            };
+            Ok(Some(res))
+        } else {
+            Ok(None)
+        }
     }
 }

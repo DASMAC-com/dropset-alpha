@@ -2,5 +2,5 @@
 //! readable, colorized format.
 
 pub mod instruction;
-pub mod instruction_error;
 pub mod transaction;
+pub mod transaction_error;
