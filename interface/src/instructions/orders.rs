@@ -88,27 +88,24 @@ impl UnvalidatedOrders {
     /// statically sized array.
     pub fn new_from_slice(orders: &[OrderInfoArgs]) -> Result<Self, DropsetError> {
         /// Safety: Caller ensures `orders.len() == N`.
-        unsafe fn to_array<const N: usize>(orders: &[OrderInfoArgs]) -> [OrderInfoArgs; N] {
-            core::array::from_fn::<_, N, _>(|i| orders.get_unchecked(i).clone())
+        fn to_array<const N: usize>(orders: &[OrderInfoArgs]) -> [OrderInfoArgs; N] {
+            core::array::from_fn::<_, N, _>(|i| orders[i].clone())
         }
 
-        // Safety: Each match arm is `orders.len()`.
-        unsafe {
-            Ok(match orders.len() {
-                0 => Self::new(to_array::<0>(orders)),
-                1 => Self::new(to_array::<1>(orders)),
-                2 => Self::new(to_array::<2>(orders)),
-                3 => Self::new(to_array::<3>(orders)),
-                4 => Self::new(to_array::<4>(orders)),
-                5 => Self::new(to_array::<5>(orders)),
-                6 => Self::new(to_array::<6>(orders)),
-                7 => Self::new(to_array::<7>(orders)),
-                8 => Self::new(to_array::<8>(orders)),
-                9 => Self::new(to_array::<9>(orders)),
-                10 => Self::new(to_array::<10>(orders)),
-                _ => return Err(DropsetError::InvalidInstructionData),
-            })
-        }
+        Ok(match orders.len() {
+            0 => Self::new(to_array::<0>(orders)),
+            1 => Self::new(to_array::<1>(orders)),
+            2 => Self::new(to_array::<2>(orders)),
+            3 => Self::new(to_array::<3>(orders)),
+            4 => Self::new(to_array::<4>(orders)),
+            5 => Self::new(to_array::<5>(orders)),
+            6 => Self::new(to_array::<6>(orders)),
+            7 => Self::new(to_array::<7>(orders)),
+            8 => Self::new(to_array::<8>(orders)),
+            9 => Self::new(to_array::<9>(orders)),
+            10 => Self::new(to_array::<10>(orders)),
+            _ => return Err(DropsetError::InvalidInstructionData),
+        })
     }
 
     /// Converts and validates [Self::order_args] into an owned iterator of [OrderInfo].
