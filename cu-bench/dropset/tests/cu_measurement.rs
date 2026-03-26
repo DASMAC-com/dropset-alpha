@@ -219,6 +219,7 @@ fn cu_batch_replace() -> anyhow::Result<()> {
 
 /// Place `n` asks via a single BatchReplace into an empty book; return total CU.
 fn batch_replace_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -240,6 +241,7 @@ fn batch_replace_place(n: u64) -> u64 {
 
 /// Place `n` asks (setup), then BatchReplace with 0 asks; return amortized CU per cancel.
 fn batch_replace_cancel(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -275,6 +277,7 @@ fn batch_replace_cancel(n: u64) -> u64 {
 /// Place `n` asks (setup), then BatchReplace with `n` new asks at the same prices; return
 /// amortized CU per cancel+place pair — this is the true "replace" workload.
 fn batch_replace_replace(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -318,6 +321,7 @@ fn batch_replace_replace(n: u64) -> u64 {
 /// The test ensures that the asks inserted during the final, measured BatchReplace instruction are
 /// inserted at evenly spaced insertion points based on the book's existing asks.
 fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
+    assert!(n <= ASK_PRICES.len(), "Invalid `n`");
     const SCALAR: u64 = 1;
 
     let f = new_bench_fixture();
@@ -441,6 +445,7 @@ fn cu_individual_orders() -> anyhow::Result<()> {
 
 /// N separate PostOrder calls into an empty book; returns amortized CU per call.
 fn individual_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -466,6 +471,7 @@ fn individual_place(n: u64) -> u64 {
 /// Place `n` asks (setup), then cancel each one with a separate CancelOrder; returns amortized
 /// CU per cancel.
 fn individual_cancel(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -504,6 +510,7 @@ fn individual_cancel(n: u64) -> u64 {
 /// Place `n` asks (setup), cancel each individually, then re-place each individually; returns
 /// amortized CU per cancel+place pair — directly comparable to `batch_replace_replace`.
 fn individual_cancel_and_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
