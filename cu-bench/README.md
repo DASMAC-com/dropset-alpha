@@ -35,8 +35,30 @@ the `--arch v2` flag.
 The `solana` cli used was version `3.1.9` with `dropset` commit
 [COMMIT_HASH_HERE].
 
-### Insertions to an empty orderbook
-```shell
+### Insertions to an empty order book
+
+#### Motivation
+
+The results below are highlighted because the `BatchReplace` instruction is a
+fundamental market maker operation. Lean and efficient order updates are
+crucial for market makers, facilitating strategies that employ tighter spreads
+and more liquidity.
+
+#### Amortized CU cost
+
+The results below are all measuring a single `BatchInstruction` to an empty
+order book. The 10 orders result displays the amortized CU cost of
+the respective operation for a single order.
+
+That is, the results indicate that placing an order has an amortized CU cost of
+~376 CUs, canceling an order has an amortized CU cost of ~212 CUs, and placing
+*and* canceling an order has an amortized CU cost of ~222 CUs (since the 444 CUs
+represents both place + cancel).
+
+Note that the market account data here is
+[pre-expanded](#pre-expanded-markets-dropset-and-manifest).
+
+```text
 ==== BatchReplace (Place, into 0 orders) ====
 
          Orders        Amortized CU
@@ -62,9 +84,24 @@ The `solana` cli used was version `3.1.9` with `dropset` commit
                10            444
 ```
 
-### Insertions that require traversal of a dense orderbook
+### Insertions that require traversal of a dense order book
 
-```shell
+Market makers are most often inserting to a non-empty order book. When inserting
+an order to a non-empty book, the protocol must find the proper insertion
+point for the new order in the existing, sorted collection of orders.
+
+For denser order books, the compute usage for traversal can dwarf other CU costs
+if the search algorithm has a poorly scaling time complexity.
+
+The results below display the cost of traversing an existing number of orders on
+the book. For the `alpha` version of the protocol, the data structure used for
+the orders collection is a simple doubly linked list, meaning the search
+complexity is linear and thus traversal scales linearly.
+
+You can see below that the average CU per comparison during traversal is about
+10 CUs.
+
+```text
 ==== BatchReplace (Place, into N orders) ====
 
   Measures the net CU cost of inserting 10
@@ -77,6 +114,56 @@ The `solana` cli used was version `3.1.9` with `dropset` commit
                10            149
               100           1044
               200           2034
+             1000           9954
+```
+
+### Dropset `beta` protocol projected CU costs
+
+The `beta` version of the protocol will see two major upgrades to the search
+algorithm:
+
+1. It will be written in pure assembly, with price comparisons expected to cost
+   roughly 40% as many CUs as comparisons in the `alpha` protocol.
+   Since price comparisons are the dominant component of traversal cost, this
+   should materially reduce total traversal CUs.
+2. It will employ a red-black tree with logarithmic time complexity.
+
+#### Dropset `alpha` traversal cost
+
+From 200 to 1000 existing orders in the `alpha` protocol, the increase in CU
+cost averages about 9.9 CUs per additional comparison.
+
+The first result with 10 existing orders is 149 CUs. At 9.9 CUs per comparison,
+this suggests a flat traversal overhead of about 50 CUs: `149 - (10 * 9.9) = 50`
+
+#### Projection assumptions for `beta`
+
+- **Price comparison cost**: 4 CUs (40% of `alpha`'s ~10 CUs,
+  unsafe Rust → assembly)
+- **Search complexity**: O(log n) red-black tree, replacing the O(n) linked list
+- **Flat traversal overhead**: ~50 CUs, derived
+  [here](#dropset-alpha-traversal-cost)
+
+#### Projected traversal cost for a book with N existing orders
+
+```text
+     N     log₂(N)    Comparisons    Traversal CU    Net CU (+50 flat)
+----------------------------------------------------------------------------
+     10      3.32        3 - 4         12 - 16          61 - 65
+    100      6.64        6 - 7         24 - 28          73 - 77
+    200      7.64        7 - 8         28 - 32          77 - 81
+   1000      9.97         10             40                89
+```
+
+#### `alpha` vs `beta` comparison
+
+```text
+     N     Net CU (alpha)   Net CU (beta, projected)
+  ----------------------------------------------------
+     10          149                61 - 65
+    100         1044                73 - 77
+    200         2034                77 - 81
+   1000         9954                  89
 ```
 
 ## Test categories
@@ -107,17 +194,21 @@ from growth cost, Dropset and Manifest **pre-expand the market account** before
 running any measured instruction. The reported CUs reflect the instruction
 itself under steady-state conditions.
 
-Phoenix Legacy predates Solana's support for dynamic account resizing, so it takes a
-different approach: the order book is allocated at a fixed maximum capacity at
-market creation time. This avoids any runtime growth but requires paying rent
-on the full allocation upfront. Since there is nothing to grow at runtime,
-there is nothing to pre-expand before measuring.
+For Dropset, the need for market expansion can be handled by expanding
+- reactively when the `NoFreeSectorsRemaining` error is returned
+- or pre-emptively when the market header's `num_free_sectors` is near zero
+
+Phoenix Legacy predates Solana's support for dynamic account resizing, so it
+takes a different approach: the order book is allocated at a fixed maximum
+capacity at market creation time. This avoids any runtime growth but requires
+paying rent on the full allocation upfront. Since there is nothing to grow at
+runtime, there is nothing to pre-expand before measuring.
 
 ## Limitations
 
 All three suites share the same fundamental constraints:
 
-- **Nearly empty order book.** Each test starts from a fresh market with a
+- **Nearly empty order book.** Most tests start from a fresh market with a
   single user. Real order books have many resting orders and users, which
   increases account sizes and traversal costs. These results are a lower-bound,
   not an average or worst-case.

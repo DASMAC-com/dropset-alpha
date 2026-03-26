@@ -313,7 +313,7 @@ fn batch_replace_replace(n: u64) -> u64 {
     cu / n
 }
 
-/// Place `n` ask orders into a dense orderbook with a specified number of pre-existing orders.
+/// Place `n` ask orders into a dense order book with a specified number of pre-existing orders.
 /// Returns the total CUs for the final batch replace operation for `n` orders.
 ///
 /// This benchmark is intended to measure the traversal cost of inserting orders.

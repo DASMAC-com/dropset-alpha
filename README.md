@@ -1,6 +1,6 @@
 # `dropset` Workspace
 
-`dropset` is an on-chain orderbook program built for Solana.
+`dropset` is an on-chain order book program built for Solana.
 
 ## 🧱 Workspace Overview
 
