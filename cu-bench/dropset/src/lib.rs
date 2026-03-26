@@ -170,14 +170,24 @@ pub fn add_funded_maker(f: &BenchFixture) -> (Address, SectorIndex) {
 
 /// Processes a single instruction on the fixture's context and returns its compute units consumed.
 ///
-/// Panics if the instruction fails.
-pub fn measure_cu(f: &BenchFixture, ix: Instruction) -> u64 {
+/// Ensures:
+/// - The instruction succeeds.
+/// - The market account data size remains constant pre and post instruction.
+pub fn measure_cu_no_expansion(f: &BenchFixture, ix: Instruction) -> u64 {
+    // Track the data length of the market's account prior to measuring CU.
+    let pre_market_data_len = f.ctx.view_market_data(f.market_ctx.market).len();
+
     let result = f.ctx.process_instruction_chain(&[ix]);
     assert!(
         result.program_result.is_ok(),
         "measured instruction failed: {:?}",
         result.program_result
     );
+
+    // Ensure the CUs measured aren't including market account data expansion.
+    let post_market_data_len = f.ctx.view_market_data(f.market_ctx.market).len();
+    assert_eq!(pre_market_data_len, post_market_data_len);
+
     result.compute_units_consumed
 }
 

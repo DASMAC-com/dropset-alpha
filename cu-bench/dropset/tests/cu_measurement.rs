@@ -8,7 +8,7 @@ use cu_bench_dropset::{
     fmt_header,
     fmt_subtable,
     make_ask_prices,
-    measure_cu,
+    measure_cu_no_expansion,
     new_bench_fixture,
     ASK_PRICES,
     BASE_UNIT,
@@ -61,7 +61,7 @@ fn cu_deposit() -> anyhow::Result<()> {
 
     // Fixture already deposited base to create the seat; measure a subsequent
     // deposit — the hot path where the seat already exists.
-    let cu = measure_cu(&f, f.market_ctx.deposit_base(f.maker, amount, f.seat_index));
+    let cu = measure_cu_no_expansion(&f, f.market_ctx.deposit_base(f.maker, amount, f.seat_index));
 
     fmt_subtable(&mut logs, "Deposits", "Flat", &[(1, cu)]);
     eprintln!("{logs}");
@@ -75,7 +75,7 @@ fn cu_withdraw() -> anyhow::Result<()> {
 
     let f = new_bench_fixture();
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.withdraw_base(f.maker, BASE_UNIT, f.seat_index),
     );
@@ -93,7 +93,7 @@ fn cu_post_order() -> anyhow::Result<()> {
     let f = new_bench_fixture();
     expand_market(&f);
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.post_order(
             f.maker,
@@ -131,7 +131,7 @@ fn cu_cancel_order() -> anyhow::Result<()> {
     )]);
     assert!(res.program_result.is_ok(), "setup PostOrder failed");
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.cancel_order(
             f.maker,
@@ -226,7 +226,7 @@ fn batch_replace_place(n: u64) -> u64 {
     let asks: Vec<OrderInfoArgs> = (0..n as usize)
         .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
         .collect();
-    measure_cu(
+    measure_cu_no_expansion(
         &f,
         f.market_ctx.batch_replace(
             f.maker,
@@ -259,7 +259,7 @@ fn batch_replace_cancel(n: u64) -> u64 {
     }
 
     // Measure: BatchReplace with empty asks cancels all n resting asks.
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.batch_replace(
             f.maker,
@@ -298,7 +298,7 @@ fn batch_replace_replace(n: u64) -> u64 {
     let asks: Vec<OrderInfoArgs> = (0..n as usize)
         .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
         .collect();
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.batch_replace(
             f.maker,
@@ -391,7 +391,7 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
         ),
     );
 
-    let raw_cu = measure_cu(&f, insert_ixn);
+    let raw_cu = measure_cu_no_expansion(&f, insert_ixn);
     let market = f.ctx.view_market(f.market_ctx.market);
     assert_eq!(market.asks.len(), N_PRE_EXISTING_ORDERS_PER_SIDE + n);
     assert_eq!(market.bids.len(), 0);
@@ -451,7 +451,7 @@ fn individual_place(n: u64) -> u64 {
 
     let total_cu: u64 = (0..n as usize)
         .map(|i| {
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.post_order(
                     f.maker,
@@ -494,7 +494,7 @@ fn individual_cancel(n: u64) -> u64 {
                 .unwrap()
                 .encoded_price
                 .as_u32();
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.cancel_order(
                     f.maker,
@@ -534,7 +534,7 @@ fn individual_cancel_and_place(n: u64) -> u64 {
                 .unwrap()
                 .encoded_price
                 .as_u32();
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.cancel_order(
                     f.maker,
@@ -547,7 +547,7 @@ fn individual_cancel_and_place(n: u64) -> u64 {
     // Measure: n individual PostOrder calls (re-place the same orders).
     let place_cu: u64 = (0..n as usize)
         .map(|i| {
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.post_order(
                     f.maker,
@@ -641,7 +641,7 @@ fn market_order_fill(n: u64) -> Result<u64, DropsetError> {
 
     // Measure: market buy for exactly the base that the n asks offer.
     let base_to_buy = sum_base_necessary(&ask_args)?;
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.market_order(
             taker,
