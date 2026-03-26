@@ -332,23 +332,25 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
 
     for ask_slice in pre_existing_asks.chunks(MAX_ORDERS_USIZE) {
         expand_market(&f);
-        // Create a new maker that will post the next 10 orders.
-        let user = Address::new_unique();
+        // Create and fund a new maker that will post the next 10 orders.
+        let next_maker = add_user(&f, 1_000_000_000);
         assert!(f
             .ctx
             .process_instruction_chain(&[
-                solana_system_interface::instruction::transfer(&f.maker, &user, 1_000_000_000),
-                f.market_ctx.base.create_ata(&user, &user),
-                f.market_ctx.base.mint_to_user(&user, INIT_BASE).unwrap(),
-                f.market_ctx.deposit_base(user, INIT_BASE, NIL),
+                f.market_ctx.base.create_ata(&next_maker, &next_maker),
+                f.market_ctx
+                    .base
+                    .mint_to_user(&next_maker, INIT_BASE)
+                    .unwrap(),
+                f.market_ctx.deposit_base(next_maker, INIT_BASE, NIL),
             ])
             .program_result
             .is_ok());
 
-        let seat_index = f.ctx.get_seat(f.market_ctx.market, user).index;
+        let seat_index = f.ctx.get_seat(f.market_ctx.market, next_maker).index;
         let err_msg = "Chunked pairs length should be <= MAX_ORDERS_USIZE";
         let ixn = f.market_ctx.batch_replace(
-            user,
+            next_maker,
             BatchReplaceInstructionData::new(
                 seat_index,
                 UnvalidatedOrders::new([]),

@@ -1252,7 +1252,6 @@ dependencies = [
  "solana-account",
  "solana-address 2.0.0",
  "solana-instruction",
- "solana-system-interface 3.0.0",
 ]
 
 [[package]]
