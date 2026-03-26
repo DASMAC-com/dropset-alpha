@@ -97,7 +97,7 @@ pub trait OrdersCollection: LinkedListHeaderOperations {
 const ORDER_PADDING: usize =
     PAYLOAD_SIZE - (size_of::<LeEncodedPrice>() + size_of::<LeSectorIndex>() + U64_SIZE + U64_SIZE);
 
-/// Represents a maker order in the orderbook.
+/// Represents a maker order in the order book.
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Order {
