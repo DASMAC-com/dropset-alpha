@@ -310,20 +310,16 @@ fn batch_replace_replace(n: u64) -> u64 {
     cu / n
 }
 
-/// Place `n` ask orders into an extremely dense orderbook; return amortized CU per order.
+/// Place `n` ask orders into a dense orderbook with a specified number of pre-existing orders.
+/// Returns the total CUs for the final batch replace operation for `n` orders.
 ///
-/// This benchmark is intended to represent the traversal cost of inserting orders across the book
-/// in a sparse manner.
+/// This benchmark is intended to measure the traversal cost of inserting orders.
 ///
-/// The knob worth paying attention to here is the number of pre-existing orders.
-/// This test is effectively amortizing the traversal cost and making it clear how expensive
-/// traversal is in terms of CUs.
-///
-/// For example, with 100 vs 200 existing ask orders on the book, a new order insertion requires
-/// traversing twice as many orders before finding the proper insert point.
-///
-/// The insertion points are evenly interpolated throughout the book's asks.
+/// The test ensures that the asks inserted during the final, measured BatchReplace instruction are
+/// inserted at evenly spaced insertion points based on the book's existing asks.
 fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
+    const SCALAR: u64 = 1;
+
     let f = new_bench_fixture();
     for _ in 0..N_PRE_EXISTING_ORDERS_PER_SIDE / MAX_PERMITTED_SECTOR_INCREASE {
         expand_market(&f);
@@ -331,9 +327,9 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
 
     // Setup: Place the desired amount of pre-existing orders on both sides (not measured).
     let ask_prices = make_ask_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
-    let asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, 1));
+    let pre_existing_asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, SCALAR));
 
-    for ask_slice in asks.chunks(MAX_ORDERS_USIZE) {
+    for ask_slice in pre_existing_asks.chunks(MAX_ORDERS_USIZE) {
         expand_market(&f);
         // Create a new maker that will post the next 10 orders.
         let user = Address::new_unique();
@@ -365,7 +361,8 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
     let inserted_asks = (0..n)
         .map(|i| {
             let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
-            OrderInfoArgs::new_unscaled(ask_prices[idx], 1)
+            let interpolated_ask_price = ask_prices[idx] + 1;
+            OrderInfoArgs::new_unscaled(interpolated_ask_price, SCALAR)
         })
         .collect::<Vec<_>>();
 
