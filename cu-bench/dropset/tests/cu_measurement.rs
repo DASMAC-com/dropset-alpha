@@ -325,9 +325,7 @@ fn batch_replace_replace(n: u64) -> u64 {
 /// The insertion points are evenly interpolated throughout the book's asks.
 fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
     let f = new_bench_fixture();
-    let total_pre_existing_orders = N_PRE_EXISTING_ORDERS_PER_SIDE * 2;
-
-    for _ in 0..total_pre_existing_orders / MAX_PERMITTED_SECTOR_INCREASE {
+    for _ in 0..N_PRE_EXISTING_ORDERS_PER_SIDE / MAX_PERMITTED_SECTOR_INCREASE {
         expand_market(&f);
     }
 
