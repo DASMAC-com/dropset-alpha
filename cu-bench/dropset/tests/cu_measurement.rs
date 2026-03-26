@@ -326,7 +326,7 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
         expand_market(&f);
     }
 
-    // Setup: Place the desired amount of pre-existing orders on both sides (not measured).
+    // Setup: Place the desired amount of pre-existing ask orders (not measured).
     let ask_prices = make_ask_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
     let pre_existing_asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, SCALAR));
 
