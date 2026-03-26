@@ -42,9 +42,9 @@ and more liquidity.
 
 #### Amortized CU cost
 
-The results below are all measuring a single `BatchInstruction` to an empty
-order book. The 10 orders result displays the amortized CU cost of
-the respective operation for a single order.
+The results below are all measuring a single `BatchReplace` instruction to an
+empty order book. The 10 orders result displays the amortized CU cost of the
+respective operation for a single order.
 
 That is, the results indicate that placing an order has an amortized CU cost of
 ~376 CUs, canceling an order has an amortized CU cost of ~212 CUs, and placing
