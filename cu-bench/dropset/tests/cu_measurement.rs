@@ -35,7 +35,6 @@ use price::{
     to_order_info,
     OrderInfoArgs,
 };
-use solana_address::Address;
 
 /// Max orders per side in a single BatchReplace.
 const BATCH_AMOUNTS: &[u64] = &[1, 5, MAX_ORDERS_USIZE as u64];
