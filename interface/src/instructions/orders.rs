@@ -12,7 +12,10 @@ use price::{
     OrderInfoArgs,
 };
 use solana_program_error::ProgramError;
-use static_assertions::const_assert_eq;
+use static_assertions::{
+    const_assert,
+    const_assert_eq,
+};
 
 use crate::{
     error::DropsetError,
@@ -87,7 +90,6 @@ impl UnvalidatedOrders {
     /// A more ergonomic version of [Self::new] that receives a slice argument instead of a
     /// statically sized array.
     pub fn new_from_slice(orders: &[OrderInfoArgs]) -> Result<Self, DropsetError> {
-        /// Safety: Caller ensures `orders.len() == N`.
         fn to_array<const N: usize>(orders: &[OrderInfoArgs]) -> [OrderInfoArgs; N] {
             core::array::from_fn::<_, N, _>(|i| orders[i].clone())
         }
@@ -104,7 +106,12 @@ impl UnvalidatedOrders {
             8 => Self::new(to_array::<8>(orders)),
             9 => Self::new(to_array::<9>(orders)),
             10 => Self::new(to_array::<10>(orders)),
-            _ => return Err(DropsetError::InvalidInstructionData),
+            _ => {
+                // If the max number of orders changes, the match arms above need to be updated.
+                // The value checked in the const assertion below also needs to be updated.
+                const_assert!(MAX_ORDERS_USIZE <= 10);
+                return Err(DropsetError::InvalidInstructionData);
+            }
         })
     }
 
