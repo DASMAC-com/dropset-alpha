@@ -29,7 +29,7 @@ program with `pnpm run build && pnpm run deploy`, which builds the program with
 the `--arch v2` flag.
 
 The `solana` cli used was version `3.1.9` with `dropset` commit
-[afd51d0].
+[f7d08fc].
 
 ### Insertions to an empty order book
 
@@ -218,4 +218,4 @@ All three suites share the same fundamental constraints:
   comparison baseline. Cross-reference with on-chain transaction data for
   production estimates.
 
-[afd51d0]: https://github.com/DASMAC-com/dropset-alpha/commit/afd51d0f6de1508aab7a13c0363cbeb2ebb5f263
+[f7d08fc]: https://github.com/DASMAC-com/dropset-alpha/commit/f7d08fc235dffb061eba7f8525171952f6433947
