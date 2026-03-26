@@ -321,7 +321,7 @@ fn batch_replace_replace(n: u64) -> u64 {
 /// The test ensures that the asks inserted during the final, measured BatchReplace instruction are
 /// inserted at evenly spaced insertion points based on the book's existing asks.
 fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
-    assert!(n <= ASK_PRICES.len(), "Invalid `n`");
+    assert!(n != 0 && n <= ASK_PRICES.len(), "Invalid `n`");
     const SCALAR: u64 = 1;
 
     let f = new_bench_fixture();
