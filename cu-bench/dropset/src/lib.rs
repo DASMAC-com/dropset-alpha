@@ -27,21 +27,42 @@ use solana_instruction::Instruction;
 pub const BASE_UNIT: u64 = 100_000_000;
 pub const QUOTE_UNIT: u64 = 100_000_000;
 
-const fn make_ask_prices<const N: usize>() -> [u32; N] {
+pub const INIT_BASE: u64 = 1_000 * BASE_UNIT;
+pub const INIT_QUOTE: u64 = 1_000_000 * QUOTE_UNIT;
+
+/// The difference in price between each price generated from
+/// [make_ask_prices] and [make_bid_prices].
+const PRICE_STEP: usize = 100;
+
+pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
+    const START: usize = 60_000_000;
+    // Ensure `N` isn't too large, otherwise the price will overflow.
+    assert!((START).checked_add(N * PRICE_STEP).is_some());
+
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        arr[i] = 60_000_000 + i as u32;
+        let step = i * PRICE_STEP;
+        let price = START + step;
+        assert!(price <= u32::MAX as usize);
+        arr[i] = price as u32;
         i += 1;
     }
     arr
 }
 
-const fn make_bid_prices<const N: usize>() -> [u32; N] {
+pub const fn make_bid_prices<const N: usize>() -> [u32; N] {
+    const START: usize = 50_000_000;
+    // Ensure `N` isn't too large, otherwise the price will underflow.
+    assert!((START).checked_sub(N * PRICE_STEP).is_some());
+
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        arr[i] = 50_000_000 - i as u32;
+        let step = i * PRICE_STEP;
+        let price = START - step;
+        assert!(price <= u32::MAX as usize);
+        arr[i] = price as u32;
         i += 1;
     }
     arr
@@ -56,7 +77,7 @@ pub const ASK_PRICES: [u32; MAX_ORDERS_USIZE] = make_ask_prices();
 pub const BID_PRICES: [u32; MAX_ORDERS_USIZE] = make_bid_prices();
 
 /// Table width for formatted output.
-pub const W: usize = 40;
+pub const W: usize = 45;
 
 /// A fully initialized benchmark fixture: a market with a funded, seated maker.
 pub struct BenchFixture {
@@ -75,7 +96,7 @@ pub struct BenchFixture {
 /// without the cost of account reallocation.
 pub fn new_bench_fixture() -> BenchFixture {
     // Give the maker enough lamports to pay for market expansions.
-    let maker_mock = create_mock_user_account(Address::new_unique(), 10_000_000_000);
+    let maker_mock = create_mock_user_account(Address::new_unique(), 100_000_000_000_000);
     let maker = maker_mock.0;
     let (ctx, market_ctx) = new_dropset_mollusk_context_with_default_market(&[maker_mock]);
 
@@ -83,29 +104,19 @@ pub fn new_bench_fixture() -> BenchFixture {
     let res = ctx.process_instruction_chain(&[
         market_ctx.base.create_ata_idempotent(&maker, &maker),
         market_ctx.quote.create_ata_idempotent(&maker, &maker),
-        market_ctx
-            .base
-            .mint_to_user(&maker, 1_000 * BASE_UNIT)
-            .unwrap(),
-        market_ctx
-            .quote
-            .mint_to_user(&maker, 1_000_000 * QUOTE_UNIT)
-            .unwrap(),
+        market_ctx.base.mint_to_user(&maker, INIT_BASE).unwrap(),
+        market_ctx.quote.mint_to_user(&maker, INIT_QUOTE).unwrap(),
     ]);
     assert!(res.program_result.is_ok(), "fixture ATA/mint setup failed");
 
     // First deposit_base with NIL creates the maker's seat.
-    let res =
-        ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, 500 * BASE_UNIT, NIL)]);
+    let res = ctx.process_instruction_chain(&[market_ctx.deposit_base(maker, INIT_BASE, NIL)]);
     assert!(res.program_result.is_ok(), "fixture initial deposit failed");
 
     let seat_index = ctx.get_seat(MOLLUSK_DEFAULT_MARKET.market, maker).index;
 
-    let res = ctx.process_instruction_chain(&[market_ctx.deposit_quote(
-        maker,
-        500_000 * QUOTE_UNIT,
-        seat_index,
-    )]);
+    let res =
+        ctx.process_instruction_chain(&[market_ctx.deposit_quote(maker, INIT_QUOTE, seat_index)]);
     assert!(res.program_result.is_ok(), "fixture quote deposit failed");
 
     BenchFixture {
@@ -159,14 +170,24 @@ pub fn add_funded_maker(f: &BenchFixture) -> (Address, SectorIndex) {
 
 /// Processes a single instruction on the fixture's context and returns its compute units consumed.
 ///
-/// Panics if the instruction fails.
-pub fn measure_cu(f: &BenchFixture, ix: Instruction) -> u64 {
+/// Ensures:
+/// - The instruction succeeds.
+/// - The market account data size remains constant pre and post instruction.
+pub fn measure_cu_no_expansion(f: &BenchFixture, ix: Instruction) -> u64 {
+    // Track the data length of the market's account prior to measuring CU.
+    let pre_market_data_len = f.ctx.view_market_data(f.market_ctx.market).len();
+
     let result = f.ctx.process_instruction_chain(&[ix]);
     assert!(
         result.program_result.is_ok(),
         "measured instruction failed: {:?}",
         result.program_result
     );
+
+    // Ensure the CUs measured aren't including market account data expansion.
+    let post_market_data_len = f.ctx.view_market_data(f.market_ctx.market).len();
+    assert_eq!(pre_market_data_len, post_market_data_len);
+
     result.compute_units_consumed
 }
 
@@ -183,10 +204,11 @@ pub fn fmt_header(logs: &mut String, title: &str) {
 }
 
 /// Write a centered sub-table: column header, dashes, and data rows.
-pub fn fmt_subtable(logs: &mut String, col_left: &str, rows: &[(u64, u64)]) {
+pub fn fmt_subtable(logs: &mut String, col_left: &str, col_right: &str, rows: &[(u64, u64)]) {
     logs.push('\n');
-    wc(logs, &format!("{:<14}{:>9}", col_left, "Average CU"));
-    wc(logs, &"-".repeat(24));
+    let s = &format!("{:<14}{:>8}", col_left, format!("{col_right} CU"));
+    wc(logs, s);
+    wc(logs, &"-".repeat(26));
     for &(n, avg) in rows {
         let label = format!("{n:>7} ");
         wc(logs, &format!("{label:<14}  {avg:>6}  "));

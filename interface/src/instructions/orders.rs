@@ -12,9 +12,13 @@ use price::{
     OrderInfoArgs,
 };
 use solana_program_error::ProgramError;
-use static_assertions::const_assert_eq;
+use static_assertions::{
+    const_assert,
+    const_assert_eq,
+};
 
 use crate::{
+    error::DropsetError,
     instructions::orders::private::UpToTen,
     state::user_order_sectors::{
         MAX_ORDERS,
@@ -36,6 +40,8 @@ pub struct UnvalidatedOrders {
 }
 
 impl UnvalidatedOrders {
+    /// Create up to [MAX_ORDERS_USIZE] orders as efficiently as possible. For a less efficient,
+    /// more ergonomic version of this method, see [Self::new_from_slice].
     #[inline(always)]
     pub fn new<const N: usize>(orders: [OrderInfoArgs; N]) -> Self
     where
@@ -79,6 +85,34 @@ impl UnvalidatedOrders {
                 >(res)
             },
         }
+    }
+
+    /// A more ergonomic version of [Self::new] that receives a slice argument instead of a
+    /// statically sized array.
+    pub fn new_from_slice(orders: &[OrderInfoArgs]) -> Result<Self, DropsetError> {
+        fn to_array<const N: usize>(orders: &[OrderInfoArgs]) -> [OrderInfoArgs; N] {
+            core::array::from_fn::<_, N, _>(|i| orders[i].clone())
+        }
+
+        Ok(match orders.len() {
+            0 => Self::new(to_array::<0>(orders)),
+            1 => Self::new(to_array::<1>(orders)),
+            2 => Self::new(to_array::<2>(orders)),
+            3 => Self::new(to_array::<3>(orders)),
+            4 => Self::new(to_array::<4>(orders)),
+            5 => Self::new(to_array::<5>(orders)),
+            6 => Self::new(to_array::<6>(orders)),
+            7 => Self::new(to_array::<7>(orders)),
+            8 => Self::new(to_array::<8>(orders)),
+            9 => Self::new(to_array::<9>(orders)),
+            10 => Self::new(to_array::<10>(orders)),
+            _ => {
+                // If the max number of orders changes, the match arms above need to be updated.
+                // The value checked in the const assertion below also needs to be updated.
+                const_assert!(MAX_ORDERS_USIZE <= 10);
+                return Err(DropsetError::InvalidInstructionData);
+            }
+        })
     }
 
     /// Converts and validates [Self::order_args] into an owned iterator of [OrderInfo].

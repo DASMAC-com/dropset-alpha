@@ -1,13 +1,18 @@
+use std::fmt::Write;
+
+use client::mollusk_helpers::helper_trait::DropsetTestHelper;
 use cu_bench_dropset::{
     add_funded_maker,
     add_user,
     expand_market,
     fmt_header,
     fmt_subtable,
-    measure_cu,
+    make_ask_prices,
+    measure_cu_no_expansion,
     new_bench_fixture,
     ASK_PRICES,
     BASE_UNIT,
+    INIT_BASE,
     MAX_ORDERS_USIZE,
     MAX_PERMITTED_SECTOR_INCREASE,
 };
@@ -20,6 +25,7 @@ use dropset_interface::{
         PostOrderInstructionData,
         UnvalidatedOrders,
     },
+    state::sector::NIL,
 };
 use price::{
     client_helpers::{
@@ -45,14 +51,19 @@ fn cu_deposit() -> anyhow::Result<()> {
     let f = new_bench_fixture();
     expand_market(&f);
 
+    // Ensure the maker has enough.
+    let amount = BASE_UNIT;
+    assert!(f
+        .ctx
+        .process_instruction(&f.market_ctx.base.mint_to_user(&f.maker, amount).unwrap())
+        .program_result
+        .is_ok());
+
     // Fixture already deposited base to create the seat; measure a subsequent
     // deposit — the hot path where the seat already exists.
-    let cu = measure_cu(
-        &f,
-        f.market_ctx.deposit_base(f.maker, BASE_UNIT, f.seat_index),
-    );
+    let cu = measure_cu_no_expansion(&f, f.market_ctx.deposit_base(f.maker, amount, f.seat_index));
 
-    fmt_subtable(&mut logs, "Deposits", &[(1, cu)]);
+    fmt_subtable(&mut logs, "Deposits", "Flat", &[(1, cu)]);
     eprintln!("{logs}");
     Ok(())
 }
@@ -64,12 +75,12 @@ fn cu_withdraw() -> anyhow::Result<()> {
 
     let f = new_bench_fixture();
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.withdraw_base(f.maker, BASE_UNIT, f.seat_index),
     );
 
-    fmt_subtable(&mut logs, "Withdrawals", &[(1, cu)]);
+    fmt_subtable(&mut logs, "Withdrawals", "Flat", &[(1, cu)]);
     eprintln!("{logs}");
     Ok(())
 }
@@ -82,7 +93,7 @@ fn cu_post_order() -> anyhow::Result<()> {
     let f = new_bench_fixture();
     expand_market(&f);
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.post_order(
             f.maker,
@@ -94,7 +105,7 @@ fn cu_post_order() -> anyhow::Result<()> {
         ),
     );
 
-    fmt_subtable(&mut logs, "Orders", &[(1, cu)]);
+    fmt_subtable(&mut logs, "Orders", "Flat", &[(1, cu)]);
 
     eprintln!("{logs}");
     Ok(())
@@ -120,7 +131,7 @@ fn cu_cancel_order() -> anyhow::Result<()> {
     )]);
     assert!(res.program_result.is_ok(), "setup PostOrder failed");
 
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.cancel_order(
             f.maker,
@@ -128,7 +139,7 @@ fn cu_cancel_order() -> anyhow::Result<()> {
         ),
     );
 
-    fmt_subtable(&mut logs, "Cancels", &[(1, cu)]);
+    fmt_subtable(&mut logs, "Cancels", "Flat", &[(1, cu)]);
     eprintln!("{logs}");
     Ok(())
 }
@@ -139,13 +150,50 @@ fn cu_cancel_order() -> anyhow::Result<()> {
 fn cu_batch_replace() -> anyhow::Result<()> {
     let mut logs = String::new();
 
+    // The total base cost for placing the max amount of orders into an empty book.
+    let mut flat_cost_inserting_max_orders_to_empty_book = 0;
+
     // Place: book starts empty, BatchReplace inserts n new asks.
-    fmt_header(&mut logs, "BatchReplace (Place)");
+    fmt_header(&mut logs, "BatchReplace (Place, into 0 orders)");
     let mut rows = Vec::new();
     for &n in BATCH_AMOUNTS {
-        rows.push((n, batch_replace_place(n)));
+        let res = batch_replace_place(n);
+        if n as usize == MAX_ORDERS_USIZE {
+            flat_cost_inserting_max_orders_to_empty_book = res;
+        }
+        rows.push((n, res / n));
     }
-    fmt_subtable(&mut logs, "Orders", &rows);
+    fmt_subtable(&mut logs, "Orders", "Amortized", &rows);
+
+    // Place: Sparse batch replace: book has n existing asks, BatchReplace sparsely inserts asks
+    // in between the existing ones on the book. See the function for more info.
+    // Instead of displaying the CU per order here, it's more meaningful to measure the CU per
+    // traversal.
+    fmt_header(&mut logs, "BatchReplace (Place, into N orders)");
+    const N_1: usize = 10;
+    const N_2: usize = 100;
+    const N_3: usize = 200;
+    let rows: Vec<_> = vec![
+        (N_1, batch_replace_sparse::<N_1>(MAX_ORDERS_USIZE)),
+        (N_2, batch_replace_sparse::<N_2>(MAX_ORDERS_USIZE)),
+        (N_3, batch_replace_sparse::<N_3>(MAX_ORDERS_USIZE)),
+    ]
+    .into_iter()
+    .map(|(n_pre_existing, total_cu)| {
+        assert!(total_cu > flat_cost_inserting_max_orders_to_empty_book);
+        let traversal_cu = total_cu - flat_cost_inserting_max_orders_to_empty_book;
+        (n_pre_existing as u64, traversal_cu)
+    })
+    .collect();
+    #[rustfmt::skip]
+    let () = {
+        writeln!(logs)?;
+        writeln!(logs, "  Measures the net CU cost of inserting {MAX_ORDERS_USIZE}")?;
+        writeln!(logs, "  orders into a book with N existing orders,")?;
+        writeln!(logs, "  excluding the flat CU cost of inserting {MAX_ORDERS_USIZE}")?;
+        writeln!(logs, "  orders into an empty book ({} CUs).", flat_cost_inserting_max_orders_to_empty_book)?;
+    };
+    fmt_subtable(&mut logs, "Existing", "Net", &rows);
 
     // Cancel: book has n existing asks, BatchReplace replaces with empty.
     fmt_header(&mut logs, "BatchReplace (Cancel)");
@@ -153,7 +201,7 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     for &n in BATCH_AMOUNTS {
         rows.push((n, batch_replace_cancel(n)));
     }
-    fmt_subtable(&mut logs, "Cancels", &rows);
+    fmt_subtable(&mut logs, "Cancels", "Amortized", &rows);
 
     // Replace: book has n existing asks, BatchReplace cancels them all and
     // inserts n new asks — the actual "replace" workload.
@@ -163,70 +211,37 @@ fn cu_batch_replace() -> anyhow::Result<()> {
         rows.push((n, batch_replace_replace(n)));
     }
     // Each row is CU for 1 cancel + 1 place within a single BatchReplace, amortized over n.
-    fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
+    fmt_subtable(&mut logs, "Pairs (C+P)", "Amortized", &rows);
 
     eprintln!("{logs}");
     Ok(())
 }
 
-/// Place `n` asks via a single BatchReplace into an empty book; return amortized CU per order.
+/// Place `n` asks via a single BatchReplace into an empty book; return total CU.
 fn batch_replace_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
-    let cu = match n as usize {
-        1 => {
-            let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        5 => {
-            let asks: [OrderInfoArgs; 5] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        MAX_ORDERS_USIZE => {
-            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        _ => unreachable!(),
-    };
-
-    cu / n
+    let asks: Vec<OrderInfoArgs> = (0..n as usize)
+        .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+        .collect();
+    measure_cu_no_expansion(
+        &f,
+        f.market_ctx.batch_replace(
+            f.maker,
+            BatchReplaceInstructionData::new(
+                f.seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(&asks).expect("n should be <= MAX_ORDERS_USIZE"),
+            ),
+        ),
+    )
 }
 
 /// Place `n` asks (setup), then BatchReplace with 0 asks; return amortized CU per cancel.
 fn batch_replace_cancel(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -244,7 +259,7 @@ fn batch_replace_cancel(n: u64) -> u64 {
     }
 
     // Measure: BatchReplace with empty asks cancels all n resting asks.
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.batch_replace(
             f.maker,
@@ -262,6 +277,7 @@ fn batch_replace_cancel(n: u64) -> u64 {
 /// Place `n` asks (setup), then BatchReplace with `n` new asks at the same prices; return
 /// amortized CU per cancel+place pair — this is the true "replace" workload.
 fn batch_replace_replace(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -279,55 +295,108 @@ fn batch_replace_replace(n: u64) -> u64 {
     }
 
     // Measure: BatchReplace cancels the n existing asks and places n new ones.
-    let cu = match n as usize {
-        1 => {
-            let asks = [OrderInfoArgs::new_unscaled(ASK_PRICES[0], 1)];
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        5 => {
-            let asks: [OrderInfoArgs; 5] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        MAX_ORDERS_USIZE => {
-            let asks: [OrderInfoArgs; MAX_ORDERS_USIZE] =
-                core::array::from_fn(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1));
-            measure_cu(
-                &f,
-                f.market_ctx.batch_replace(
-                    f.maker,
-                    BatchReplaceInstructionData::new(
-                        f.seat_index,
-                        UnvalidatedOrders::new([]),
-                        UnvalidatedOrders::new(asks),
-                    ),
-                ),
-            )
-        }
-        _ => unreachable!(),
-    };
+    let asks: Vec<OrderInfoArgs> = (0..n as usize)
+        .map(|i| OrderInfoArgs::new_unscaled(ASK_PRICES[i], 1))
+        .collect();
+    let cu = measure_cu_no_expansion(
+        &f,
+        f.market_ctx.batch_replace(
+            f.maker,
+            BatchReplaceInstructionData::new(
+                f.seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(&asks).expect("n should be <= MAX_ORDERS_USIZE"),
+            ),
+        ),
+    );
 
     cu / n
+}
+
+/// Place `n` ask orders into a dense orderbook with a specified number of pre-existing orders.
+/// Returns the total CUs for the final batch replace operation for `n` orders.
+///
+/// This benchmark is intended to measure the traversal cost of inserting orders.
+///
+/// The test ensures that the asks inserted during the final, measured BatchReplace instruction are
+/// inserted at evenly spaced insertion points based on the book's existing asks.
+fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -> u64 {
+    assert!(n != 0 && n <= ASK_PRICES.len(), "Invalid `n`");
+    const SCALAR: u64 = 1;
+
+    let f = new_bench_fixture();
+    for _ in 0..N_PRE_EXISTING_ORDERS_PER_SIDE / MAX_PERMITTED_SECTOR_INCREASE {
+        expand_market(&f);
+    }
+
+    // Setup: Place the desired amount of pre-existing ask orders (not measured).
+    let ask_prices = make_ask_prices::<N_PRE_EXISTING_ORDERS_PER_SIDE>();
+    let pre_existing_asks = ask_prices.map(|price| OrderInfoArgs::new_unscaled(price, SCALAR));
+
+    for ask_slice in pre_existing_asks.chunks(MAX_ORDERS_USIZE) {
+        expand_market(&f);
+        // Create and fund a new maker that will post the next 10 orders.
+        let next_maker = add_user(&f, 1_000_000_000);
+        assert!(f
+            .ctx
+            .process_instruction_chain(&[
+                f.market_ctx.base.create_ata(&next_maker, &next_maker),
+                f.market_ctx
+                    .base
+                    .mint_to_user(&next_maker, INIT_BASE)
+                    .unwrap(),
+                f.market_ctx.deposit_base(next_maker, INIT_BASE, NIL),
+            ])
+            .program_result
+            .is_ok());
+
+        let seat_index = f.ctx.get_seat(f.market_ctx.market, next_maker).index;
+        let err_msg = "Slice length should be <= MAX_ORDERS_USIZE";
+        let ixn = f.market_ctx.batch_replace(
+            next_maker,
+            BatchReplaceInstructionData::new(
+                seat_index,
+                UnvalidatedOrders::new([]),
+                UnvalidatedOrders::new_from_slice(ask_slice).expect(err_msg),
+            ),
+        );
+
+        assert!(f.ctx.process_instruction(&ixn).program_result.is_ok());
+    }
+
+    let inserted_asks = (0..n)
+        .map(|i| {
+            let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
+            let interpolated_ask_price = ask_prices[idx] + 1;
+            assert!(interpolated_ask_price > ask_prices[idx]);
+            if let Some(next_price) = ask_prices.get(idx + 1) {
+                assert!(interpolated_ask_price < *next_price);
+            }
+            OrderInfoArgs::new_unscaled(interpolated_ask_price, SCALAR)
+        })
+        .collect::<Vec<_>>();
+
+    let err_msg = "n should be <= MAX_ORDERS_USIZE to fit in a single batch replace";
+    assert!(n <= MAX_ORDERS_USIZE, "{err_msg}");
+    expand_market(&f);
+
+    // Measure: BatchReplace where the inserted orders are sparsely inserted at different points
+    // in the book.
+    let insert_ixn = f.market_ctx.batch_replace(
+        f.maker,
+        BatchReplaceInstructionData::new(
+            f.seat_index,
+            UnvalidatedOrders::new([]),
+            UnvalidatedOrders::new_from_slice(&inserted_asks).expect(err_msg),
+        ),
+    );
+
+    let raw_cu = measure_cu_no_expansion(&f, insert_ixn);
+    let market = f.ctx.view_market(f.market_ctx.market);
+    assert_eq!(market.asks.len(), N_PRE_EXISTING_ORDERS_PER_SIDE + n);
+    assert_eq!(market.bids.len(), 0);
+
+    raw_cu as u64
 }
 
 // ── Individual-instruction comparison benchmarks ─────────────────────────────
@@ -345,7 +414,7 @@ fn cu_individual_orders() -> anyhow::Result<()> {
         for &n in BATCH_AMOUNTS {
             rows.push((n, individual_place(n)));
         }
-        fmt_subtable(&mut logs, "Orders", &rows);
+        fmt_subtable(&mut logs, "Orders", "Amortized", &rows);
     }
 
     // N individual CancelOrder calls (n asks placed as setup).
@@ -355,7 +424,7 @@ fn cu_individual_orders() -> anyhow::Result<()> {
         for &n in BATCH_AMOUNTS {
             rows.push((n, individual_cancel(n)));
         }
-        fmt_subtable(&mut logs, "Cancels", &rows);
+        fmt_subtable(&mut logs, "Cancels", "Amortized", &rows);
     }
 
     // N individual CancelOrder calls followed by N individual PostOrder calls;
@@ -367,7 +436,7 @@ fn cu_individual_orders() -> anyhow::Result<()> {
             rows.push((n, individual_cancel_and_place(n)));
         }
         // Each row is CU for 1 cancel + 1 place as separate instructions, amortized over n.
-        fmt_subtable(&mut logs, "Pairs (C+P)", &rows);
+        fmt_subtable(&mut logs, "Pairs (C+P)", "Amortized", &rows);
     }
 
     eprintln!("{logs}");
@@ -376,12 +445,13 @@ fn cu_individual_orders() -> anyhow::Result<()> {
 
 /// N separate PostOrder calls into an empty book; returns amortized CU per call.
 fn individual_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
     let total_cu: u64 = (0..n as usize)
         .map(|i| {
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.post_order(
                     f.maker,
@@ -401,6 +471,7 @@ fn individual_place(n: u64) -> u64 {
 /// Place `n` asks (setup), then cancel each one with a separate CancelOrder; returns amortized
 /// CU per cancel.
 fn individual_cancel(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -423,7 +494,7 @@ fn individual_cancel(n: u64) -> u64 {
                 .unwrap()
                 .encoded_price
                 .as_u32();
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.cancel_order(
                     f.maker,
@@ -439,6 +510,7 @@ fn individual_cancel(n: u64) -> u64 {
 /// Place `n` asks (setup), cancel each individually, then re-place each individually; returns
 /// amortized CU per cancel+place pair — directly comparable to `batch_replace_replace`.
 fn individual_cancel_and_place(n: u64) -> u64 {
+    assert!(n as usize <= ASK_PRICES.len(), "Invalid `n`");
     let f = new_bench_fixture();
     expand_market(&f);
 
@@ -462,7 +534,7 @@ fn individual_cancel_and_place(n: u64) -> u64 {
                 .unwrap()
                 .encoded_price
                 .as_u32();
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.cancel_order(
                     f.maker,
@@ -475,7 +547,7 @@ fn individual_cancel_and_place(n: u64) -> u64 {
     // Measure: n individual PostOrder calls (re-place the same orders).
     let place_cu: u64 = (0..n as usize)
         .map(|i| {
-            measure_cu(
+            measure_cu_no_expansion(
                 &f,
                 f.market_ctx.post_order(
                     f.maker,
@@ -504,7 +576,7 @@ fn cu_market_order() -> anyhow::Result<()> {
         rows.push((n, market_order_fill(n).map_err(|e| anyhow::anyhow!("{e}"))?));
     }
 
-    fmt_subtable(&mut logs, "Fills", &rows);
+    fmt_subtable(&mut logs, "Fills", "Amortized", &rows);
     eprintln!("{logs}");
     Ok(())
 }
@@ -569,7 +641,7 @@ fn market_order_fill(n: u64) -> Result<u64, DropsetError> {
 
     // Measure: market buy for exactly the base that the n asks offer.
     let base_to_buy = sum_base_necessary(&ask_args)?;
-    let cu = measure_cu(
+    let cu = measure_cu_no_expansion(
         &f,
         f.market_ctx.market_order(
             taker,
