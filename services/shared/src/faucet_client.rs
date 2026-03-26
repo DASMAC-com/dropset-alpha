@@ -61,9 +61,13 @@ impl FaucetClient {
         amount: Option<u64>,
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         let ui_amount = if let Some(atoms) = amount {
-            atoms_to_ui_amount(atoms, self.base.mint_decimals)
-                .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
-                .to_u64()
+            Some(
+                atoms_to_ui_amount(atoms, self.base.mint_decimals)
+                    .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
+                    .round()
+                    .to_u64()
+                    .context("Couldn't convert atoms amount to ui amount")?,
+            )
         } else {
             None
         };
@@ -83,9 +87,13 @@ impl FaucetClient {
         amount: Option<u64>,
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         let ui_amount = if let Some(atoms) = amount {
-            atoms_to_ui_amount(atoms, self.quote.mint_decimals)
-                .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
-                .to_u64()
+            Some(
+                atoms_to_ui_amount(atoms, self.quote.mint_decimals)
+                    .map_err(|e| TransactionSubmitError::from(anyhow::anyhow!("{e}")))?
+                    .round()
+                    .to_u64()
+                    .context("Couldn't convert atoms amount to ui amount")?,
+            )
         } else {
             None
         };

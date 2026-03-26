@@ -224,6 +224,7 @@ impl MakerContext {
                 let error_msg =
                     || format!("Couldn't convert bid size to u64 at layer {i}: price={price}");
                 let size = (Decimal::from(self.bid_order_size) * Decimal::from(i + 1) / price)
+                    .round()
                     .to_u64()
                     .with_context(error_msg)?;
                 Ok((price, size))
