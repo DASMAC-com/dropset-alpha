@@ -30,11 +30,16 @@ pub const QUOTE_UNIT: u64 = 100_000_000;
 pub const INIT_BASE: u64 = 1_000 * BASE_UNIT;
 pub const INIT_QUOTE: u64 = 1_000_000 * QUOTE_UNIT;
 
+/// The difference in price between each price generated from
+/// [make_ask_prices] and [make_bid_prices].
+const PRICE_STEP: u32 = 100;
+
 pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        arr[i] = 60_000_000 + i as u32;
+        let step = i as u32 * PRICE_STEP;
+        arr[i] = 60_000_000 + step;
         i += 1;
     }
     arr
@@ -44,7 +49,8 @@ pub const fn make_bid_prices<const N: usize>() -> [u32; N] {
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        arr[i] = 50_000_000 - i as u32;
+        let step = i as u32 * PRICE_STEP;
+        arr[i] = 50_000_000 - step;
         i += 1;
     }
     arr

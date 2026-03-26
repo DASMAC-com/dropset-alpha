@@ -181,7 +181,7 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     ]
     .into_iter()
     .map(|(n_pre_existing, total_cu)| {
-        assert!(total_cu <= flat_cost_inserting_max_orders_to_empty_book);
+        assert!(total_cu > flat_cost_inserting_max_orders_to_empty_book);
         let traversal_cu = total_cu - flat_cost_inserting_max_orders_to_empty_book;
         (n_pre_existing as u64, traversal_cu)
     })
@@ -363,6 +363,10 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
         .map(|i| {
             let idx = i * N_PRE_EXISTING_ORDERS_PER_SIDE / n;
             let interpolated_ask_price = ask_prices[idx] + 1;
+            assert!(interpolated_ask_price > ask_prices[idx]);
+            if let Some(next_price) = ask_prices.get(idx + 1) {
+                assert!(interpolated_ask_price < *next_price);
+            }
             OrderInfoArgs::new_unscaled(interpolated_ask_price, SCALAR)
         })
         .collect::<Vec<_>>();
