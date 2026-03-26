@@ -172,7 +172,7 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     fmt_header(&mut logs, "BatchReplace (Place, into N orders)");
     const N_1: usize = 10;
     const N_2: usize = 100;
-    const N_3: usize = 200;
+    const N_3: usize = 1000;
     let rows: Vec<_> = vec![
         (N_1, batch_replace_sparse::<N_1>(MAX_ORDERS_USIZE)),
         (N_2, batch_replace_sparse::<N_2>(MAX_ORDERS_USIZE)),
