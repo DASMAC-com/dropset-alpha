@@ -165,6 +165,10 @@ this suggests a flat traversal overhead of about 50 CUs: `149 - (10 * 9.9) = 50`
     200         2034                77 - 81
    1000         9954                  89
 ```
+**Note:** These projections do not account for red-black tree rebalancing
+overhead (up to 2 rotations per insertion). Rebalancing cost is expected to be
+small relative to traversal (estimated ~20-50 CUs per rotation) but will be
+measured once the `beta` implementation is complete.
 
 ## Test categories
 
