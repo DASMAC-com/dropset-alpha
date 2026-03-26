@@ -154,9 +154,9 @@ this suggests a flat traversal overhead of about 50 CUs: `149 - (10 * 9.9) = 50`
 ```text
      N     Net CU (alpha)   Net CU (beta, projected)
   ----------------------------------------------------
-     10          149                61 - 65
-    100         1044                73 - 77
-   1000         9954                  89
+     10          149                62 - 66
+    100         1044                74 - 78
+   1000         9954                  90
 ```
 **Note:** These projections do not account for red-black tree rebalancing
 overhead (up to 2 rotations per insertion). Rebalancing cost is expected to be
