@@ -351,7 +351,7 @@ fn batch_replace_sparse<const N_PRE_EXISTING_ORDERS_PER_SIDE: usize>(n: usize) -
             .is_ok());
 
         let seat_index = f.ctx.get_seat(f.market_ctx.market, next_maker).index;
-        let err_msg = "Chunked pairs length should be <= MAX_ORDERS_USIZE";
+        let err_msg = "Slice length should be <= MAX_ORDERS_USIZE";
         let ixn = f.market_ctx.batch_replace(
             next_maker,
             BatchReplaceInstructionData::new(

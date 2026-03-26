@@ -36,7 +36,7 @@ const PRICE_STEP: usize = 100;
 
 pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
     const START: usize = 60_000_000;
-    // Ensure `N` isn't too large, otherwise the price will underflow.
+    // Ensure `N` isn't too large, otherwise the price will overflow.
     assert!((START).checked_add(N * PRICE_STEP).is_some());
 
     let mut arr = [0u32; N];
