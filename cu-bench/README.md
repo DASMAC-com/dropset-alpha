@@ -109,7 +109,6 @@ You can see below that the average CU per comparison during traversal is about
          --------------------------
                10            149
               100           1044
-              200           2034
              1000           9954
 ```
 
@@ -126,7 +125,7 @@ algorithm:
 
 #### Dropset `alpha` traversal cost
 
-From 200 to 1000 existing orders in the `alpha` protocol, the increase in CU
+From 100 to 1000 existing orders in the `alpha` protocol, the increase in CU
 cost averages about 9.9 CUs per additional comparison.
 
 The first result with 10 existing orders is 149 CUs. At 9.9 CUs per comparison,
@@ -147,7 +146,6 @@ this suggests a flat traversal overhead of about 50 CUs: `149 - (10 * 9.9) = 50`
 ----------------------------------------------------------------------------
      10      3.32        3 - 4         12 - 16          61 - 65
     100      6.64        6 - 7         24 - 28          73 - 77
-    200      7.64        7 - 8         28 - 32          77 - 81
    1000      9.97         10             40                89
 ```
 
@@ -158,7 +156,6 @@ this suggests a flat traversal overhead of about 50 CUs: `149 - (10 * 9.9) = 50`
   ----------------------------------------------------
      10          149                61 - 65
     100         1044                73 - 77
-    200         2034                77 - 81
    1000         9954                  89
 ```
 **Note:** These projections do not account for red-black tree rebalancing
