@@ -191,9 +191,10 @@ from growth cost, Dropset and Manifest **pre-expand the market account** before
 running any measured instruction. The reported CUs reflect the instruction
 itself under steady-state conditions.
 
-For Dropset, the need for market expansion can be handled by expanding
-- reactively when the `NoFreeSectorsRemaining` error is returned
-- or pre-emptively when the market header's `num_free_sectors` is near zero
+For Dropset, the need for market expansion can be handled in two ways:
+- Reactively expanding when the `NoFreeSectorsRemaining` error is returned
+- Pre-emptively expanding when the market header's `num_free_sectors` is near
+  zero
 
 Phoenix Legacy predates Solana's support for dynamic account resizing, so it
 takes a different approach: the order book is allocated at a fixed maximum
