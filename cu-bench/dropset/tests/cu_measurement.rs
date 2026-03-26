@@ -52,10 +52,10 @@ fn cu_deposit() -> anyhow::Result<()> {
     expand_market(&f);
 
     // Ensure the maker has enough.
-    let amount = 1000;
+    let amount = BASE_UNIT;
     assert!(f
         .ctx
-        .process_instruction(&f.market_ctx.base.mint_to_user(&f.maker, amount).unwrap(),)
+        .process_instruction(&f.market_ctx.base.mint_to_user(&f.maker, amount).unwrap())
         .program_result
         .is_ok());
 
