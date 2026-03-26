@@ -33,6 +33,12 @@ pub struct FaucetState {
     recent_blockhash: Arc<RwLock<solana_sdk::hash::Hash>>,
 }
 
+/// The blockhash refresh. This is, effectively, how often the same address can sign and submit a
+/// [Transaction] signed by the faucet to transfer base or mint tokens with the same amount of
+/// atoms. If the same amount of atoms is requested twice for the same token and the two blockhashes
+/// are equal, the sender will get an `AlreadyProcessed` error when submitting the transaction.
+pub const BLOCKHASH_REFRESH: u64 = 5;
+
 impl FaucetState {
     pub async fn new(config: ValidFaucetConfig, rpc: Arc<CustomRpcClient>) -> anyhow::Result<Self> {
         let ValidFaucetConfig {
@@ -53,15 +59,16 @@ impl FaucetState {
 
         let recent_blockhash = Arc::new(RwLock::new(initial_blockhash));
 
-        // Refresh the blockhash every 20 seconds. Solana blockhashes are valid
-        // for ~60s (~150 slots), so this gives users ~40s to sign and submit.
-        // `get_new_latest_blockhash` retries until a genuinely new hash appears.
+        // Refresh the blockhash every BLOCKHASH_REFRESH seconds. Solana blockhashes are valid
+        // for ~60s (~150 slots), so this gives users 60 - BLOCKHASH_REFRESH seconds to sign and
+        // submit. `get_new_latest_blockhash` retries until a genuinely new hash appears.
         {
             let blockhash = Arc::clone(&recent_blockhash);
             let rpc = Arc::clone(&rpc);
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(20));
-                interval.tick().await; // skip immediate first tick
+                let mut interval = tokio::time::interval(Duration::from_secs(BLOCKHASH_REFRESH));
+                // Skip immediate first tick.
+                interval.tick().await;
                 loop {
                     interval.tick().await;
                     let current = *blockhash
