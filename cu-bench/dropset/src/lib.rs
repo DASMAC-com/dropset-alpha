@@ -32,25 +32,37 @@ pub const INIT_QUOTE: u64 = 1_000_000 * QUOTE_UNIT;
 
 /// The difference in price between each price generated from
 /// [make_ask_prices] and [make_bid_prices].
-const PRICE_STEP: u32 = 100;
+const PRICE_STEP: usize = 100;
 
 pub const fn make_ask_prices<const N: usize>() -> [u32; N] {
+    const START: usize = 60_000_000;
+    // Ensure `N` isn't too large, otherwise the price will underflow.
+    assert!((START).checked_add(N * PRICE_STEP).is_some());
+
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        let step = i as u32 * PRICE_STEP;
-        arr[i] = 60_000_000 + step;
+        let step = i * PRICE_STEP;
+        let price = START + step;
+        assert!(price <= u32::MAX as usize);
+        arr[i] = price as u32;
         i += 1;
     }
     arr
 }
 
 pub const fn make_bid_prices<const N: usize>() -> [u32; N] {
+    const START: usize = 50_000_000;
+    // Ensure `N` isn't too large, otherwise the price will underflow.
+    assert!((START).checked_sub(N * PRICE_STEP).is_some());
+
     let mut arr = [0u32; N];
     let mut i = 0;
     while i < N {
-        let step = i as u32 * PRICE_STEP;
-        arr[i] = 50_000_000 - step;
+        let step = i * PRICE_STEP;
+        let price = START - step;
+        assert!(price <= u32::MAX as usize);
+        arr[i] = price as u32;
         i += 1;
     }
     arr
