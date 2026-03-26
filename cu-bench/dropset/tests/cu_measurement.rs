@@ -181,8 +181,9 @@ fn cu_batch_replace() -> anyhow::Result<()> {
     ]
     .into_iter()
     .map(|(n_pre_existing, total_cu)| {
-        let cu_per_traversal = total_cu - flat_cost_inserting_max_orders_to_empty_book;
-        (n_pre_existing as u64, cu_per_traversal)
+        assert!(total_cu <= flat_cost_inserting_max_orders_to_empty_book);
+        let traversal_cu = total_cu - flat_cost_inserting_max_orders_to_empty_book;
+        (n_pre_existing as u64, traversal_cu)
     })
     .collect();
     #[rustfmt::skip]
