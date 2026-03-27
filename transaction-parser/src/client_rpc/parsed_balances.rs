@@ -76,31 +76,19 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
             ..
         } = parsed_transaction;
 
-        let indexed_addresses = HashMap::from_iter(
-            addresses
-                .iter()
-                .enumerate()
-                .map(|(i, addr)| {
-                    if i > u8::MAX as usize {
-                        anyhow::bail!(
-                            "Got {} addresses, maximum supported is {}",
-                            addresses.len(),
-                            u8::MAX as usize + 1
-                        );
-                    }
-                    Ok((i as u8, *addr))
-                })
-                .collect::<anyhow::Result<Vec<_>>>()?,
-        );
+        let n_addresses = addresses.len();
+        if n_addresses > u8::MAX as usize + 1 {
+            anyhow::bail!(
+                "Got {n_addresses} addresses, max supported is {}",
+                u8::MAX as usize + 1
+            );
+        }
 
-        fn get(index: usize, hash_map: &HashMap<u8, Address>) -> anyhow::Result<Address> {
-            if index > u8::MAX as usize {
-                anyhow::bail!("Index {index} is greater than u8::MAX ({})", u8::MAX);
-            }
-            hash_map.get(&(index as u8)).cloned().ok_or_else(|| {
+        fn get(index: usize, addresses: &[Address]) -> anyhow::Result<Address> {
+            addresses.get(index).cloned().ok_or_else(|| {
                 anyhow::anyhow!(
                     "Account index ({index}) not found in the transaction's {} indexed addresses",
-                    hash_map.len(),
+                    addresses.len(),
                 )
             })
         }
@@ -108,20 +96,20 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
         let pre_lamports = pre_balances
             .iter()
             .enumerate()
-            .map(|(i, b)| Ok((get(i, &indexed_addresses)?, *b)))
+            .map(|(i, b)| Ok((get(i, addresses)?, *b)))
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         let post_lamports = post_balances
             .iter()
             .enumerate()
-            .map(|(i, b)| Ok((get(i, &indexed_addresses)?, *b)))
+            .map(|(i, b)| Ok((get(i, addresses)?, *b)))
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         let pre_tokens = pre_token_balances
             .iter()
             .map(|ui_balance| {
                 Ok((
-                    get(ui_balance.account_index as usize, &indexed_addresses)?,
+                    get(ui_balance.account_index as usize, addresses)?,
                     parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
                 ))
             })
@@ -131,7 +119,7 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
             .iter()
             .map(|ui_balance| {
                 Ok((
-                    get(ui_balance.account_index as usize, &indexed_addresses)?,
+                    get(ui_balance.account_index as usize, addresses)?,
                     parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
                 ))
             })
