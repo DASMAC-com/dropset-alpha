@@ -7665,10 +7665,12 @@ dependencies = [
  "price",
  "serde",
  "serde_json",
+ "solana-account-decoder-client-types",
  "solana-address 2.0.0",
  "solana-sdk",
  "solana-transaction-status",
  "solana-transaction-status-client-types",
+ "spl-associated-token-account-interface",
  "strum",
  "strum_macros",
 ]

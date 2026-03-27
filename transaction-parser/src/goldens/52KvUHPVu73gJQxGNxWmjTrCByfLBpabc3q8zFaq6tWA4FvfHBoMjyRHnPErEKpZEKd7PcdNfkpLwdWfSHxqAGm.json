@@ -1,0 +1,100 @@
+{
+  "slot": 416361,
+  "transaction": {
+    "signatures": [
+      "52KvUHPVu73gJQxGNxWmjTrCByfLBpabc3q8zFaq6tWA4FvfHBoMjyRHnPErEKpZEKd7PcdNfkpLwdWfSHxqAGm",
+      "uTPyKeFrX31gTssJ82KSPUD5s7csZ64PzoKjQVraEx1wpre9ANikZ2UTbCWqxNeFJkD7CrfduBjCyFc4dyRW1eb"
+    ],
+    "message": {
+      "header": {
+        "numRequiredSignatures": 2,
+        "numReadonlySignedAccounts": 0,
+        "numReadonlyUnsignedAccounts": 3
+      },
+      "accountKeys": [
+        "6W6rmoYuPL9FFtgBvWQzhnm64xNJNd5mE5yLf4ZzfAAW",
+        "7PGGqUCp8AdTiKzjxVhjz7WDWwUBWuTXQsaucKxsCnbD",
+        "11111111111111111111111111111111",
+        "ComputeBudget111111111111111111111111111111",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ],
+      "recentBlockhash": "BzwoKWoEtnk8KqpF7fap4ubDZFbdiSPjHPT4bqNwTZyp",
+      "instructions": [
+        {
+          "programIdIndex": 3,
+          "accounts": [],
+          "data": "HNbTD1",
+          "stackHeight": 1
+        },
+        {
+          "programIdIndex": 3,
+          "accounts": [],
+          "data": "3DdGGhkhJbjm",
+          "stackHeight": 1
+        },
+        {
+          "programIdIndex": 2,
+          "accounts": [
+            0,
+            1
+          ],
+          "data": "11114XtYk9gGfZoo968fyjNUYQJKf9gdmkGoaoBpzFv4vyaSMBn3VKxZdv7mZLzoyX5YNC",
+          "stackHeight": 1
+        },
+        {
+          "programIdIndex": 4,
+          "accounts": [
+            1
+          ],
+          "data": "2zw6qWMnynqLdKezzdH9xDoJAj9PLTVyuHgTYv5kzP58gfou",
+          "stackHeight": 1
+        }
+      ]
+    }
+  },
+  "meta": {
+    "err": null,
+    "status": {
+      "Ok": null
+    },
+    "fee": 10002,
+    "preBalances": [
+      10000000000,
+      0,
+      1,
+      1,
+      929020800
+    ],
+    "postBalances": [
+      9998528398,
+      1461600,
+      1,
+      1,
+      929020800
+    ],
+    "innerInstructions": [],
+    "logMessages": [
+      "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+      "Program ComputeBudget111111111111111111111111111111 success",
+      "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+      "Program ComputeBudget111111111111111111111111111111 success",
+      "Program 11111111111111111111111111111111 invoke [1]",
+      "Program 11111111111111111111111111111111 success",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]",
+      "Program log: Instruction: InitializeMint2",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 2779 of 1399550 compute units",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success"
+    ],
+    "preTokenBalances": [],
+    "postTokenBalances": [],
+    "rewards": [],
+    "loadedAddresses": {
+      "writable": [],
+      "readonly": []
+    },
+    "computeUnitsConsumed": 3229,
+    "costUnits": 5334
+  },
+  "version": "legacy",
+  "blockTime": 1773261820
+}

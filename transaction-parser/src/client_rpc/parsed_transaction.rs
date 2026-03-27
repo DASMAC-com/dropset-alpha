@@ -32,6 +32,7 @@ use crate::client_rpc::{
         ParsedOuterInstruction,
     },
     GroupedParsedLogs,
+    ParsedMappedBalances,
 };
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ pub struct ParsedTransaction {
     pub pre_balances: Vec<u64>,
     pub post_balances: Vec<u64>,
     pub instructions: Vec<ParsedOuterInstruction>,
+    pub addresses: Vec<Address>,
     pub log_messages: Vec<String>,
     pub pre_token_balances: Vec<UiTransactionTokenBalance>,
     pub post_token_balances: Vec<UiTransactionTokenBalance>,
@@ -67,7 +69,7 @@ impl ParsedTransaction {
         let log_messages = meta.log_messages.unwrap_or(vec![]);
         let compute_infos = parse_logs_for_compute(&log_messages).expect("Should parse");
 
-        let addresses = match meta.loaded_addresses {
+        let loaded_addresses = match meta.loaded_addresses {
             OptionSerializer::Some(addresses) => [addresses.writable, addresses.readonly]
                 .concat()
                 .iter()
@@ -81,7 +83,7 @@ impl ParsedTransaction {
                 signatures,
                 message,
             }) => {
-                let (instructions, accounts) = parse_ui_message(message, &addresses);
+                let (instructions, accounts) = parse_ui_message(message, &loaded_addresses);
                 let signature =
                     Signature::from_str(&signatures[0]).expect("Should be a valid signature");
                 (instructions, accounts, signature)
@@ -89,7 +91,7 @@ impl ParsedTransaction {
             encoded => {
                 let versioned: solana_sdk::transaction::VersionedTransaction =
                     encoded.decode().expect("Should decode transaction");
-                parse_versioned_transaction(versioned, &addresses)
+                parse_versioned_transaction(versioned, &loaded_addresses)
             }
         };
 
@@ -114,6 +116,7 @@ impl ParsedTransaction {
                 Some(compute_infos),
             )?,
             log_messages,
+            addresses: parsed_accounts.into_iter().map(|acc| acc.address).collect(),
             pre_token_balances: meta.pre_token_balances.unwrap_or(vec![]),
             post_token_balances: meta.post_token_balances.unwrap_or(vec![]),
             raw_compute_usage: match (meta.compute_units_consumed, meta.cost_units) {
@@ -153,6 +156,10 @@ impl ParsedTransaction {
         }
 
         Ok(outers)
+    }
+
+    pub fn try_into_mapped_balances(&self) -> anyhow::Result<ParsedMappedBalances> {
+        ParsedMappedBalances::try_from(self)
     }
 }
 

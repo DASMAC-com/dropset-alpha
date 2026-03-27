@@ -12,7 +12,9 @@ instruction-macros-traits = { path = "../instruction-macros/crates/instruction-m
 itertools.workspace = true
 lazy-regex.workspace = true
 price = { path = "../price" }
+spl-associated-token-account-interface.workspace = true
 solana-address = { workspace = true, features = ["copy"] }
+solana-account-decoder-client-types.workspace = true
 solana-sdk.workspace = true
 solana-transaction-status.workspace = true
 solana-transaction-status-client-types.workspace = true
