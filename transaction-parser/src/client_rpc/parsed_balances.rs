@@ -19,9 +19,11 @@ pub struct ParsedMappedBalances {
     pre_lamport_balances: HashMap<Address, u64>,
     /// Mapping of addresses to lamport post-balances.
     post_lamport_balances: HashMap<Address, u64>,
-    /// Mapping of associated token account pre-balances to [UiTokenAmount]. Entry keys are ATAs.
+    /// Mapping of token account pre-balances to [UiTokenAmount]. The [Address] keys are very
+    /// likely associated token accounts but could possibly be a non-ATA token account.
     pub pre_ui_token_amounts: HashMap<Address, UiTokenAmount>,
-    /// Mapping of associated token account post-balances to [UiTokenAmount]. Entry keys are ATAs.
+    /// Mapping of token account post-balances to [UiTokenAmount]. The [Address] keys are very
+    /// likely associated token accounts but could possibly be a non-ATA token account.
     pub post_ui_token_amounts: HashMap<Address, UiTokenAmount>,
 }
 
@@ -73,9 +75,9 @@ impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
                 .map(|(i, addr)| {
                     if i > u8::MAX as usize {
                         anyhow::bail!(
-                            "Got {} addresses, expected fewer than {}",
+                            "Got {} addresses, maximum supported is {}",
                             addresses.len(),
-                            u8::MAX
+                            u8::MAX as usize + 1
                         );
                     }
                     Ok((i as u8, *addr))
