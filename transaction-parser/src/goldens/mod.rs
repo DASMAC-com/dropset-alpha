@@ -1,7 +1,6 @@
 use std::{
-    fs::File,
-    io::BufReader,
     path::PathBuf,
+    sync::LazyLock,
 };
 
 use solana_account_decoder_client_types::token::UiTokenAmount;
@@ -17,35 +16,46 @@ fn goldens_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("transaction-parser/src/goldens")
 }
 
-pub fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
-    let dir = goldens_dir();
-    let mut paths: Vec<_> = std::fs::read_dir(&dir)
-        .expect("Should read goldens directory")
-        .map(|entry| entry.expect("Should read directory entry").path())
-        .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
-        .collect();
-    paths.sort();
-    assert!(
-        !paths.is_empty(),
-        "No golden JSON fixtures found in {dir:?}"
-    );
+fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
+    static GOLDEN_JSON_STRINGS: LazyLock<Vec<String>> = LazyLock::new(|| {
+        let dir = goldens_dir();
+        let mut paths: Vec<_> = std::fs::read_dir(&dir)
+            .expect("Should read goldens directory")
+            .map(|entry| entry.expect("Should read directory entry").path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
+            .collect();
+        paths.sort();
+        assert!(
+            !paths.is_empty(),
+            "No golden JSON fixtures found in {dir:?}"
+        );
 
-    paths
+        paths
+            .iter()
+            .map(|path| {
+                std::fs::read_to_string(path).expect("Should read the JSON file as a string")
+            })
+            .collect()
+    });
+
+    GOLDEN_JSON_STRINGS
         .iter()
-        .map(|path| {
-            let file = File::open(path).expect("Golden JSON file should be readable");
-            let reader = BufReader::new(file);
-            serde_json::from_reader(reader).expect("Should deserialize")
+        .map(|json| {
+            serde_json::from_str(json).expect("Should deserialize encoded transaction meta")
         })
         .collect()
 }
 
-pub fn golden_parsed_transactions() -> Vec<ParsedTransaction> {
-    golden_encoded_metas()
-        .into_iter()
-        .map(ParsedTransaction::from_encoded_transaction)
-        .collect::<anyhow::Result<Vec<_>>>()
-        .expect("Should parse")
+pub fn golden_parsed_transactions() -> &'static [ParsedTransaction] {
+    static PARSED_GOLDENS: LazyLock<Vec<ParsedTransaction>> = LazyLock::new(|| {
+        golden_encoded_metas()
+            .into_iter()
+            .map(ParsedTransaction::from_encoded_transaction)
+            .collect::<anyhow::Result<Vec<_>>>()
+            .expect("Should parse")
+    });
+
+    &PARSED_GOLDENS
 }
 
 #[cfg(test)]
