@@ -71,7 +71,11 @@ mod test {
     fn load_goldens() {
         let goldens = golden_parsed_transactions();
 
-        let txn = goldens.iter().find(|v| v.signature.to_string() == "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN").unwrap();
+        let txn_string = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
+        let txn = goldens
+            .iter()
+            .find(|v| v.signature.to_string() == txn_string)
+            .expect("Should be able to find parsed transaction with matching signature");
 
         assert_eq!(txn.pre_token_balances.len(), 1);
         assert_eq!(txn.post_token_balances.len(), 1);
