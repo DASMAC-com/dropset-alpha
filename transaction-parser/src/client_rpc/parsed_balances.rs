@@ -56,7 +56,7 @@ impl ParsedBalances {
     }
 
     /// Get a user's post token balance for a given mint by deriving the ATA address and calling
-    /// [Self::get_pre_token_balance] with it.
+    /// [Self::get_post_token_balance] with it.
     pub fn get_user_post_token_balance(&self, user: &Address, mint: &Address) -> Option<u64> {
         let ata = get_associated_token_address(user, mint);
         self.get_post_token_balance(&ata)
