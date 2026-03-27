@@ -76,14 +76,6 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
             ..
         } = parsed_transaction;
 
-        let n_addresses = addresses.len();
-        if n_addresses > u8::MAX as usize + 1 {
-            anyhow::bail!(
-                "Got {n_addresses} addresses, max supported is {}",
-                u8::MAX as usize + 1
-            );
-        }
-
         fn get(index: usize, addresses: &[Address]) -> anyhow::Result<Address> {
             addresses.get(index).cloned().ok_or_else(|| {
                 anyhow::anyhow!(
