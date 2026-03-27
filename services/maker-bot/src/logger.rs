@@ -56,10 +56,11 @@ impl Logger {
         }
     }
 
-    /// Append a log line. In visualize mode this redraws the fixed block; otherwise plain println.
+    /// Append a log line. In visualize mode this redraws the fixed block; otherwise log the info
+    /// with `tracing`.
     pub fn log(&mut self, line: String) {
         if !self.visualize {
-            println!("{line}");
+            tracing::info!(line);
             return;
         }
         self.log_buffer.push_back(line);

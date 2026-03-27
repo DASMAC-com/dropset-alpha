@@ -17,11 +17,7 @@ use dropset_services_shared::{
     debug_logs::format_timestamped_log,
     faucet_client::FaucetClient,
 };
-use solana_address::Address;
-use solana_keypair::{
-    Keypair,
-    Signer,
-};
+use solana_keypair::Signer;
 use tokio::sync::watch;
 
 use crate::{
@@ -82,39 +78,10 @@ pub async fn throttled_order_update(
                     ctx.needs_expand = true;
                 }
                 Err(TransactionSubmitError::Dropset(DropsetError::InsufficientUserBalance)) => {
-                    let (kp, addr, quote_amount, base_amount, base_ata, quote_ata) = {
-                        let ctx = maker_ctx.try_borrow_mut()?;
-                        let kp = ctx.keypair.insecure_clone();
-                        let (ask_size, bid_size) = (ctx.ask_order_size, ctx.bid_order_size);
-                        let quote_amount = bid_size * 100;
-                        let base_amount = ask_size * 100;
-                        let addr = kp.pubkey();
-                        let base_ata = ctx.market_ctx.get_base_ata(&addr);
-                        let quote_ata = ctx.market_ctx.get_quote_ata(&addr);
-
-                        (kp, addr, quote_amount, base_amount, base_ata, quote_ata)
-                    };
-
                     if let Some(ref faucet_client) = faucet_client {
-                        faucet_client
-                            .request_quote_sign_and_submit(&addr, &kp, rpc, Some(quote_amount))
-                            .await?;
-                        faucet_client
-                            .request_base_sign_and_submit(&addr, &kp, rpc, Some(base_amount))
-                            .await?;
-                        let base_after = rpc.client.get_token_account_balance(&base_ata).await?;
-                        let quote_after = rpc.client.get_token_account_balance(&quote_ata).await?;
-
-                        let deposits = {
-                            let ctx = maker_ctx.try_borrow_mut()?;
-                            [
-                                ctx.deposit_base(base_after.amount.parse::<u64>()?),
-                                ctx.deposit_quote(quote_after.amount.parse::<u64>()?),
-                            ]
-                        };
-
-                        rpc.sign_and_submit_instructions(&kp, &[&kp], &deposits)
-                            .await?;
+                        handle_faucet_request(&maker_ctx, faucet_client, rpc).await?;
+                    } else {
+                        anyhow::bail!("Out of tokens and couldn't request from faucet");
                     }
                 }
                 Err(e) => return Err(e.into()),
@@ -128,21 +95,18 @@ pub async fn throttled_order_update(
 }
 
 async fn handle_faucet_request(
-    maker_ctx: Rc<RefCell<MakerContext>>,
+    maker_ctx: &Rc<RefCell<MakerContext>>,
     faucet_client: &FaucetClient,
     rpc: &CustomRpcClient,
-    kp: Keypair,
-    addr: Address,
-    bid_size: u64,
-    ask_size: u64,
-    base_ata: Address,
-    quote_ata: Address,
 ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-    let (kp, addr, bid_size, ask_size, base_ata, quote_ata) = {
-        let ctx = maker_ctx.try_borrow()?;
+    let (kp, addr, quote_amount, base_amount, base_ata, quote_ata) = {
+        let ctx = maker_ctx
+            .try_borrow()
+            .map_err(|e| TransactionSubmitError::Other(e.into()))?;
         let kp = ctx.keypair.insecure_clone();
-        let quote_amount = ctx.bid_order_size * 100;
-        let base_amount = ctx.ask_order_size * 100;
+        let (ask_size, bid_size) = (ctx.ask_order_size, ctx.bid_order_size);
+        let quote_amount = bid_size * 100;
+        let base_amount = ask_size * 100;
         let addr = kp.pubkey();
         let base_ata = ctx.market_ctx.get_base_ata(&addr);
         let quote_ata = ctx.market_ctx.get_quote_ata(&addr);
@@ -150,21 +114,29 @@ async fn handle_faucet_request(
         (kp, addr, quote_amount, base_amount, base_ata, quote_ata)
     };
 
-    faucet_client
+    let quote_request = faucet_client
         .request_quote_sign_and_submit(&addr, &kp, rpc, Some(quote_amount))
         .await?;
-    faucet_client
+    let base_request = faucet_client
         .request_base_sign_and_submit(&addr, &kp, rpc, Some(base_amount))
         .await?;
-    let base_after = rpc.client.get_token_account_balance(&base_ata).await?;
-    let quote_after = rpc.client.get_token_account_balance(&quote_ata).await?;
+
+    let quote_after = quote_request
+        .parsed_transaction
+        .try_into_mapped_balances()?
+        .get_ata_post_token_balance(&quote_ata)
+        .expect("Quote balance should be mapped");
+    let base_after = base_request
+        .parsed_transaction
+        .try_into_mapped_balances()?
+        .get_ata_post_token_balance(&base_ata)
+        .expect("Base balance should be mapped");
 
     let deposits = {
-        let ctx = maker_ctx.try_borrow_mut()?;
-        [
-            ctx.deposit_base(base_after.amount.parse::<u64>()?),
-            ctx.deposit_quote(quote_after.amount.parse::<u64>()?),
-        ]
+        let ctx = maker_ctx
+            .try_borrow()
+            .map_err(|e| TransactionSubmitError::Other(e.into()))?;
+        [ctx.deposit_base(base_after), ctx.deposit_quote(quote_after)]
     };
 
     rpc.sign_and_submit_instructions(&kp, &[&kp], &deposits)

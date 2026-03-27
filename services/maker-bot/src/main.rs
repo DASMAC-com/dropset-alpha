@@ -34,6 +34,7 @@ use solana_client::{
     rpc_config::CommitmentConfig,
 };
 use tokio::sync::watch;
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::get_validated_config,
@@ -67,6 +68,10 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Default to `error`.
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("error"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
+
     let poll_interval = cfg.price_feed_poll_interval;
     let throttle_window = cfg.order_update_throttle_window;
     let ws_url = cfg.ws_url.clone();
@@ -94,13 +99,13 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         r1 = tasks::program_subscribe(maker_ctx.clone(), sender.clone(), ws_url.as_str()) => {
-            println!("Program subscription terminated: {r1:#?}");
+            tracing::error!("Program subscription terminated: {r1:#?}");
         },
         r2 = tasks::poll_price_feed(maker_ctx.clone(), sender.clone(), reqwest_client, &oanda_args, poll_interval) => {
-            println!("Price feed poll loop terminated: {r2:#?}");
+            tracing::error!("Price feed poll loop terminated: {r2:#?}");
         },
         r3 = tasks::throttled_order_update(maker_ctx.clone(), receiver, &rpc, throttle_window, faucet_client) => {
-            println!("Throttled order update loop terminated: {r3:#?}");
+            tracing::error!("Throttled order update loop terminated: {r3:#?}");
         }
     }
 
