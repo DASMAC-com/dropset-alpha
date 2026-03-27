@@ -170,7 +170,10 @@ mod test {
             .zip_eq(balances)
             .collect();
 
-        let balances = hash_map.get("5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN").unwrap();
+        let sig = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
+        let balances = hash_map
+            .get(sig)
+            .expect("Signature should be in the goldens fixtures");
 
         let user = &Address::from_str_const("11113MwGAy1Aq8qkfPuukq892Zn3tV6uGHWoRYLaUBS");
 
