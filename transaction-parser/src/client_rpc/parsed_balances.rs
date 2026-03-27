@@ -6,11 +6,8 @@ use spl_associated_token_account_interface::address::get_associated_token_addres
 
 use crate::client_rpc::ParsedTransaction;
 
-fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> u64 {
-    ui_amount
-        .amount
-        .parse()
-        .expect("All ui token amounts should be parsable u64 strings")
+fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> anyhow::Result<u64> {
+    Ok(ui_amount.amount.parse()?)
 }
 
 /// Parsed, mapped balances of lamports and token accounts.
@@ -19,12 +16,12 @@ pub struct ParsedMappedBalances {
     pre_lamport_balances: HashMap<Address, u64>,
     /// Mapping of addresses to lamport post-balances.
     post_lamport_balances: HashMap<Address, u64>,
-    /// Mapping of token account pre-balances to [UiTokenAmount]. The [Address] keys are very
-    /// likely associated token accounts but could possibly be a non-ATA token account.
-    pub pre_ui_token_amounts: HashMap<Address, UiTokenAmount>,
-    /// Mapping of token account post-balances to [UiTokenAmount]. The [Address] keys are very
-    /// likely associated token accounts but could possibly be a non-ATA token account.
-    pub post_ui_token_amounts: HashMap<Address, UiTokenAmount>,
+    /// Mapping of token accounts to their pre-transaction [u64] balance in atoms. Each [Address]
+    /// key is very likely an associated token account but is possibly a non-ATA token account.
+    pub pre_token_balances: HashMap<Address, u64>,
+    /// Mapping of token accounts to their post-transaction [u64] balance in atoms. Each [Address]
+    /// key is very likely an associated token account but is possibly a non-ATA token account.
+    pub post_token_balances: HashMap<Address, u64>,
 }
 
 impl ParsedMappedBalances {
@@ -47,11 +44,11 @@ impl ParsedMappedBalances {
     }
 
     pub fn get_ata_pre_token_balance(&self, ata: &Address) -> Option<u64> {
-        self.pre_ui_token_amounts.get(ata).map(parse_u64_ui_amount)
+        self.pre_token_balances.get(ata).cloned()
     }
 
     pub fn get_ata_post_token_balance(&self, ata: &Address) -> Option<u64> {
-        self.post_ui_token_amounts.get(ata).map(parse_u64_ui_amount)
+        self.post_token_balances.get(ata).cloned()
     }
 }
 
@@ -111,7 +108,7 @@ impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
             .map(|ui_balance| {
                 Ok((
                     get(ui_balance.account_index as usize, &indexed_addresses)?,
-                    ui_balance.ui_token_amount.clone(),
+                    parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
                 ))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
@@ -121,7 +118,7 @@ impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
             .map(|ui_balance| {
                 Ok((
                     get(ui_balance.account_index as usize, &indexed_addresses)?,
-                    ui_balance.ui_token_amount.clone(),
+                    parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
                 ))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
@@ -129,8 +126,8 @@ impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
         Ok(Self {
             pre_lamport_balances: HashMap::from_iter(pre_lamports),
             post_lamport_balances: HashMap::from_iter(post_lamports),
-            pre_ui_token_amounts: HashMap::from_iter(pre_tokens),
-            post_ui_token_amounts: HashMap::from_iter(post_tokens),
+            pre_token_balances: HashMap::from_iter(pre_tokens),
+            post_token_balances: HashMap::from_iter(post_tokens),
         })
     }
 }
@@ -195,14 +192,7 @@ mod test {
         let mint = &Address::from_str_const("EmgRPxqMnGFFYTqRY6L6gVRNyzaadjHhkTDB4Jq8h9kV");
         let expected_ata = &get_associated_token_address(user, mint);
 
-        assert_eq!(
-            balances
-                .pre_ui_token_amounts
-                .get(expected_ata)
-                .unwrap()
-                .ui_amount,
-            None,
-        );
+        assert_eq!(balances.pre_token_balances.get(expected_ata), Some(&0));
 
         assert_eq!(balances.get_ata_pre_token_balance(expected_ata), Some(0));
         assert_eq!(balances.get_user_pre_token_balance(user, mint), Some(0));
@@ -210,44 +200,15 @@ mod test {
         // There's a difference between 0 and None.
         assert_eq!(balances.get_ata_pre_token_balance(mint), None);
 
-        assert_eq!(
-            balances
-                .post_ui_token_amounts
-                .get(expected_ata)
-                .unwrap()
-                .amount,
-            "10000",
-        );
+        assert_eq!(balances.post_token_balances.get(expected_ata), Some(&10000));
 
         assert_eq!(
-            balances.get_ata_post_token_balance(expected_ata).unwrap(),
-            10000
+            balances.get_ata_post_token_balance(expected_ata),
+            Some(10000)
         );
         assert_eq!(
             balances.get_user_post_token_balance(user, mint),
             Some(10000)
         );
-    }
-
-    #[test]
-    fn all_goldens_have_u64_ui_amounts() {
-        let goldens = golden_parsed_transactions();
-        let maps = goldens
-            .iter()
-            .map(ParsedMappedBalances::try_from)
-            .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse mapped balances");
-
-        // For all parsed transactions in `goldens`, test the u64 string parsing
-        // that's occurring in the `get_ata_*_balance` methods.
-        // If any of the strings are invalid `u64`s, this test will panic.
-        for mapped_balances in maps {
-            for ata in mapped_balances.pre_ui_token_amounts.keys() {
-                mapped_balances.get_ata_pre_token_balance(ata).unwrap();
-            }
-            for ata in mapped_balances.post_ui_token_amounts.keys() {
-                mapped_balances.get_ata_post_token_balance(ata).unwrap();
-            }
-        }
     }
 }
