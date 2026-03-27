@@ -13,9 +13,9 @@ fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> anyhow::Result<u64> {
 /// Parsed, mapped balances of lamports and token accounts.
 pub struct ParsedMappedBalances {
     /// Mapping of addresses to lamport pre-balances.
-    pre_lamport_balances: HashMap<Address, u64>,
+    pub pre_lamport_balances: HashMap<Address, u64>,
     /// Mapping of addresses to lamport post-balances.
-    post_lamport_balances: HashMap<Address, u64>,
+    pub post_lamport_balances: HashMap<Address, u64>,
     /// Mapping of token accounts to their pre-transaction [u64] balance in atoms. Each [Address]
     /// key is very likely an associated token account but is possibly a non-ATA token account.
     pub pre_token_balances: HashMap<Address, u64>,
