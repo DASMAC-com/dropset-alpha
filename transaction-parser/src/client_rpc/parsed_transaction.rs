@@ -32,7 +32,7 @@ use crate::client_rpc::{
         ParsedOuterInstruction,
     },
     GroupedParsedLogs,
-    ParsedMappedBalances,
+    ParsedBalances,
 };
 
 #[derive(Debug)]
@@ -158,8 +158,8 @@ impl ParsedTransaction {
         Ok(outers)
     }
 
-    pub fn try_into_mapped_balances(&self) -> anyhow::Result<ParsedMappedBalances> {
-        ParsedMappedBalances::try_from(self)
+    pub fn parsed_balances(&self) -> anyhow::Result<ParsedBalances> {
+        ParsedBalances::try_from(self)
     }
 }
 

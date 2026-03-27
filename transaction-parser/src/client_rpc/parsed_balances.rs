@@ -10,8 +10,11 @@ fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> anyhow::Result<u64> {
     Ok(ui_amount.amount.parse()?)
 }
 
-/// Parsed, mapped balances of lamports and token accounts.
-pub struct ParsedMappedBalances {
+/// Parsed lamport and token account balances as hashmaps from addresses to pre/post transaction
+/// amounts in atoms.
+///
+/// This is intended to be created from [ParsedTransaction] data.
+pub struct ParsedBalances {
     /// Mapping of addresses to lamport pre-balances.
     pub pre_lamport_balances: HashMap<Address, u64>,
     /// Mapping of addresses to lamport post-balances.
@@ -24,7 +27,7 @@ pub struct ParsedMappedBalances {
     pub post_token_balances: HashMap<Address, u64>,
 }
 
-impl ParsedMappedBalances {
+impl ParsedBalances {
     pub fn get_pre_lamports(&self, address: &Address) -> Option<u64> {
         self.pre_lamport_balances.get(address).cloned()
     }
@@ -52,7 +55,7 @@ impl ParsedMappedBalances {
     }
 }
 
-impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
+impl TryFrom<&ParsedTransaction> for ParsedBalances {
     type Error = anyhow::Error;
 
     fn try_from(parsed_transaction: &ParsedTransaction) -> Result<Self, Self::Error> {
@@ -86,9 +89,12 @@ impl TryFrom<&ParsedTransaction> for ParsedMappedBalances {
             if index > u8::MAX as usize {
                 anyhow::bail!("Index {index} is greater than u8::MAX ({})", u8::MAX);
             }
-            hash_map.get(&(index as u8)).cloned().ok_or(anyhow::anyhow!(
-                "Account index should exist in indexed addresses"
-            ))
+            hash_map.get(&(index as u8)).cloned().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Account index ({index}) not found in the transaction's {} indexed addresses",
+                    hash_map.len(),
+                )
+            })
         }
 
         let pre_lamports = pre_balances
@@ -141,7 +147,7 @@ mod test {
     use spl_associated_token_account_interface::address::get_associated_token_address;
 
     use crate::{
-        client_rpc::ParsedMappedBalances,
+        client_rpc::ParsedBalances,
         goldens::golden_parsed_transactions,
     };
 
@@ -150,15 +156,15 @@ mod test {
         let goldens = golden_parsed_transactions();
         let _try_from = goldens
             .iter()
-            .map(ParsedMappedBalances::try_from)
+            .map(ParsedBalances::try_from)
             .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse mapped balances");
+            .expect("Should parse balances");
 
         let _helper = goldens
             .iter()
-            .map(|p| p.try_into_mapped_balances())
+            .map(|p| p.parsed_balances())
             .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse mapped balances");
+            .expect("Should parse balances");
     }
 
     #[test]
@@ -166,11 +172,11 @@ mod test {
         let goldens = golden_parsed_transactions();
         let balances = goldens
             .iter()
-            .map(ParsedMappedBalances::try_from)
+            .map(ParsedBalances::try_from)
             .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse mapped balances");
+            .expect("Should parse balances");
 
-        let hash_map: HashMap<String, ParsedMappedBalances> = goldens
+        let hash_map: HashMap<String, ParsedBalances> = goldens
             .iter()
             .map(|txn| txn.signature.to_string())
             .zip_eq(balances)
