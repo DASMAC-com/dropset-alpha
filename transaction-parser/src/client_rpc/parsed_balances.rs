@@ -28,30 +28,38 @@ pub struct ParsedBalances {
 }
 
 impl ParsedBalances {
+    /// Get a user's pre lamport balance.
     pub fn get_pre_lamports(&self, address: &Address) -> Option<u64> {
         self.pre_lamport_balances.get(address).cloned()
     }
 
+    /// Get a user's post lamport balance.
     pub fn get_post_lamports(&self, address: &Address) -> Option<u64> {
         self.post_lamport_balances.get(address).cloned()
     }
 
+    /// Get the pre token balance for the passed address. Typically, this will be an ATA address.
+    pub fn get_pre_token_balance(&self, token_account: &Address) -> Option<u64> {
+        self.pre_token_balances.get(token_account).cloned()
+    }
+
+    /// Get the post token balance for the passed address. Typically, this will be an ATA address.
+    pub fn get_post_token_balance(&self, token_account: &Address) -> Option<u64> {
+        self.post_token_balances.get(token_account).cloned()
+    }
+
+    /// Get a user's pre token balance for a given mint by deriving the ATA address and calling
+    /// [Self::get_pre_token_balance] with it.
     pub fn get_user_pre_token_balance(&self, user: &Address, mint: &Address) -> Option<u64> {
         let ata = get_associated_token_address(user, mint);
-        self.get_ata_pre_token_balance(&ata)
+        self.get_pre_token_balance(&ata)
     }
 
+    /// Get a user's post token balance for a given mint by deriving the ATA address and calling
+    /// [Self::get_pre_token_balance] with it.
     pub fn get_user_post_token_balance(&self, user: &Address, mint: &Address) -> Option<u64> {
         let ata = get_associated_token_address(user, mint);
-        self.get_ata_post_token_balance(&ata)
-    }
-
-    pub fn get_ata_pre_token_balance(&self, ata: &Address) -> Option<u64> {
-        self.pre_token_balances.get(ata).cloned()
-    }
-
-    pub fn get_ata_post_token_balance(&self, ata: &Address) -> Option<u64> {
-        self.post_token_balances.get(ata).cloned()
+        self.get_post_token_balance(&ata)
     }
 }
 
@@ -200,18 +208,15 @@ mod test {
 
         assert_eq!(balances.pre_token_balances.get(expected_ata), Some(&0));
 
-        assert_eq!(balances.get_ata_pre_token_balance(expected_ata), Some(0));
+        assert_eq!(balances.get_pre_token_balance(expected_ata), Some(0));
         assert_eq!(balances.get_user_pre_token_balance(user, mint), Some(0));
 
         // There's a difference between 0 and None.
-        assert_eq!(balances.get_ata_pre_token_balance(mint), None);
+        assert_eq!(balances.get_pre_token_balance(mint), None);
 
         assert_eq!(balances.post_token_balances.get(expected_ata), Some(&10000));
 
-        assert_eq!(
-            balances.get_ata_post_token_balance(expected_ata),
-            Some(10000)
-        );
+        assert_eq!(balances.get_post_token_balance(expected_ata), Some(10000));
         assert_eq!(
             balances.get_user_post_token_balance(user, mint),
             Some(10000)
