@@ -10,7 +10,7 @@ fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> u64 {
     ui_amount
         .amount
         .parse()
-        .expect("All ui token amounts should be parseable u64 strings")
+        .expect("All ui token amounts should be parsable u64 strings")
 }
 
 /// Parsed, mapped balances of lamports and token accounts.
