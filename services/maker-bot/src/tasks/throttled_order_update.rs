@@ -123,12 +123,12 @@ async fn handle_faucet_request(
 
     let quote_after = quote_request
         .parsed_transaction
-        .try_into_mapped_balances()?
+        .parsed_balances()?
         .get_ata_post_token_balance(&quote_ata)
         .expect("Quote balance should be mapped");
     let base_after = base_request
         .parsed_transaction
-        .try_into_mapped_balances()?
+        .parsed_balances()?
         .get_ata_post_token_balance(&base_ata)
         .expect("Base balance should be mapped");
 
