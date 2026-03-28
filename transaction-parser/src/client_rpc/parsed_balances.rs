@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use anyhow::Context;
 use solana_account_decoder_client_types::token::UiTokenAmount;
 use solana_address::Address;
 use spl_associated_token_account_interface::address::get_associated_token_address;
@@ -7,7 +8,10 @@ use spl_associated_token_account_interface::address::get_associated_token_addres
 use crate::client_rpc::ParsedTransaction;
 
 fn parse_u64_ui_amount(ui_amount: &UiTokenAmount) -> anyhow::Result<u64> {
-    Ok(ui_amount.amount.parse()?)
+    ui_amount
+        .amount
+        .parse()
+        .with_context(|| anyhow::anyhow!("Couldn't parse UI token amount: {}", ui_amount.amount))
 }
 
 /// Parsed lamport and token account balances as hashmaps from addresses to pre/post transaction
@@ -100,20 +104,20 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
         let pre_tokens = pre_token_balances
             .iter()
             .map(|ui_balance| {
-                Ok((
-                    get(ui_balance.account_index as usize, addresses)?,
-                    parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
-                ))
+                let address = get(ui_balance.account_index as usize, addresses)?;
+                let amount = parse_u64_ui_amount(&ui_balance.ui_token_amount)
+                    .with_context(|| anyhow::anyhow!("Couldn't parse ui amount for {address}"))?;
+                Ok((address, amount))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         let post_tokens = post_token_balances
             .iter()
             .map(|ui_balance| {
-                Ok((
-                    get(ui_balance.account_index as usize, addresses)?,
-                    parse_u64_ui_amount(&ui_balance.ui_token_amount)?,
-                ))
+                let address = get(ui_balance.account_index as usize, addresses)?;
+                let amount = parse_u64_ui_amount(&ui_balance.ui_token_amount)
+                    .with_context(|| anyhow::anyhow!("Couldn't parse ui amount for {address}"))?;
+                Ok((address, amount))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
