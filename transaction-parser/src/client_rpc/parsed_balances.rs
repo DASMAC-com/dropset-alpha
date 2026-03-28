@@ -119,12 +119,7 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
 mod test {
 
     use solana_address::Address;
-    use solana_transaction_status::{
-        EncodedConfirmedTransactionWithStatusMeta,
-        EncodedTransaction,
-        UiLoadedAddresses,
-        UiTransaction,
-    };
+    
     use spl_associated_token_account_interface::address::get_associated_token_address;
 
     use crate::{
@@ -133,10 +128,8 @@ mod test {
             ParsedTransaction,
         },
         goldens::{
-            golden_encoded_metas,
             golden_parsed_balances,
             golden_parsed_transactions,
-            goldens_dir,
             load_golden_with_loaded_addresses,
         },
     };
