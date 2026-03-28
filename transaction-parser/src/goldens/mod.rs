@@ -107,7 +107,7 @@ pub fn load_golden_with_loaded_addresses(sig: &str) -> EncodedConfirmedTransacti
         serde_json::from_str(&json).expect("Should deserialize");
 
     let msg = format!("Loaded address fixture at ({path:?}) doesn't have loaded addresses");
-    assert!(has_loaded_addresses(&meta), msg);
+    assert!(has_loaded_addresses(&meta), "{msg}");
 
     meta
 }
