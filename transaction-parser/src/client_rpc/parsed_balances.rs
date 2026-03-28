@@ -117,52 +117,27 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
 
-    use itertools::Itertools;
     use solana_address::Address;
     use spl_associated_token_account_interface::address::get_associated_token_address;
 
     use crate::{
-        client_rpc::ParsedBalances,
-        goldens::golden_parsed_transactions,
+        client_rpc::{
+            ParsedBalances,
+            ParsedTransaction,
+        },
+        goldens::{
+            golden_parsed_balances,
+            load_golden_with_loaded_addresses,
+        },
     };
 
     #[test]
-    fn parse_balances() {
-        let goldens = golden_parsed_transactions();
-        let _try_from = goldens
-            .iter()
-            .map(ParsedBalances::try_from)
-            .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse balances");
-
-        let _helper = goldens
-            .iter()
-            .map(|p| p.parsed_balances())
-            .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse balances");
-    }
-
-    #[test]
     fn parse_correct_balances() {
-        let goldens = golden_parsed_transactions();
-        let balances = goldens
-            .iter()
-            .map(ParsedBalances::try_from)
-            .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse balances");
-
-        let hash_map: HashMap<String, ParsedBalances> = goldens
-            .iter()
-            .map(|txn| txn.signature.to_string())
-            .zip_eq(balances)
-            .collect();
-
         let sig = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
-        let balances = hash_map
+        let balances = golden_parsed_balances()
             .get(sig)
-            .expect("Signature should be in the goldens fixtures");
+            .expect("Should have txn signature");
 
         let user = &Address::from_str_const("11113MwGAy1Aq8qkfPuukq892Zn3tV6uGHWoRYLaUBS");
 
@@ -188,5 +163,37 @@ mod test {
         assert_eq!(balances.post_token_balances.get(expected_ata), Some(&10000));
 
         assert_eq!(balances.get_post_token_balance(expected_ata), Some(10000));
+    }
+
+    #[test]
+    fn parse_balances_with_loaded_addresses() {
+        let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
+        let encoded_meta = load_golden_with_loaded_addresses(sig);
+        let parsed_txn =
+            ParsedTransaction::from_encoded_transaction(encoded_meta).expect("Should parse txn");
+
+        let parsed_balances = ParsedBalances::try_from(&parsed_txn).expect("Should parse balances");
+
+        for balances in [
+            parsed_txn.pre_token_balances,
+            parsed_txn.post_token_balances,
+        ] {
+            for b in balances {
+                let token_account = parsed_txn
+                    .addresses
+                    .get(b.account_index as usize)
+                    .expect("account_index should map to a valid address");
+
+                // Verify at least one of the balance maps contain this token account.
+                let is_in_pre_token = parsed_balances
+                    .pre_token_balances
+                    .contains_key(token_account);
+                let is_in_post_token = parsed_balances
+                    .post_token_balances
+                    .contains_key(token_account);
+
+                assert!(is_in_pre_token || is_in_post_token);
+            }
+        }
     }
 }
