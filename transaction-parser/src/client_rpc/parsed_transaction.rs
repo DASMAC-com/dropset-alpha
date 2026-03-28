@@ -184,7 +184,6 @@ mod tests {
             LOG_TRUNCATED_SUBSTRING,
         },
         goldens::{
-            golden_encoded_metas,
             golden_parsed_transactions,
             has_loaded_addresses,
             load_golden_meta_with_sig,
