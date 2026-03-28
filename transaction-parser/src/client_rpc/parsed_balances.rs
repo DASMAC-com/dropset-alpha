@@ -119,7 +119,6 @@ impl TryFrom<&ParsedTransaction> for ParsedBalances {
 mod test {
 
     use solana_address::Address;
-    
     use spl_associated_token_account_interface::address::get_associated_token_address;
 
     use crate::{
@@ -167,30 +166,8 @@ mod test {
         assert_eq!(balances.get_post_token_balance(expected_ata), Some(10000));
     }
 
-    /// Ensure that the JSON data for the golden with explicit loaded addresses results in the same
-    /// vector of addresses as the golden with the other encoding that has the loaded addresses
-    /// already merged.
     #[test]
-    fn parse_loaded_addresses_equality() {
-        let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
-
-        let meta_with_loaded_addresses = load_golden_with_loaded_addresses();
-        let parsed_txn_with_loaded_addresses =
-            ParsedTransaction::from_encoded_transaction(meta_with_loaded_addresses)
-                .expect("Should parse golden with loaded addresses");
-
-        let parsed_txn = golden_parsed_transactions()
-            .get(sig)
-            .expect("Should have the non-loaded addresses version in the map");
-
-        assert_eq!(
-            parsed_txn_with_loaded_addresses.addresses,
-            parsed_txn.addresses
-        );
-    }
-
-    #[test]
-    fn parse_with_loaded_addresses() {
+    fn parse_balances_with_loaded_addresses() {
         let encoded_meta = load_golden_with_loaded_addresses();
         let parsed_txn =
             ParsedTransaction::from_encoded_transaction(encoded_meta).expect("Should parse txn");

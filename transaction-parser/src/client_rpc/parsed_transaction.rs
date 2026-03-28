@@ -184,6 +184,7 @@ mod tests {
             LOG_TRUNCATED_SUBSTRING,
         },
         goldens::{
+            golden_parsed_transactions,
             load_golden_meta_with_sig,
             load_golden_with_loaded_addresses,
         },
@@ -362,5 +363,27 @@ mod tests {
                 assert_eq!(expected_child, parsed_child);
             }
         }
+    }
+
+    /// Ensure that the JSON data for the golden with explicit loaded addresses results in the same
+    /// vector of addresses as the golden with the other encoding that has the loaded addresses
+    /// already merged.
+    #[test]
+    fn parse_loaded_addresses_equality() {
+        let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
+
+        let meta_with_loaded_addresses = load_golden_with_loaded_addresses();
+        let parsed_txn_with_loaded_addresses =
+            ParsedTransaction::from_encoded_transaction(meta_with_loaded_addresses)
+                .expect("Should parse golden with loaded addresses");
+
+        let parsed_txn = golden_parsed_transactions()
+            .get(sig)
+            .expect("Should have the non-loaded addresses version in the map");
+
+        assert_eq!(
+            parsed_txn_with_loaded_addresses.addresses,
+            parsed_txn.addresses
+        );
     }
 }
