@@ -70,7 +70,7 @@ pub fn parse_logs_for_compute(
     for log in log_messages {
         let trimmed = log.trim();
 
-        if trimmed == LOG_TRUNCATED_SUBSTRING {
+        if trimmed.contains(LOG_TRUNCATED_SUBSTRING) {
             return Ok(None);
         }
 
