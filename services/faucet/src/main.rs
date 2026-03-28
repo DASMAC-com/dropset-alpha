@@ -130,9 +130,9 @@ async fn faucet_handler(
     }
 
     match state.create_signed_mint_to_user_txn(&address, req.is_base, amount) {
-        Ok(transaction) => {
+        Ok((transaction, sent)) => {
             let token = if req.is_base { "base" } else { "quote" };
-            tracing::info!(%address, token, amount = amount, "Signed mint transaction");
+            tracing::info!(%address, token, requested = amount, sent, "Signed mint transaction");
             Json(MintResponse { transaction }).into_response()
         }
         Err(e) => respond_err(

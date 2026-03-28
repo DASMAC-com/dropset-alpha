@@ -18,7 +18,7 @@ max_public_tokens = 10
 
 # Maximum number of whole tokens an allowlisted address receives per request.
 # Multiplied by 10^mint_decimals at runtime based on the requested mint.
-max_allowlist_tokens = 1000
+max_allowlist_tokens = 10000
 
 # Addresses that receive the elevated cap.
 allowlist = []

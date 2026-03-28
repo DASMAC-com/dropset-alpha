@@ -108,44 +108,49 @@ impl FaucetState {
             .expect("Blockhash lock should not be poisoned")
     }
 
-    /// Caps the requested amount based on allowlist membership.
-    /// `amount` in is in whole tokens; this returns the capped value in atoms.
-    pub fn cap_amount(&self, receiver: &Address, amount: u64, is_base: bool) -> u64 {
+    /// Caps the requested amount based on allowlist membership. The input `amount` should be in
+    /// whole tokens.
+    ///
+    /// This returns the capped value as a pair of (atoms, whole_tokens).
+    pub fn cap_amount(&self, receiver: &Address, amount: u64, is_base: bool) -> (u64, u64) {
         let max_tokens = if self.allowlist.contains(receiver) {
             self.max_allowlist_tokens
         } else {
             self.max_public_tokens
         };
-        let capped = amount.min(max_tokens);
+        let capped_whole_tokens = amount.min(max_tokens);
         let decimals = if is_base {
             self.base.mint_decimals
         } else {
             self.quote.mint_decimals
         } as u32;
-        capped.saturating_mul(10u64.saturating_pow(decimals))
+
+        let capped_atoms = capped_whole_tokens.saturating_mul(10u64.saturating_pow(decimals));
+
+        (capped_atoms, capped_whole_tokens)
     }
 
     /// Build and partially sign a transaction that mints tokens to the receiver, where the receiver
     /// is set as the fee payer.
     ///
     /// Returns the partially signed [Transaction] that the receiver must add their signature to and
-    /// submit.
+    /// submit, paired with the capped token amount (as whole tokens) sent in the transaction.
     pub fn create_signed_mint_to_user_txn(
         &self,
         receiver: &Address,
         is_base: bool,
         amount: u64,
-    ) -> anyhow::Result<Transaction> {
-        let capped_amount = self.cap_amount(receiver, amount, is_base);
+    ) -> anyhow::Result<(Transaction, u64)> {
+        let (capped_atoms, capped_whole_tokens) = self.cap_amount(receiver, amount, is_base);
         let token_ctx = if is_base { &self.base } else { &self.quote };
         let create_ata = token_ctx.create_ata_idempotent(receiver, receiver);
-        let mint_to = token_ctx.mint_to_user(receiver, capped_amount)?;
+        let mint_to = token_ctx.mint_to_user(receiver, capped_atoms)?;
 
         let message = Message::new(&[create_ata, mint_to], Some(receiver));
         let mut tx = Transaction::new_unsigned(message);
 
         tx.try_partial_sign(&[&self.keypair], self.recent_blockhash())?;
 
-        Ok(tx)
+        Ok((tx, capped_whole_tokens))
     }
 }
