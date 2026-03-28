@@ -128,7 +128,6 @@ mod test {
         },
         goldens::{
             golden_parsed_balances,
-            golden_parsed_transactions,
             load_golden_with_loaded_addresses,
         },
     };
