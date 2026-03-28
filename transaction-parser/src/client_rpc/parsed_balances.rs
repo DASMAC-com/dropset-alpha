@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use anyhow::Context;
 use solana_account_decoder_client_types::token::UiTokenAmount;
 use solana_address::Address;
-use spl_associated_token_account_interface::address::get_associated_token_address;
 
 use crate::client_rpc::ParsedTransaction;
 
@@ -50,20 +49,6 @@ impl ParsedBalances {
     /// Get the post token balance for the passed address. Typically, this will be an ATA address.
     pub fn get_post_token_balance(&self, token_account: &Address) -> Option<u64> {
         self.post_token_balances.get(token_account).cloned()
-    }
-
-    /// Get a user's pre token balance for a given mint by deriving the ATA address and calling
-    /// [Self::get_pre_token_balance] with it.
-    pub fn get_user_pre_token_balance(&self, user: &Address, mint: &Address) -> Option<u64> {
-        let ata = get_associated_token_address(user, mint);
-        self.get_pre_token_balance(&ata)
-    }
-
-    /// Get a user's post token balance for a given mint by deriving the ATA address and calling
-    /// [Self::get_post_token_balance] with it.
-    pub fn get_user_post_token_balance(&self, user: &Address, mint: &Address) -> Option<u64> {
-        let ata = get_associated_token_address(user, mint);
-        self.get_post_token_balance(&ata)
     }
 }
 
@@ -196,7 +181,6 @@ mod test {
         assert_eq!(balances.pre_token_balances.get(expected_ata), Some(&0));
 
         assert_eq!(balances.get_pre_token_balance(expected_ata), Some(0));
-        assert_eq!(balances.get_user_pre_token_balance(user, mint), Some(0));
 
         // There's a difference between 0 and None.
         assert_eq!(balances.get_pre_token_balance(mint), None);
@@ -204,9 +188,5 @@ mod test {
         assert_eq!(balances.post_token_balances.get(expected_ata), Some(&10000));
 
         assert_eq!(balances.get_post_token_balance(expected_ata), Some(10000));
-        assert_eq!(
-            balances.get_user_post_token_balance(user, mint),
-            Some(10000)
-        );
     }
 }
