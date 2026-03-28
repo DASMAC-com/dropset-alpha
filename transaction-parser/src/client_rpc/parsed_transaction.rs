@@ -184,7 +184,9 @@ mod tests {
             LOG_TRUNCATED_SUBSTRING,
         },
         goldens::{
+            golden_encoded_metas,
             golden_parsed_transactions,
+            has_loaded_addresses,
             load_golden_meta_with_sig,
             load_golden_with_loaded_addresses,
         },
@@ -214,7 +216,7 @@ mod tests {
     fn parse_truncated_logs() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
 
-        let meta_with_non_truncated_logs = load_golden_with_loaded_addresses();
+        let meta_with_non_truncated_logs = load_golden_with_loaded_addresses(sig);
         let meta_with_truncated_logs = load_golden_meta_with_sig(sig);
 
         fn has_truncated_logs(meta: &EncodedConfirmedTransactionWithStatusMeta) -> bool {
@@ -372,18 +374,24 @@ mod tests {
     fn parse_loaded_addresses_equality() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
 
-        let meta_with_loaded_addresses = load_golden_with_loaded_addresses();
+        // Load the fixture and ensure it has loaded addresses. Then parse it.
+        let meta_with_loaded_addresses = load_golden_with_loaded_addresses(sig);
+        assert!(has_loaded_addresses(&meta_with_loaded_addresses));
         let parsed_txn_with_loaded_addresses =
             ParsedTransaction::from_encoded_transaction(meta_with_loaded_addresses)
                 .expect("Should parse golden with loaded addresses");
 
-        let parsed_txn = golden_parsed_transactions()
+        // Load the fixture and ensure it doesn't have loaded addresses. Then parse it.
+        let meta_no_loaded_addresses = load_golden_meta_with_sig(sig);
+        assert!(!has_loaded_addresses(&meta_no_loaded_addresses));
+        let parsed_txn_no_loaded_addresses = golden_parsed_transactions()
             .get(sig)
             .expect("Should have the non-loaded addresses version in the map");
 
+        // Ensure the parsed addresses are equal.
         assert_eq!(
             parsed_txn_with_loaded_addresses.addresses,
-            parsed_txn.addresses
+            parsed_txn_no_loaded_addresses.addresses
         );
     }
 }

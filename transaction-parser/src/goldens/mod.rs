@@ -85,31 +85,35 @@ pub fn golden_parsed_balances() -> &'static HashMap<String, ParsedBalances> {
     &PARSED_GOLDEN_BALANCES
 }
 
-pub fn load_golden_with_loaded_addresses() -> EncodedConfirmedTransactionWithStatusMeta {
+pub fn has_loaded_addresses(meta: &EncodedConfirmedTransactionWithStatusMeta) -> bool {
+    if let Some(ref tx_meta) = meta.transaction.meta {
+        let maybe_loaded = Option::<UiLoadedAddresses>::from(tx_meta.loaded_addresses.clone());
+        if let Some(loaded) = maybe_loaded {
+            !loaded.readonly.is_empty() || !loaded.writable.is_empty()
+        } else {
+            false
+        }
+    } else {
+        panic!("Fixture should have transaction meta");
+    }
+}
+
+pub fn load_golden_with_loaded_addresses(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
     let path = goldens_dir()
         .join("with_loaded_addresses")
-        .join("3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA.json");
+        .join(format!("{sig}.json"));
     let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
     let meta: EncodedConfirmedTransactionWithStatusMeta =
         serde_json::from_str(&json).expect("Should deserialize");
 
-    // Verify this fixture actually has loaded addresses.
-    if let Some(ref tx_meta) = meta.transaction.meta {
-        let loaded = Option::<UiLoadedAddresses>::from(tx_meta.loaded_addresses.clone())
-            .expect("Should have loaded addresses");
-        assert!(
-            !loaded.readonly.is_empty() || !loaded.writable.is_empty(),
-            "Fixture should have non-empty loaded addresses"
-        );
-    } else {
-        panic!("Fixture should have transaction meta");
-    }
+    let msg = format!("Loaded address fixture at ({path:?}) doesn't have loaded addresses");
+    assert!(has_loaded_addresses(&meta), msg);
 
     meta
 }
 
-/// Necessary because [EncodedConfirmedTransactionWithStatusMeta] is not [Clone] and it typically
-/// needs to be an owned value.
+/// This helper function is useful because [EncodedConfirmedTransactionWithStatusMeta] is not
+/// [Clone] and it typically needs to be an owned value.
 pub fn load_golden_meta_with_sig(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
     let path = goldens_dir().join(format!("{sig}.json"));
     let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
@@ -125,7 +129,6 @@ mod test {
         golden_encoded_metas();
         golden_parsed_transactions();
         golden_parsed_balances();
-        load_golden_with_loaded_addresses();
     }
 
     #[test]
