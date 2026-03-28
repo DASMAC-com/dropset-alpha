@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::PathBuf,
     sync::LazyLock,
 };
@@ -7,16 +8,20 @@ use solana_account_decoder_client_types::token::UiTokenAmount;
 use solana_transaction_status::{
     option_serializer::OptionSerializer,
     EncodedConfirmedTransactionWithStatusMeta,
+    UiLoadedAddresses,
     UiTransactionTokenBalance,
 };
 
-use crate::client_rpc::ParsedTransaction;
+use crate::client_rpc::{
+    ParsedBalances,
+    ParsedTransaction,
+};
 
-fn goldens_dir() -> PathBuf {
+pub fn goldens_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("transaction-parser/src/goldens")
 }
 
-fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
+pub fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
     static GOLDEN_JSON_STRINGS: LazyLock<Vec<String>> = LazyLock::new(|| {
         let dir = goldens_dir();
         let mut paths: Vec<_> = std::fs::read_dir(&dir)
@@ -46,16 +51,69 @@ fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
         .collect()
 }
 
-pub fn golden_parsed_transactions() -> &'static [ParsedTransaction] {
-    static PARSED_GOLDENS: LazyLock<Vec<ParsedTransaction>> = LazyLock::new(|| {
-        golden_encoded_metas()
-            .into_iter()
-            .map(ParsedTransaction::from_encoded_transaction)
-            .collect::<anyhow::Result<Vec<_>>>()
-            .expect("Should parse")
-    });
+pub fn golden_parsed_transactions() -> &'static HashMap<String, ParsedTransaction> {
+    static PARSED_GOLDEN_TRANSACTIONS: LazyLock<HashMap<String, ParsedTransaction>> =
+        LazyLock::new(|| {
+            golden_encoded_metas()
+                .into_iter()
+                .map(ParsedTransaction::from_encoded_transaction)
+                .collect::<anyhow::Result<Vec<_>>>()
+                .expect("Should parse")
+                .into_iter()
+                .map(|txn| (txn.signature.to_string(), txn))
+                .collect()
+        });
 
-    &PARSED_GOLDENS
+    &PARSED_GOLDEN_TRANSACTIONS
+}
+
+pub fn golden_parsed_balances() -> &'static HashMap<String, ParsedBalances> {
+    static PARSED_GOLDEN_BALANCES: LazyLock<HashMap<String, ParsedBalances>> =
+        LazyLock::new(|| {
+            let goldens = golden_parsed_transactions();
+            goldens
+                .iter()
+                .map(|(sig, txn)| {
+                    (
+                        sig.clone(),
+                        ParsedBalances::try_from(txn).expect("Should parse balances"),
+                    )
+                })
+                .collect()
+        });
+
+    &PARSED_GOLDEN_BALANCES
+}
+
+pub fn load_golden_with_loaded_addresses() -> EncodedConfirmedTransactionWithStatusMeta {
+    let path = goldens_dir()
+        .join("with_loaded_addresses")
+        .join("3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA.json");
+    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
+    let meta: EncodedConfirmedTransactionWithStatusMeta =
+        serde_json::from_str(&json).expect("Should deserialize");
+
+    // Verify this fixture actually has loaded addresses.
+    if let Some(ref tx_meta) = meta.transaction.meta {
+        let loaded = Option::<UiLoadedAddresses>::from(tx_meta.loaded_addresses.clone())
+            .expect("Should have loaded addresses");
+        assert!(
+            !loaded.readonly.is_empty() || !loaded.writable.is_empty(),
+            "Fixture should have non-empty loaded addresses"
+        );
+    } else {
+        panic!("Fixture should have transaction meta");
+    }
+
+    meta
+}
+
+/// Necessary because [EncodedConfirmedTransactionWithStatusMeta] is not [Clone] and it typically
+/// needs to be an owned value.
+pub fn load_golden_meta_with_sig(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
+    let path = goldens_dir().join(format!("{sig}.json"));
+    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
+    serde_json::from_str(&json).expect("Should deserialize")
 }
 
 #[cfg(test)]
@@ -64,18 +122,20 @@ mod test {
 
     #[test]
     fn deserialize_goldens() {
-        let _ = golden_encoded_metas();
+        golden_encoded_metas();
+        golden_parsed_transactions();
+        golden_parsed_balances();
+        load_golden_with_loaded_addresses();
     }
 
     #[test]
     fn load_goldens() {
         let goldens = golden_parsed_transactions();
 
-        let txn_string = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
+        let sig = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
         let txn = goldens
-            .iter()
-            .find(|v| v.signature.to_string() == txn_string)
-            .expect("Should be able to find parsed transaction with matching signature");
+            .get(sig)
+            .expect("Should find txn with matching signature");
 
         assert_eq!(txn.pre_token_balances.len(), 1);
         assert_eq!(txn.post_token_balances.len(), 1);

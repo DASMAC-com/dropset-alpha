@@ -67,7 +67,7 @@ impl ParsedTransaction {
             .meta
             .ok_or(anyhow::Error::msg("Expected transaction meta"))?;
         let log_messages = meta.log_messages.unwrap_or(vec![]);
-        let compute_infos = parse_logs_for_compute(&log_messages).expect("Should parse");
+        let compute_infos = parse_logs_for_compute(&log_messages)?;
 
         let loaded_addresses = match meta.loaded_addresses {
             OptionSerializer::Some(addresses) => [addresses.writable, addresses.readonly]
@@ -113,7 +113,7 @@ impl ParsedTransaction {
             instructions: Self::parse_outer_instructions(
                 outer_instructions,
                 inner_instructions,
-                Some(compute_infos),
+                compute_infos,
             )?,
             log_messages,
             addresses: parsed_accounts.into_iter().map(|acc| acc.address).collect(),
@@ -173,11 +173,20 @@ mod tests {
     };
 
     use solana_address::Address;
+    use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 
-    use crate::client_rpc::{
-        parse_logs_for_compute,
-        GroupedParsedLogs,
-        ParsedLogs,
+    use crate::{
+        client_rpc::{
+            parse_logs_for_compute,
+            GroupedParsedLogs,
+            ParsedLogs,
+            ParsedTransaction,
+            LOG_TRUNCATED_SUBSTRING,
+        },
+        goldens::{
+            load_golden_meta_with_sig,
+            load_golden_with_loaded_addresses,
+        },
     };
 
     fn get_json_reader() -> BufReader<File> {
@@ -198,6 +207,43 @@ mod tests {
             let res = parse_logs_for_compute(&log_messages);
             assert!(res.is_ok());
         }
+    }
+
+    #[test]
+    fn parse_truncated_logs() {
+        let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
+
+        let meta_with_non_truncated_logs = load_golden_with_loaded_addresses();
+        let meta_with_truncated_logs = load_golden_meta_with_sig(sig);
+
+        fn has_truncated_logs(meta: &EncodedConfirmedTransactionWithStatusMeta) -> bool {
+            meta.transaction
+                .meta
+                .as_ref()
+                .expect("Should have meta")
+                .log_messages
+                .as_ref()
+                .expect("Should have log messages")
+                .iter()
+                .any(|log| log.contains(LOG_TRUNCATED_SUBSTRING))
+        }
+
+        assert!(!has_truncated_logs(&meta_with_non_truncated_logs));
+        assert!(has_truncated_logs(&meta_with_truncated_logs));
+
+        let non_truncated_parsed =
+            ParsedTransaction::from_encoded_transaction(meta_with_non_truncated_logs)
+                .expect("Should parse the non truncated logs version");
+        let truncated_parsed =
+            ParsedTransaction::from_encoded_transaction(meta_with_truncated_logs)
+                .expect("Should parse the truncated logs version");
+
+        non_truncated_parsed
+            .parsed_balances()
+            .expect("Should parse the balances for the non truncated logs version");
+        truncated_parsed
+            .parsed_balances()
+            .expect("Should parse the balances for the truncated logs version");
     }
 
     /// Helper function to create the `ParsedLogs` for an inner/child instruction.
@@ -231,7 +277,10 @@ mod tests {
 
         let parsed_logs = map
             .get(complex_txn_sig)
-            .and_then(|logs| parse_logs_for_compute(logs).ok())
+            .and_then(|logs| {
+                parse_logs_for_compute(logs)
+                    .expect("Should be Some since it has non-truncated logs")
+            })
             .expect("Should parse");
 
         const TEST_IDX: usize = 2;

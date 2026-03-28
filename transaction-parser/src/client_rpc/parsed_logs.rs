@@ -55,16 +55,24 @@ static PROGRAM_LOG_PATTERN: &lazy_regex::Lazy<lazy_regex::Regex> = regex!(r"Prog
 
 type ParseResult<T> = Result<T, anyhow::Error>;
 
+pub const LOG_TRUNCATED_SUBSTRING: &str = "Log truncated";
+
 /// Parses program logs for compute usage information. This function iteratively builds upon
 /// received log messages to construct a complete mapping of each instruction's chronological
 /// invocation index, stack height, and compute usage.
 ///
 /// This also facilitates grouping outer/parent instructions with their inner/child instructions.
-pub fn parse_logs_for_compute(log_messages: &[String]) -> ParseResult<Vec<GroupedParsedLogs>> {
+pub fn parse_logs_for_compute(
+    log_messages: &[String],
+) -> ParseResult<Option<Vec<GroupedParsedLogs>>> {
     let mut stack = ComputeBuilder::default();
 
     for log in log_messages {
         let trimmed = log.trim();
+
+        if trimmed == LOG_TRUNCATED_SUBSTRING {
+            return Ok(None);
+        }
 
         if let Some((program_id, expected_height)) = parse_invoke(trimmed) {
             stack.push_new(program_id);
@@ -80,7 +88,7 @@ pub fn parse_logs_for_compute(log_messages: &[String]) -> ParseResult<Vec<Groupe
         }
     }
 
-    stack.build_compute_infos()
+    Ok(Some(stack.build_compute_infos()?))
 }
 
 fn parse_compute(log: &str) -> Option<(Address, u64, u64)> {

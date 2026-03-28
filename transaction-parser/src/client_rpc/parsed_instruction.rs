@@ -81,7 +81,7 @@ impl ParsedInstruction {
                     .map(|s| {
                         *parsed_accounts
                             .iter()
-                            .find(|p| &p.signer.to_string() == s)
+                            .find(|p| &p.address.to_string() == s)
                             .expect("Should find address")
                     })
                     .collect(),
