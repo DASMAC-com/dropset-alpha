@@ -17,13 +17,13 @@ solana-account-decoder-client-types.workspace = true
 solana-sdk.workspace = true
 solana-transaction-status.workspace = true
 solana-transaction-status-client-types.workspace = true
-spl-associated-token-account-interface.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
 
 [dev-dependencies]
 serde = { version = "1.0.228" }
 serde_json = { version = "1.0.145" }
+spl-associated-token-account-interface.workspace = true
 
 [lints]
 workspace = true
