@@ -175,6 +175,7 @@ mod test {
         let encoded_meta = load_golden_full_logs(sig);
         let parsed_txn =
             ParsedTransaction::from_encoded_transaction(encoded_meta).expect("Should parse txn");
+        assert!(parsed_txn.used_address_lookup_table);
 
         let parsed_balances = ParsedBalances::try_from(&parsed_txn).expect("Should parse balances");
 

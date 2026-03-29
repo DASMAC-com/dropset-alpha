@@ -51,6 +51,9 @@ pub struct ParsedTransaction {
     pub pre_token_balances: Vec<UiTransactionTokenBalance>,
     pub post_token_balances: Vec<UiTransactionTokenBalance>,
     pub raw_compute_usage: Option<u64>,
+    /// Whether or not the original [EncodedConfirmedTransactionWithStatusMeta] used an address
+    /// lookup table (ALT) to load additional addresses.
+    pub used_address_lookup_table: bool,
 }
 
 impl ParsedTransaction {
@@ -77,6 +80,7 @@ impl ParsedTransaction {
                 .collect::<Vec<_>>(),
             _ => vec![],
         };
+        let used_address_lookup_table = !loaded_addresses.is_empty();
 
         let (outer_instructions, parsed_accounts, signature) = match transaction.transaction {
             EncodedTransaction::Json(UiTransaction {
@@ -125,6 +129,7 @@ impl ParsedTransaction {
                 }
                 _ => None,
             },
+            used_address_lookup_table,
         })
     }
 
