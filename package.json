@@ -29,5 +29,8 @@
     "services:faucet:docker": "docker compose -f services/faucet/compose.yaml up --build -d",
     "test": "pnpm run build && cargo test"
   },
-  "packageManager": "pnpm@10.30.3"
+  "packageManager": "pnpm@10.30.3",
+  "devDependencies": {
+    "@biomejs/biome": "2.2.0"
+  }
 }
