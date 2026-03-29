@@ -41,10 +41,10 @@ pub fn load_golden_encoding(
 /// The supported RPC transaction encoding names, mapped to how they appear in deserialized
 /// [EncodedTransaction] variants.
 ///
-/// - `"json"` → [EncodedTransaction::Json] with [UiMessage::Raw]`
-/// - `"jsonParsed"` → [EncodedTransaction::Json] with [UiMessage::Parsed]`
-/// - `"base64"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base64])`
-/// - `"base58"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base58])`
+/// - `"json"` → [EncodedTransaction::Json] with [UiMessage::Raw]
+/// - `"jsonParsed"` → [EncodedTransaction::Json] with [UiMessage::Parsed]
+/// - `"base64"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base64])
+/// - `"base58"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base58])
 pub const SUPPORTED_ENCODINGS: &[&str] = &["json", "jsonParsed", "base64", "base58"];
 
 /// Returns the encoding name for a deserialized [EncodedConfirmedTransactionWithStatusMeta].
