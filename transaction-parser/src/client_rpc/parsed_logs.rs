@@ -62,6 +62,8 @@ pub const LOG_TRUNCATED_SUBSTRING: &str = "Log truncated";
 /// invocation index, stack height, and compute usage.
 ///
 /// This also facilitates grouping outer/parent instructions with their inner/child instructions.
+///
+/// If the logs are truncated, this returns `Ok(None)` since the compute usage info is incomplete.
 pub fn parse_logs_for_compute(
     log_messages: &[String],
 ) -> ParseResult<Option<Vec<GroupedParsedLogs>>> {
