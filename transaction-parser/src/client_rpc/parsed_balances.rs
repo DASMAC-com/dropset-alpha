@@ -22,11 +22,15 @@ pub struct ParsedBalances {
     pub pre_lamport_balances: HashMap<Address, u64>,
     /// Mapping of addresses to lamport post-balances.
     pub post_lamport_balances: HashMap<Address, u64>,
-    /// Mapping of token accounts to their pre-transaction [u64] balance in atoms. Note that the
-    /// token accounts here aren't necessarily *associated* token accounts.
+    /// Mapping of token account addresses to their pre-transaction [u64] balance in atoms.
+    ///
+    /// Note that the [Address] keys here are always token accounts but not necessarily
+    /// *associated* token accounts.
     pub pre_token_balances: HashMap<Address, u64>,
-    /// Mapping of token accounts to their post-transaction [u64] balance in atoms. Note that the
-    /// token accounts here aren't necessarily *associated* token accounts.
+    /// Mapping of token account addresses to their post-transaction [u64] balance in atoms.
+    ///
+    /// Note that the [Address] keys here are always token accounts but not necessarily
+    /// *associated* token accounts.
     pub post_token_balances: HashMap<Address, u64>,
 }
 
