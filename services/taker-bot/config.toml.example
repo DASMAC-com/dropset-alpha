@@ -1,6 +1,5 @@
-# Token mint addresses for the market.
-base_mint  = ""
-quote_mint = ""
+# Note that the base/quote token mints are in the shared/config.toml file, not here.
+# --
 
 # The Solana RPC endpoint.
 rpc_url = "http://localhost:8899"

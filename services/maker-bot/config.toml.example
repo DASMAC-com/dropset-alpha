@@ -1,3 +1,6 @@
+# Note that the base/quote token mints are in the shared/config.toml file, not here.
+# --
+
 # OANDA API authentication token.
 # See: https://developer.oanda.com/rest-live-v20/authentication/
 # See: https://hub.oanda.com/tpa/personal_token
@@ -14,10 +17,6 @@ batch_replace = true
 # Turn this off to emit simpler logs; for example, you probably want to
 # set this to `false` when running as a `docker` service.
 visualize = true
-
-# Token mint addresses for the market.
-base_mint  = ""
-quote_mint = ""
 
 # Target base inventory in atoms. The model gravitates toward this amount.
 # The initialization helper deposits a constant amount of atoms (MAKER_INITIAL_BASE) by default.
