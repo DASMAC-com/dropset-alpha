@@ -35,7 +35,8 @@ pub fn load_golden_encoding(
 ) -> EncodedConfirmedTransactionWithStatusMeta {
     let path = goldens_dir().join(sig).join(format!("{encoding}.json"));
     let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
-    serde_json::from_str(&json).expect("Should deserialize")
+    let value: serde_json::Value = serde_json::from_str(&json).expect("Should parse JSON");
+    serde_json::from_value(value).expect("Should deserialize")
 }
 
 /// The supported RPC transaction encoding names, mapped to how they appear in deserialized
@@ -84,8 +85,10 @@ mod test {
         for path in &paths {
             let json =
                 std::fs::read_to_string(path).unwrap_or_else(|_| panic!("Should read {path:?}"));
+            let value: serde_json::Value =
+                serde_json::from_str(&json).expect("Should parse JSON");
             let encoded: EncodedConfirmedTransactionWithStatusMeta =
-                serde_json::from_str(&json).expect("Should deserialize");
+                serde_json::from_value(value).expect("Should deserialize");
             let txn = ParsedTransaction::from_encoded_transaction(encoded)
                 .expect("Should parse transaction");
             ParsedBalances::try_from(&txn).expect("Should parse balances");
@@ -169,8 +172,10 @@ mod test {
                 }
 
                 let json = std::fs::read_to_string(&file_path).expect("Should read fixture");
+                let value: serde_json::Value =
+                    serde_json::from_str(&json).expect("Should parse JSON");
                 let meta: EncodedConfirmedTransactionWithStatusMeta =
-                    serde_json::from_str(&json).expect("Should deserialize");
+                    serde_json::from_value(value).expect("Should deserialize");
 
                 let detected = detect_encoding(&meta);
                 assert_eq!(
