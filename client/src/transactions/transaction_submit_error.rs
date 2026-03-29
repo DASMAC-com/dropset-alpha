@@ -94,14 +94,13 @@ impl TransactionSubmitError {
 
     pub fn from_custom_error_info(program_id: Address, code: u32) -> TransactionSubmitError {
         match program_id {
-            dropset_interface::program::ID => {
-                let dropset_code =
-                    u8::try_from(code).expect("Dropset error codes should be valid u8 values");
-                match DropsetError::from_repr(dropset_code) {
-                    Some(e) => Self::Dropset(e),
-                    None => Self::Other(anyhow::anyhow!("Unknown dropset error code: {code}")),
-                }
-            }
+            dropset_interface::program::ID => u8::try_from(code)
+                .ok()
+                .and_then(DropsetError::from_repr)
+                .map_or_else(
+                    || Self::Other(anyhow::anyhow!("Unknown dropset error code: {code}")),
+                    Self::Dropset,
+                ),
             spl_token_interface::ID => {
                 let error = TokenError::try_from(code);
                 match error {
@@ -116,14 +115,13 @@ impl TransactionSubmitError {
                     Err(e) => Self::Other(e.into()),
                 }
             }
-            spl_associated_token_account_interface::program::ID => {
-                let ata_code =
-                    u8::try_from(code).expect("ATA error codes should be valid u8 values");
-                match AssociatedTokenAccountError::from_repr(ata_code) {
-                    Some(e) => Self::AssociatedTokenAccount(e),
-                    None => Self::Other(anyhow::anyhow!("Unknown ATA error code: {code}")),
-                }
-            }
+            spl_associated_token_account_interface::program::ID => u8::try_from(code)
+                .ok()
+                .and_then(AssociatedTokenAccountError::from_repr)
+                .map_or_else(
+                    || Self::Other(anyhow::anyhow!("Unknown ATA error code: {code}")),
+                    Self::AssociatedTokenAccount,
+                ),
             _ => Self::Program {
                 program_id,
                 error: ProgramError::Custom(code),
