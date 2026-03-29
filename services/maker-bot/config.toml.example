@@ -1,4 +1,6 @@
-# Note that the base/quote token mints are in the shared/config.toml file, not here.
+# Note that this config extends the config in `shared/config.toml`.
+# Things like the base/quote mint addresses and the RPC url are
+# specified there, not here.
 # --
 
 # OANDA API authentication token.
@@ -29,9 +31,6 @@ ask_order_size = 10000000
 
 # Each bid order's size, denominated in quote atoms.
 bid_order_size = 10000000
-
-# The Solana RPC endpoint.
-rpc_url = "http://localhost:8899"
 
 # The Solana WebSocket endpoint.
 ws_url = "ws://localhost:8900"
