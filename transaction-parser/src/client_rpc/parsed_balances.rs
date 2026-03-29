@@ -189,7 +189,7 @@ mod test {
                     .get(b.account_index as usize)
                     .expect("account_index should map to a valid address");
 
-                // Verify at least one of the balance maps contain this token account.
+                // Verify at least one of the balance maps contains this token account.
                 let is_in_pre_token = parsed_balances
                     .pre_token_balances
                     .contains_key(token_account);
