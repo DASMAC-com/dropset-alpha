@@ -2,7 +2,10 @@ use std::{
     collections::HashSet,
     fs,
     io::ErrorKind,
-    path::PathBuf,
+    path::{
+        Path,
+        PathBuf,
+    },
     str::FromStr,
 };
 
@@ -228,15 +231,30 @@ pub fn load_raw_service_config(service_config: ServiceConfig) -> anyhow::Result<
     let path = &service_config.toml_config_path();
     let example_path = &service_config.toml_config_example_path();
 
+    /// Only display the path after `services/` since if it's running in a container it will display
+    /// the Docker's path instead of the host path. The host path is the intended displayed path
+    /// here since it's what's mounted to the container.
+    fn relative_path_starting_from_services(path: &Path) -> Option<PathBuf> {
+        let parts: Vec<_> = path.iter().collect();
+        let start = parts.iter().position(|part| *part == "services")?;
+
+        Some(parts[start..].iter().collect())
+    }
+
+    let relative_config_path =
+        relative_path_starting_from_services(path).expect("Services config path should exist");
+    let relative_config_example_path = relative_path_starting_from_services(example_path)
+        .expect("Services example config path should exist");
+
     fs::read_to_string(path).map_err(|e| match e.kind() {
         ErrorKind::NotFound => anyhow::anyhow!(
             "Config file not found at '{}'.\n\
                  Copy the template and fill in empty fields:\n\n\
                  \tcp {} \\\n\
                  \t   {}\n",
-            path.display(),
-            example_path.display(),
-            path.display(),
+            relative_config_path.display(),
+            relative_config_example_path.display(),
+            relative_config_path.display(),
         ),
         ErrorKind::IsADirectory => anyhow::anyhow!(
             "Expected a config file at '{}' but found a directory.\n\
@@ -246,10 +264,10 @@ pub fn load_raw_service_config(service_config: ServiceConfig) -> anyhow::Result<
                  \trmdir {} && \\\n\
                  \tcp {} \\\n\
                  \t   {}\n",
-            path.display(),
-            path.display(),
-            example_path.display(),
-            path.display(),
+            relative_config_path.display(),
+            relative_config_path.display(),
+            relative_config_example_path.display(),
+            relative_config_path.display(),
         ),
         _ => anyhow::anyhow!("Failed to read config file: '{path:#?}': {e}"),
     })

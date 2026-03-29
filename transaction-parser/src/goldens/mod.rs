@@ -85,8 +85,7 @@ mod test {
         for path in &paths {
             let json =
                 std::fs::read_to_string(path).unwrap_or_else(|_| panic!("Should read {path:?}"));
-            let value: serde_json::Value =
-                serde_json::from_str(&json).expect("Should parse JSON");
+            let value: serde_json::Value = serde_json::from_str(&json).expect("Should parse JSON");
             let encoded: EncodedConfirmedTransactionWithStatusMeta =
                 serde_json::from_value(value).expect("Should deserialize");
             let txn = ParsedTransaction::from_encoded_transaction(encoded)

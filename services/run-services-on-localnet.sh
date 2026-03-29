@@ -70,7 +70,7 @@ for service in maker-bot taker-bot faucet; do
     status=$(docker inspect --format='{{.State.Status}}' $service 2>/dev/null)
     if [ "$status" = "exited" ] || [ "$status" = "restarting" ]; then
         echo "Error: $service failed to start (status: $status):"
-        docker logs --tail 5 $service 2>&1
+        docker logs --tail 10 $service 2>&1
         exit 1
     fi
 done
