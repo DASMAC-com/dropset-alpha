@@ -184,10 +184,9 @@ mod tests {
             LOG_TRUNCATED_SUBSTRING,
         },
         goldens::{
-            golden_parsed_transactions,
-            has_loaded_addresses,
-            load_golden_meta_with_sig,
-            load_golden_with_loaded_addresses,
+            load_golden,
+            load_golden_encoding,
+            load_golden_full_logs,
         },
     };
 
@@ -215,8 +214,8 @@ mod tests {
     fn parse_truncated_logs() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
 
-        let meta_with_non_truncated_logs = load_golden_with_loaded_addresses(sig);
-        let meta_with_truncated_logs = load_golden_meta_with_sig(sig);
+        let meta_with_non_truncated_logs = load_golden_full_logs(sig);
+        let meta_with_truncated_logs = load_golden(sig);
 
         fn has_truncated_logs(meta: &EncodedConfirmedTransactionWithStatusMeta) -> bool {
             meta.transaction
@@ -365,31 +364,61 @@ mod tests {
         }
     }
 
-    /// Ensure that the JSON data for the golden with explicit loaded addresses results in the same
-    /// vector of addresses as the golden with the other encoding that has the loaded addresses
-    /// already merged.
+    /// Parsing the same transaction in json, base64, and base58 encodings should produce
+    /// equivalent results.
     #[test]
-    fn parse_loaded_addresses_equality() {
+    fn parse_encoding_equality() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
 
-        // Load the fixture and ensure it has loaded addresses. Then parse it.
-        let meta_with_loaded_addresses = load_golden_with_loaded_addresses(sig);
-        assert!(has_loaded_addresses(&meta_with_loaded_addresses));
-        let parsed_txn_with_loaded_addresses =
-            ParsedTransaction::from_encoded_transaction(meta_with_loaded_addresses)
-                .expect("Should parse golden with loaded addresses");
+        let json_parsed = ParsedTransaction::from_encoded_transaction(
+            load_golden_encoding(sig, "json"),
+        )
+        .expect("Should parse json encoding");
 
-        // Load the fixture and ensure it doesn't have loaded addresses. Then parse it.
-        let meta_no_loaded_addresses = load_golden_meta_with_sig(sig);
-        assert!(!has_loaded_addresses(&meta_no_loaded_addresses));
-        let parsed_txn_no_loaded_addresses = golden_parsed_transactions()
-            .get(sig)
-            .expect("Should have the non-loaded addresses version in the map");
+        let base64_parsed = ParsedTransaction::from_encoded_transaction(
+            load_golden_encoding(sig, "base64"),
+        )
+        .expect("Should parse base64 encoding");
 
-        // Ensure the parsed addresses are equal.
-        assert_eq!(
-            parsed_txn_with_loaded_addresses.addresses,
-            parsed_txn_no_loaded_addresses.addresses
-        );
+        let base58_parsed = ParsedTransaction::from_encoded_transaction(
+            load_golden_encoding(sig, "base58"),
+        )
+        .expect("Should parse base58 encoding");
+
+        for (label, other) in [("base64", &base64_parsed), ("base58", &base58_parsed)] {
+            assert_eq!(json_parsed.signature, other.signature, "{label}: signature mismatch");
+            assert_eq!(json_parsed.addresses, other.addresses, "{label}: addresses mismatch");
+            assert_eq!(json_parsed.slot, other.slot, "{label}: slot mismatch");
+            assert_eq!(json_parsed.fee, other.fee, "{label}: fee mismatch");
+            assert_eq!(json_parsed.pre_balances, other.pre_balances, "{label}: pre_balances mismatch");
+            assert_eq!(json_parsed.post_balances, other.post_balances, "{label}: post_balances mismatch");
+            assert_eq!(
+                json_parsed.instructions.len(),
+                other.instructions.len(),
+                "{label}: outer instruction count mismatch"
+            );
+            for (i, (json_outer, other_outer)) in json_parsed
+                .instructions
+                .iter()
+                .zip(other.instructions.iter())
+                .enumerate()
+            {
+                assert_eq!(
+                    json_outer.outer_instruction.program_id,
+                    other_outer.outer_instruction.program_id,
+                    "{label}: outer instruction {i} program_id mismatch"
+                );
+                assert_eq!(
+                    json_outer.outer_instruction.data,
+                    other_outer.outer_instruction.data,
+                    "{label}: outer instruction {i} data mismatch"
+                );
+                assert_eq!(
+                    json_outer.inner_instructions.len(),
+                    other_outer.inner_instructions.len(),
+                    "{label}: outer instruction {i} inner count mismatch"
+                );
+            }
+        }
     }
 }

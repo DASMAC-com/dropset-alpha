@@ -8,7 +8,9 @@ use solana_account_decoder_client_types::token::UiTokenAmount;
 use solana_transaction_status::{
     option_serializer::OptionSerializer,
     EncodedConfirmedTransactionWithStatusMeta,
-    UiLoadedAddresses,
+    EncodedTransaction,
+    TransactionBinaryEncoding,
+    UiMessage,
     UiTransactionTokenBalance,
 };
 
@@ -85,39 +87,55 @@ pub fn golden_parsed_balances() -> &'static HashMap<String, ParsedBalances> {
     &PARSED_GOLDEN_BALANCES
 }
 
-pub fn has_loaded_addresses(meta: &EncodedConfirmedTransactionWithStatusMeta) -> bool {
-    if let Some(ref tx_meta) = meta.transaction.meta {
-        let maybe_loaded = Option::<UiLoadedAddresses>::from(tx_meta.loaded_addresses.clone());
-        if let Some(loaded) = maybe_loaded {
-            !loaded.readonly.is_empty() || !loaded.writable.is_empty()
-        } else {
-            false
-        }
-    } else {
-        panic!("Fixture should have transaction meta");
-    }
-}
-
-pub fn load_golden_with_loaded_addresses(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
-    let path = goldens_dir()
-        .join("with_loaded_addresses")
-        .join(format!("{sig}.json"));
-    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
-    let meta: EncodedConfirmedTransactionWithStatusMeta =
-        serde_json::from_str(&json).expect("Should deserialize");
-
-    let msg = format!("Loaded address fixture at ({path:?}) doesn't have loaded addresses");
-    assert!(has_loaded_addresses(&meta), "{msg}");
-
-    meta
-}
-
+/// Load a golden fixture by signature from the main `goldens/` directory.
+///
 /// This helper function is useful because [EncodedConfirmedTransactionWithStatusMeta] is not
 /// [Clone] and it typically needs to be an owned value.
-pub fn load_golden_meta_with_sig(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
+pub fn load_golden(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
     let path = goldens_dir().join(format!("{sig}.json"));
     let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
     serde_json::from_str(&json).expect("Should deserialize")
+}
+
+/// Load a golden fixture that has full (non-truncated) logs.
+pub fn load_golden_full_logs(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
+    let path = goldens_dir().join("full_logs").join(format!("{sig}.json"));
+    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
+    serde_json::from_str(&json).expect("Should deserialize")
+}
+
+/// Load a golden fixture for a specific encoding variant (e.g., "json", "base64", "base58").
+/// These live in a subdirectory named after the transaction signature.
+pub fn load_golden_encoding(
+    sig: &str,
+    encoding: &str,
+) -> EncodedConfirmedTransactionWithStatusMeta {
+    let path = goldens_dir().join(sig).join(format!("{encoding}.json"));
+    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
+    serde_json::from_str(&json).expect("Should deserialize")
+}
+
+/// The supported RPC transaction encoding names, mapped to how they appear in deserialized
+/// [EncodedTransaction] variants.
+///
+/// - `"json"` → [EncodedTransaction::Json] with [UiMessage::Raw]`
+/// - `"jsonParsed"` → [EncodedTransaction::Json] with [UiMessage::Parsed]`
+/// - `"base64"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base64])`
+/// - `"base58"` → [EncodedTransaction::Binary](_, [TransactionBinaryEncoding::Base58])`
+pub const SUPPORTED_ENCODINGS: &[&str] = &["json", "jsonParsed", "base64", "base58"];
+
+/// Returns the encoding name for a deserialized [EncodedConfirmedTransactionWithStatusMeta].
+pub fn detect_encoding(meta: &EncodedConfirmedTransactionWithStatusMeta) -> &'static str {
+    match &meta.transaction.transaction {
+        EncodedTransaction::Json(ui_txn) => match &ui_txn.message {
+            UiMessage::Raw(_) => "json",
+            UiMessage::Parsed(_) => "jsonParsed",
+        },
+        EncodedTransaction::Binary(_, TransactionBinaryEncoding::Base64) => "base64",
+        EncodedTransaction::Binary(_, TransactionBinaryEncoding::Base58)
+        | EncodedTransaction::LegacyBinary(_) => "base58",
+        EncodedTransaction::Accounts(_) => "accounts",
+    }
 }
 
 #[cfg(test)]
@@ -177,6 +195,60 @@ mod test {
                     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".into()
                 ),
             }
+        );
+    }
+
+    /// Walks all subdirectories in `goldens/` that contain encoding-named JSON files
+    /// (e.g., `json.json`, `base64.json`) and verifies each file deserializes to the
+    /// encoding indicated by its filename.
+    #[test]
+    fn encoding_fixtures_match_filenames() {
+        let dir = goldens_dir();
+        let mut checked = 0;
+
+        for entry in std::fs::read_dir(&dir).expect("Should read goldens directory") {
+            let entry = entry.expect("Should read entry");
+            let path = entry.path();
+
+            if !path.is_dir() {
+                continue;
+            }
+
+            // Skip known non-encoding subdirectories.
+            let dir_name = path.file_name().unwrap().to_str().unwrap();
+            if dir_name == "full_logs" {
+                continue;
+            }
+
+            for file in std::fs::read_dir(&path).expect("Should read subdirectory") {
+                let file = file.expect("Should read file entry");
+                let file_path = file.path();
+
+                let stem = file_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .expect("Should have file stem");
+
+                if !SUPPORTED_ENCODINGS.contains(&stem) {
+                    continue;
+                }
+
+                let json = std::fs::read_to_string(&file_path).expect("Should read fixture");
+                let meta: EncodedConfirmedTransactionWithStatusMeta =
+                    serde_json::from_str(&json).expect("Should deserialize");
+
+                let detected = detect_encoding(&meta);
+                assert_eq!(
+                    detected, stem,
+                    "Fixture {file_path:?} has encoding {detected:?} but filename says {stem:?}"
+                );
+                checked += 1;
+            }
+        }
+
+        assert!(
+            checked > 0,
+            "Should have checked at least one encoding fixture"
         );
     }
 }

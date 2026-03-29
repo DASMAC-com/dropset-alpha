@@ -132,7 +132,7 @@ mod test {
         },
         goldens::{
             golden_parsed_balances,
-            load_golden_with_loaded_addresses,
+            load_golden_full_logs,
         },
     };
 
@@ -172,7 +172,7 @@ mod test {
     #[test]
     fn parse_balances_with_loaded_addresses() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
-        let encoded_meta = load_golden_with_loaded_addresses(sig);
+        let encoded_meta = load_golden_full_logs(sig);
         let parsed_txn =
             ParsedTransaction::from_encoded_transaction(encoded_meta).expect("Should parse txn");
 
