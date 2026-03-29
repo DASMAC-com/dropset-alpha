@@ -370,28 +370,37 @@ mod tests {
     fn parse_encoding_equality() {
         let sig = "3apVSExwHE5PuoMGHdpBZWbjV79bhcjP2cUTHGwysCKjhBfFcRs2JLDnjpxc6jNhsLu7bNCScNoP2mzrv9dBKCYA";
 
-        let json_parsed = ParsedTransaction::from_encoded_transaction(
-            load_golden_encoding(sig, "json"),
-        )
-        .expect("Should parse json encoding");
+        let json_parsed =
+            ParsedTransaction::from_encoded_transaction(load_golden_encoding(sig, "json"))
+                .expect("Should parse json encoding");
 
-        let base64_parsed = ParsedTransaction::from_encoded_transaction(
-            load_golden_encoding(sig, "base64"),
-        )
-        .expect("Should parse base64 encoding");
+        let base64_parsed =
+            ParsedTransaction::from_encoded_transaction(load_golden_encoding(sig, "base64"))
+                .expect("Should parse base64 encoding");
 
-        let base58_parsed = ParsedTransaction::from_encoded_transaction(
-            load_golden_encoding(sig, "base58"),
-        )
-        .expect("Should parse base58 encoding");
+        let base58_parsed =
+            ParsedTransaction::from_encoded_transaction(load_golden_encoding(sig, "base58"))
+                .expect("Should parse base58 encoding");
 
         for (label, other) in [("base64", &base64_parsed), ("base58", &base58_parsed)] {
-            assert_eq!(json_parsed.signature, other.signature, "{label}: signature mismatch");
-            assert_eq!(json_parsed.addresses, other.addresses, "{label}: addresses mismatch");
+            assert_eq!(
+                json_parsed.signature, other.signature,
+                "{label}: signature mismatch"
+            );
+            assert_eq!(
+                json_parsed.addresses, other.addresses,
+                "{label}: addresses mismatch"
+            );
             assert_eq!(json_parsed.slot, other.slot, "{label}: slot mismatch");
             assert_eq!(json_parsed.fee, other.fee, "{label}: fee mismatch");
-            assert_eq!(json_parsed.pre_balances, other.pre_balances, "{label}: pre_balances mismatch");
-            assert_eq!(json_parsed.post_balances, other.post_balances, "{label}: post_balances mismatch");
+            assert_eq!(
+                json_parsed.pre_balances, other.pre_balances,
+                "{label}: pre_balances mismatch"
+            );
+            assert_eq!(
+                json_parsed.post_balances, other.post_balances,
+                "{label}: post_balances mismatch"
+            );
             assert_eq!(
                 json_parsed.instructions.len(),
                 other.instructions.len(),
@@ -409,8 +418,7 @@ mod tests {
                     "{label}: outer instruction {i} program_id mismatch"
                 );
                 assert_eq!(
-                    json_outer.outer_instruction.data,
-                    other_outer.outer_instruction.data,
+                    json_outer.outer_instruction.data, other_outer.outer_instruction.data,
                     "{label}: outer instruction {i} data mismatch"
                 );
                 assert_eq!(

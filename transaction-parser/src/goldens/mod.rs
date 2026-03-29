@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::LazyLock,
-};
+use std::path::PathBuf;
 
 use solana_account_decoder_client_types::token::UiTokenAmount;
 use solana_transaction_status::{
@@ -14,94 +10,21 @@ use solana_transaction_status::{
     UiTransactionTokenBalance,
 };
 
-use crate::client_rpc::{
-    ParsedBalances,
-    ParsedTransaction,
-};
-
 pub fn goldens_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_WORKSPACE_DIR")).join("transaction-parser/src/goldens")
 }
 
-pub fn golden_encoded_metas() -> Vec<EncodedConfirmedTransactionWithStatusMeta> {
-    static GOLDEN_JSON_STRINGS: LazyLock<Vec<String>> = LazyLock::new(|| {
-        let dir = goldens_dir();
-        let mut paths: Vec<_> = std::fs::read_dir(&dir)
-            .expect("Should read goldens directory")
-            .map(|entry| entry.expect("Should read directory entry").path())
-            .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
-            .collect();
-        paths.sort();
-        assert!(
-            !paths.is_empty(),
-            "No golden JSON fixtures found in {dir:?}"
-        );
-
-        paths
-            .iter()
-            .map(|path| {
-                std::fs::read_to_string(path).expect("Should read the JSON file as a string")
-            })
-            .collect()
-    });
-
-    GOLDEN_JSON_STRINGS
-        .iter()
-        .map(|json| {
-            serde_json::from_str(json).expect("Should deserialize encoded transaction meta")
-        })
-        .collect()
-}
-
-pub fn golden_parsed_transactions() -> &'static HashMap<String, ParsedTransaction> {
-    static PARSED_GOLDEN_TRANSACTIONS: LazyLock<HashMap<String, ParsedTransaction>> =
-        LazyLock::new(|| {
-            golden_encoded_metas()
-                .into_iter()
-                .map(ParsedTransaction::from_encoded_transaction)
-                .collect::<anyhow::Result<Vec<_>>>()
-                .expect("Should parse")
-                .into_iter()
-                .map(|txn| (txn.signature.to_string(), txn))
-                .collect()
-        });
-
-    &PARSED_GOLDEN_TRANSACTIONS
-}
-
-pub fn golden_parsed_balances() -> &'static HashMap<String, ParsedBalances> {
-    static PARSED_GOLDEN_BALANCES: LazyLock<HashMap<String, ParsedBalances>> =
-        LazyLock::new(|| {
-            let goldens = golden_parsed_transactions();
-            goldens
-                .iter()
-                .map(|(sig, txn)| {
-                    (
-                        sig.clone(),
-                        ParsedBalances::try_from(txn).expect("Should parse balances"),
-                    )
-                })
-                .collect()
-        });
-
-    &PARSED_GOLDEN_BALANCES
-}
-
-/// Load a golden fixture by signature from the main `goldens/` directory.
+/// Load a golden fixture by signature, using the default `json` encoding.
 ///
-/// This helper function is useful because [EncodedConfirmedTransactionWithStatusMeta] is not
-/// [Clone] and it typically needs to be an owned value.
+/// For a different encoding (e.g., `"base64"`, `"base58"`, `"jsonParsed"`),
+/// use [load_golden_encoding] instead.
 pub fn load_golden(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
-    let path = goldens_dir().join(format!("{sig}.json"));
-    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
-    serde_json::from_str(&json).expect("Should deserialize")
+    load_golden_encoding(sig, "json")
 }
 
 /// Load a golden fixture that has full (non-truncated) logs.
 pub fn load_golden_full_logs(sig: &str) -> EncodedConfirmedTransactionWithStatusMeta {
-    let path = goldens_dir().join("full_logs").join(format!("{sig}.json"));
-    let json = std::fs::read_to_string(&path).expect("Should read golden fixture");
-    serde_json::from_str(&json).expect("Should deserialize")
+    load_golden_encoding(sig, "json_full_logs")
 }
 
 /// Load a golden fixture for a specific encoding variant (e.g., "json", "base64", "base58").
@@ -141,22 +64,40 @@ pub fn detect_encoding(meta: &EncodedConfirmedTransactionWithStatusMeta) -> &'st
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::client_rpc::{
+        ParsedBalances,
+        ParsedTransaction,
+    };
 
     #[test]
-    fn deserialize_goldens() {
-        golden_encoded_metas();
-        golden_parsed_transactions();
-        golden_parsed_balances();
+    fn deserialize_all_goldens() {
+        let dir = goldens_dir();
+        let mut paths: Vec<_> = std::fs::read_dir(&dir)
+            .expect("Should read goldens directory")
+            .map(|entry| entry.expect("Should read directory entry").path())
+            .filter(|path| path.is_dir())
+            .map(|dir| dir.join("json.json"))
+            .collect();
+        paths.sort();
+        assert!(!paths.is_empty(), "No golden directories found in {dir:?}");
+
+        for path in &paths {
+            let json =
+                std::fs::read_to_string(path).unwrap_or_else(|_| panic!("Should read {path:?}"));
+            let encoded: EncodedConfirmedTransactionWithStatusMeta =
+                serde_json::from_str(&json).expect("Should deserialize");
+            let txn = ParsedTransaction::from_encoded_transaction(encoded)
+                .expect("Should parse transaction");
+            ParsedBalances::try_from(&txn).expect("Should parse balances");
+        }
     }
 
     #[test]
     fn load_goldens() {
-        let goldens = golden_parsed_transactions();
-
         let sig = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
-        let txn = goldens
-            .get(sig)
-            .expect("Should find txn with matching signature");
+        let encoded = load_golden(sig);
+        let txn =
+            ParsedTransaction::from_encoded_transaction(encoded).expect("Should parse transaction");
 
         assert_eq!(txn.pre_token_balances.len(), 1);
         assert_eq!(txn.post_token_balances.len(), 1);
@@ -211,12 +152,6 @@ mod test {
             let path = entry.path();
 
             if !path.is_dir() {
-                continue;
-            }
-
-            // Skip known non-encoding subdirectories.
-            let dir_name = path.file_name().unwrap().to_str().unwrap();
-            if dir_name == "full_logs" {
                 continue;
             }
 

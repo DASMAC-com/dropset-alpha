@@ -10,65 +10,43 @@
         "index": 2,
         "instructions": [
           {
-            "accounts": [
-              0,
-              1,
-              0,
-              30,
-              33,
-              31
-            ],
+            "accounts": [0, 1, 0, 30, 33, 31],
             "data": "1",
             "programIdIndex": 32,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              30
-            ],
+            "accounts": [30],
             "data": "84eT",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              0,
-              1
-            ],
+            "accounts": [0, 1],
             "data": "11119os1e9qSs2u7TsThXqkBSRVFxhmYaFKFZ1waB2X7armDmvK3p5GmLdUxYdg3h7QSrL",
             "programIdIndex": 33,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              1
-            ],
+            "accounts": [1],
             "data": "P",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              1,
-              30
-            ],
+            "accounts": [1, 30],
             "data": "6caZCX93HefSQAokvLxEDaHBmJxCqhdr35ZJFUbpDh43y",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              0,
-              1
-            ],
+            "accounts": [0, 1],
             "data": "3Bxs4eNaubmmvCib",
             "programIdIndex": 33,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              1
-            ],
+            "accounts": [1],
             "data": "J",
             "programIdIndex": 31,
             "stackHeight": 2
@@ -79,358 +57,199 @@
         "index": 3,
         "instructions": [
           {
-            "accounts": [
-              0,
-              2,
-              0,
-              38,
-              33,
-              31
-            ],
+            "accounts": [0, 2, 0, 38, 33, 31],
             "data": "1",
             "programIdIndex": 32,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              38
-            ],
+            "accounts": [38],
             "data": "84eT",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              0,
-              2
-            ],
+            "accounts": [0, 2],
             "data": "11119os1e9qSs2u7TsThXqkBSRVFxhmYaFKFZ1waB2X7armDmvK3p5GmLdUxYdg3h7QSrL",
             "programIdIndex": 33,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              2
-            ],
+            "accounts": [2],
             "data": "P",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              2,
-              38
-            ],
+            "accounts": [2, 38],
             "data": "6caZCX93HefSQAokvLxEDaHBmJxCqhdr35ZJFUbpDh43y",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              31,
-              0,
-              18,
-              2,
-              19,
-              1,
-              20,
-              22,
-              23,
-              24,
-              45
-            ],
+            "accounts": [31, 0, 18, 2, 19, 1, 20, 22, 23, 24, 45],
             "data": "59p8WydnSZtWt8LoVaAsDpjgTkh5MuyZ2FRSjGs8GhoVCcqxAJzkH9WFSP",
             "programIdIndex": 37,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              1,
-              20,
-              0
-            ],
+            "accounts": [1, 20, 0],
             "data": "3ryVFpA4VoMH",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              19,
-              2,
-              18
-            ],
+            "accounts": [19, 2, 18],
             "data": "3Yn4NH81yed5",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              34
-            ],
+            "accounts": [34],
             "data": "QMqFu4fYGGeUEysFnenhAvDWgqp1W7DbrMv3z8JcyrP4Bu3Yyyj7irLW76wEzMiFqiFwoETYwdqiPRSaEKSWpjDuenVF1jJfDrxNf9W2BiSt1kebV4hge9jUfLCnbnnZzzFCbX6dBERB8RidUFcwDFL64iLoNrsWNCqNuUfp75aeWW3",
             "programIdIndex": 7,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              1,
-              0,
-              0
-            ],
+            "accounts": [1, 0, 0],
             "data": "A",
             "programIdIndex": 31,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              0,
-              3,
-              0,
-              41,
-              33,
-              31
-            ],
+            "accounts": [0, 3, 0, 41, 33, 31],
             "data": "1",
             "programIdIndex": 32,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              41
-            ],
+            "accounts": [41],
             "data": "84eT",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              0,
-              3
-            ],
+            "accounts": [0, 3],
             "data": "11119os1e9qSs2u7TsThXqkBSRVFxhmYaFKFZ1waB2X7armDmvK3p5GmLdUxYdg3h7QSrL",
             "programIdIndex": 33,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              3
-            ],
+            "accounts": [3],
             "data": "P",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              3,
-              41
-            ],
+            "accounts": [3, 41],
             "data": "6caZCX93HefSQAokvLxEDaHBmJxCqhdr35ZJFUbpDh43y",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              8,
-              2,
-              3,
-              9,
-              10,
-              11,
-              12,
-              13,
-              14,
-              15,
-              16,
-              17,
-              0,
-              40,
-              31
-            ],
+            "accounts": [8, 2, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 40, 31],
             "data": "PgQWtn8ozix53siWYKKMaXbuftZHLK5z7",
             "programIdIndex": 39,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              2,
-              17,
-              0
-            ],
+            "accounts": [2, 17, 0],
             "data": "3NfAnwDPmMLb",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              9,
-              11,
-              13,
-              2,
-              15,
-              0,
-              31
-            ],
+            "accounts": [9, 11, 13, 2, 15, 0, 31],
             "data": "P5KP9jVziudq5zXtKMpxC5PdN3tCR6vMV",
             "programIdIndex": 40,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              2,
-              11,
-              0
-            ],
+            "accounts": [2, 11, 0],
             "data": "3PaTB2rW2Hkj",
             "programIdIndex": 31,
             "stackHeight": 4
           },
           {
-            "accounts": [
-              13,
-              15,
-              9
-            ],
+            "accounts": [13, 15, 9],
             "data": "6LrXyHT16wiP",
             "programIdIndex": 31,
             "stackHeight": 4
           },
           {
-            "accounts": [
-              10,
-              12,
-              14,
-              3,
-              16,
-              15,
-              31
-            ],
+            "accounts": [10, 12, 14, 3, 16, 15, 31],
             "data": "HgzYw38kQ5nNxPZYhS5jDJWokXTbPKd5R",
             "programIdIndex": 40,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              12,
-              3,
-              10
-            ],
+            "accounts": [12, 3, 10],
             "data": "3pp3wKDGiXBm",
             "programIdIndex": 31,
             "stackHeight": 4
           },
           {
-            "accounts": [
-              16,
-              14,
-              15
-            ],
+            "accounts": [16, 14, 15],
             "data": "7Wuew8TQ4qdq",
             "programIdIndex": 31,
             "stackHeight": 4
           },
           {
-            "accounts": [
-              34
-            ],
+            "accounts": [34],
             "data": "QMqFu4fYGGeUEysFnenhAvqN6w9n3A28YStPLfH9Rz9Ak2KWiKnYskS7xVokXrYXKgQHXNoBdueuDuLtXnd6bea2F6a8AJx3uTQW4KZJR8cwYZYF7hBBRyp4urFxFjcCLZg3R8PNuVKipdwbZ9JpVrhByJjqzLkbmHkS9xwZX1LvEF9",
             "programIdIndex": 7,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              2,
-              0,
-              0
-            ],
+            "accounts": [2, 0, 0],
             "data": "A",
             "programIdIndex": 31,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              25,
-              46,
-              26,
-              27,
-              3,
-              4,
-              41,
-              42,
-              28,
-              43,
-              0,
-              31,
-              31,
-              44,
-              43,
-              29
-            ],
+            "accounts": [25, 46, 26, 27, 3, 4, 41, 42, 28, 43, 0, 31, 31, 44, 43, 29],
             "data": "PgQWtn8ozixGtTNK1KeyfvywTK1YYDzpf",
             "programIdIndex": 43,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              3,
-              41,
-              26,
-              0
-            ],
+            "accounts": [3, 41, 26, 0],
             "data": "inzPc4KoAVDCh",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              27,
-              42,
-              4,
-              25
-            ],
+            "accounts": [27, 42, 4, 25],
             "data": "hUvzogk1KY8Hs",
             "programIdIndex": 31,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              44
-            ],
+            "accounts": [44],
             "data": "yCGxBopjnVNQkNP5usq1Po6g92jF2Ahn74nfYgXVcY4EctKqPgRCcbpnD3EM5AG72dCXjmPUUaUiPkBbe5sQaKtVezLxiK9ZeB8HuxvsJ2V1khcCZ4JrHZLceSKSwBhQJFHDxgcZm5GFYa9KEJQrx3BaHG362Ud4RcRCZVMQtzxYCZmzUxmMQdt4c3PTkhFP5xp9mZ",
             "programIdIndex": 43,
             "stackHeight": 3
           },
           {
-            "accounts": [
-              34
-            ],
+            "accounts": [34],
             "data": "QMqFu4fYGGeUEysFnenhAvBobXTzswhLdvQq6s8axxcbKUPRksm2543pJNNNHVd1VJBMV5nsAchaHdGhG8jkhkLdz4RMFtTamSt2oA4HS4PeyHM7DCf6KsRdqSEeo5arBvBMAxHDpggD6n7x637fP8thaxREZ4GCuZTpGaYoFXJi3Xu",
             "programIdIndex": 7,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              3,
-              0,
-              0
-            ],
+            "accounts": [3, 0, 0],
             "data": "A",
             "programIdIndex": 31,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              4,
-              5,
-              0
-            ],
+            "accounts": [4, 5, 0],
             "data": "3nutXS8c7SHV",
             "programIdIndex": 31,
             "stackHeight": 2
           },
           {
-            "accounts": [
-              34
-            ],
+            "accounts": [34],
             "data": "2qWhKzSZDTHhTkHUC1NYnTgXZsmMJK8rZgJJEL5JeLXapEMhYd8j4nXdmRRnjo89hXgitJjxaoeVaNjH7N2nm63kDXJEfcoK2v5BvxAbk5EFwrYFkcVDdbx47",
             "programIdIndex": 7,
             "stackHeight": 2
@@ -647,53 +466,11 @@
       "Log truncated"
     ],
     "postBalances": [
-      711423421,
-      0,
-      0,
-      0,
-      2039280,
-      2142480,
-      1,
-      1326443,
-      7461120,
-      9473136,
-      9465917,
-      2039284,
-      2039281,
-      1461600,
-      1461600,
-      2039515,
-      2039280,
-      2039281,
-      9805805,
-      2039291,
-      989201101517,
-      70407360,
-      70407360,
-      70407360,
-      70407360,
-      7182745,
-      2039283,
-      2039288,
-      23385600,
-      71437440,
-      1451297855395,
-      5595651284,
-      3316551056,
-      1,
-      1244009,
-      0,
-      58559540,
-      8205554,
-      72992225312,
-      1314441,
-      1296443,
-      11920386374,
-      494091919369,
-      34988462,
-      5987434,
-      0,
-      11859840
+      711423421, 0, 0, 0, 2039280, 2142480, 1, 1326443, 7461120, 9473136, 9465917, 2039284, 2039281,
+      1461600, 1461600, 2039515, 2039280, 2039281, 9805805, 2039291, 989201101517, 70407360,
+      70407360, 70407360, 70407360, 7182745, 2039283, 2039288, 23385600, 71437440, 1451297855395,
+      5595651284, 3316551056, 1, 1244009, 0, 58559540, 8205554, 72992225312, 1314441, 1296443,
+      11920386374, 494091919369, 34988462, 5987434, 0, 11859840
     ],
     "postTokenBalances": [
       {
@@ -830,53 +607,11 @@
       }
     ],
     "preBalances": [
-      712496859,
-      0,
-      0,
-      0,
-      2039280,
-      2142480,
-      1,
-      1326443,
-      7461120,
-      9473136,
-      9465917,
-      2039284,
-      2039281,
-      1461600,
-      1461600,
-      2039515,
-      2039280,
-      2039281,
-      9805805,
-      2039291,
-      989200033517,
-      70407360,
-      70407360,
-      70407360,
-      70407360,
-      7182745,
-      2039283,
-      2039288,
-      23385600,
-      71437440,
-      1451297855395,
-      5595651284,
-      3316551056,
-      1,
-      1244009,
-      0,
-      58559540,
-      8205554,
-      72992225312,
-      1314441,
-      1296443,
-      11920386374,
-      494091919369,
-      34988462,
-      5987434,
-      0,
-      11859840
+      712496859, 0, 0, 0, 2039280, 2142480, 1, 1326443, 7461120, 9473136, 9465917, 2039284, 2039281,
+      1461600, 1461600, 2039515, 2039280, 2039281, 9805805, 2039291, 989200033517, 70407360,
+      70407360, 70407360, 70407360, 7182745, 2039283, 2039288, 23385600, 71437440, 1451297855395,
+      5595651284, 3316551056, 1, 1244009, 0, 58559540, 8205554, 72992225312, 1314441, 1296443,
+      11920386374, 494091919369, 34988462, 5987434, 0, 11859840
     ],
     "preTokenBalances": [
       {
@@ -1033,68 +768,23 @@
       "addressTableLookups": [
         {
           "accountKey": "C97tD2y1oqAJracdzJUJTkf2fFfqYQCWKZYymd1m5bKz",
-          "readonlyIndexes": [
-            98,
-            6,
-            8,
-            0,
-            12,
-            2,
-            7,
-            48,
-            104,
-            54,
-            85,
-            108,
-            99,
-            57,
-            78
-          ],
+          "readonlyIndexes": [98, 6, 8, 0, 12, 2, 7, 48, 104, 54, 85, 108, 99, 57, 78],
           "writableIndexes": []
         },
         {
           "accountKey": "8oHiboiasPm4SCEXBJmCxTbXL1pMh4Wr7rqQSAz6WofA",
           "readonlyIndexes": [],
-          "writableIndexes": [
-            19,
-            22,
-            29,
-            27,
-            24,
-            20,
-            23,
-            28,
-            26,
-            30
-          ]
+          "writableIndexes": [19, 22, 29, 27, 24, 20, 23, 28, 26, 30]
         },
         {
           "accountKey": "CBRmDpG8LTL1Snfubaq8TneCM8rhhvr3EGhA3rp7WK2y",
-          "readonlyIndexes": [
-            8
-          ],
-          "writableIndexes": [
-            3,
-            0,
-            7,
-            25,
-            24,
-            23,
-            22
-          ]
+          "readonlyIndexes": [8],
+          "writableIndexes": [3, 0, 7, 25, 24, 23, 22]
         },
         {
           "accountKey": "8CY9azwZTKbrmJwk4t4wKRKDbb1CrAXyJw6GGaYPMSPi",
-          "readonlyIndexes": [
-            8
-          ],
-          "writableIndexes": [
-            5,
-            0,
-            1,
-            3,
-            4
-          ]
+          "readonlyIndexes": [8],
+          "writableIndexes": [5, 0, 1, 3, 4]
         }
       ],
       "header": {
@@ -1116,78 +806,16 @@
           "stackHeight": 1
         },
         {
-          "accounts": [
-            0,
-            1,
-            30,
-            31,
-            32,
-            33
-          ],
+          "accounts": [0, 1, 30, 31, 32, 33],
           "data": "6qNScTvk3UaqZTP6tX1KLj",
           "programIdIndex": 7,
           "stackHeight": 1
         },
         {
           "accounts": [
-            31,
-            32,
-            33,
-            0,
-            34,
-            7,
-            35,
-            36,
-            7,
-            7,
-            37,
-            31,
-            0,
-            18,
-            2,
-            19,
-            1,
-            20,
-            21,
-            22,
-            23,
-            24,
-            45,
-            38,
-            39,
-            8,
-            2,
-            3,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            0,
-            40,
-            33,
-            41,
-            25,
-            46,
-            26,
-            27,
-            3,
-            4,
-            41,
-            42,
-            28,
-            43,
-            0,
-            31,
-            31,
-            44,
-            43,
-            29,
-            5
+            31, 32, 33, 0, 34, 7, 35, 36, 7, 7, 37, 31, 0, 18, 2, 19, 1, 20, 21, 22, 23, 24, 45, 38,
+            39, 8, 2, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 40, 33, 41, 25, 46, 26, 27, 3, 4, 41,
+            42, 28, 43, 0, 31, 31, 44, 43, 29, 5
           ],
           "data": "5N2dA7eTG8tAXkyFA36ztKT2RCYaQ8srvtbA1yy2hfCQEokGZGVjNzCywroaqHtcFyZH1oj5oALjCPL6atAh7SEoRrEMEZuXRuBTxQPZrQhLp9akganAhvvar43QfPJAEwdSyknEgTpUuoR64BHXr682zQTZq4in4VwK9imqsD9TDdyKJk6Yy8igTiRUgiTQdwBZ2FandWwxQi5usFLi7Pth2sUmCGkrSnw",
           "programIdIndex": 7,

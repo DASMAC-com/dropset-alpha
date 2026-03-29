@@ -131,7 +131,7 @@ mod test {
             ParsedTransaction,
         },
         goldens::{
-            golden_parsed_balances,
+            load_golden,
             load_golden_full_logs,
         },
     };
@@ -139,9 +139,9 @@ mod test {
     #[test]
     fn parse_correct_balances() {
         let sig = "5Vt3URq3RfWdPQkiJEWxDMcCQ65UeRzxoBwCd3vBvwsN54HvEu6s71zXRw5p3VJwfKKiPdmgG7T2NuJT1t3h3QcN";
-        let balances = golden_parsed_balances()
-            .get(sig)
-            .expect("Should have txn signature");
+        let txn = ParsedTransaction::from_encoded_transaction(load_golden(sig))
+            .expect("Should parse transaction");
+        let balances = ParsedBalances::try_from(&txn).expect("Should parse balances");
 
         let user = &Address::from_str_const("11113MwGAy1Aq8qkfPuukq892Zn3tV6uGHWoRYLaUBS");
 
