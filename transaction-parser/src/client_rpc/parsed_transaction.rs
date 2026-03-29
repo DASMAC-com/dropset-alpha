@@ -277,13 +277,12 @@ mod tests {
         let map: HashMap<String, Vec<String>> =
             serde_json::from_reader(reader).unwrap_or_else(|_| HashMap::new());
 
-        let parsed_logs = map
+        let maybe_parsed_logs = map
             .get(complex_txn_sig)
-            .and_then(|logs| {
-                parse_logs_for_compute(logs)
-                    .expect("Should be Some since it has non-truncated logs")
-            })
-            .expect("Should parse");
+            .map(|logs| parse_logs_for_compute(logs).expect("Should parse compute logs"))
+            .expect("Transaction with signature should exist");
+        let parsed_logs = maybe_parsed_logs
+            .expect("Parsed logs should be Some since there are non-truncated logs");
 
         const TEST_IDX: usize = 2;
 
