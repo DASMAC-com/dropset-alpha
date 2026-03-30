@@ -277,7 +277,7 @@ async fn sign_transaction_with_config(
         .concat(),
         bh,
     )
-    .expect("Should sign");
+    .context("Failed to sign transaction")?;
 
     Ok(tx)
 }
@@ -292,7 +292,9 @@ async fn send_transaction_with_config(
     match res {
         Ok(signature) => {
             let encoded = fetch_transaction_json(rpc, signature).await?;
-            let parsed_transaction = parse_transaction(encoded).expect("Should parse transaction");
+            let parsed_transaction = parse_transaction(encoded).map_err(|e| {
+                TransactionSubmitError::Other(e.context("Failed to parse transaction"))
+            })?;
 
             let dropset_events = {
                 let mut res = vec![];
