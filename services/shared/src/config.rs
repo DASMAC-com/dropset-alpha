@@ -77,30 +77,12 @@ pub struct SharedConfigInput {
     pub base_mint: String,
     pub quote_mint: String,
     pub rpc_url: String,
-    #[serde(default = "default_faucet_base_url")]
     pub faucet_base_url: String,
-    #[serde(default = "default_port")]
     pub faucet_port: u16,
-    #[serde(default = "default_max_public")]
     pub max_public_tokens: u64,
-    #[serde(default = "default_max_allowlist")]
     pub max_allowlist_tokens: u64,
     #[serde(default)]
     pub allowlist: Vec<String>,
-}
-
-fn default_faucet_base_url() -> String {
-    "http://localhost".to_string()
-}
-
-fn default_port() -> u16 {
-    9090
-}
-fn default_max_public() -> u64 {
-    10
-}
-fn default_max_allowlist() -> u64 {
-    1000
 }
 
 impl ValidSharedConfig {
@@ -110,7 +92,7 @@ impl ValidSharedConfig {
             base_mint,
             quote_mint,
             rpc_url,
-            faucet_base_url: faucet_base_url_input,
+            faucet_base_url: faucet_base_url_str,
             faucet_port,
             max_public_tokens,
             max_allowlist_tokens,
@@ -118,11 +100,6 @@ impl ValidSharedConfig {
         } = shared_input;
 
         // --- Validate the faucet and RPC urls.
-        let faucet_base_url_str = if faucet_base_url_input.is_empty() {
-            default_faucet_base_url()
-        } else {
-            faucet_base_url_input
-        };
         let faucet_base_url = Url::try_from(faucet_base_url_str.as_str())
             .with_context(|| format!("Invalid faucet url: {}", faucet_base_url_str))?;
         full_faucet_url(&faucet_base_url, faucet_port)?;

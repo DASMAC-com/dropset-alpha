@@ -232,8 +232,8 @@ async fn request_tokens(
     }
 }
 
-/// Handles signing and submitting the received [Transaction] from [request_tokens].
-async fn sign_faucet_transaction_and_submit(
+/// Handles signing and submitting the [Transaction] returned by [request_base] and [request_quote].
+pub async fn sign_faucet_transaction_and_submit(
     mut faucet_transaction: Transaction,
     keypair: &Keypair,
     rpc: &CustomRpcClient,

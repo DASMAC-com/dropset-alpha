@@ -6,8 +6,7 @@ base_mint = ""
 quote_mint = ""
 
 # The base faucet URL (without the port).
-# Defaults to `http://localhost` if nothing is provided.
-faucet_base_url = ""
+faucet_base_url = "http://localhost"
 
 # Port the faucet HTTP server listens on.
 faucet_port = 9090

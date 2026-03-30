@@ -1624,7 +1624,6 @@ dependencies = [
  "anyhow",
  "chrono",
  "client",
- "colored",
  "dropset-interface",
  "price",
  "reqwest 0.13.2",
