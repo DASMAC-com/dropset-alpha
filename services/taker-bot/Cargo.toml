@@ -21,6 +21,8 @@ spl-token-interface.workspace = true
 spl-token-2022-interface.workspace = true
 rand.workspace = true
 tokio = { workspace = true, features = ["time"] }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [dev-dependencies]
 solana-account.workspace = true

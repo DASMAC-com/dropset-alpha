@@ -10,13 +10,13 @@ use client::transactions::{
     TransactionSubmitError,
 };
 use dropset_interface::error::DropsetError;
-use dropset_services_shared::debug_logs::format_timestamped_log;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::CommitmentConfig,
 };
 use spl_token_2022_interface::error::TokenError as Token2022Error;
 use spl_token_interface::error::TokenError;
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::get_validated_config,
@@ -30,6 +30,10 @@ async fn main() -> anyhow::Result<()> {
     if health_check {
         return Ok(());
     }
+
+    // Default to `info`.
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let rpc = CustomRpcClient::new(
         Some(RpcClient::new_with_commitment(
@@ -71,10 +75,9 @@ async fn main() -> anyhow::Result<()> {
                 Err(TransactionSubmitError::Dropset(err)) => match err {
                     // Book is dry — most likely there is no liquidity to fill against, skip.
                     DropsetError::AmountCannotBeZero => {
-                        let log_message =
-                            "ERROR: Fill returned zero amount, book likely empty — skipping";
+                        let log_message = "Fill returned zero amount, book likely empty — skipping";
                         if cfg.verbose {
-                            eprintln!("{}", format_timestamped_log(log_message));
+                            tracing::error!("{log_message}");
                         }
                     }
                     _ => return Err(TransactionSubmitError::Dropset(err).into()),

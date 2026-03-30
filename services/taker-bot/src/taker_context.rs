@@ -70,10 +70,12 @@ impl TakerContext {
             .await
     }
 
+    /// Tries to request a faucet airdrop and then submits the transaction, returning the
+    /// [TransactionSubmitError] if it fails or if the faucet service isn't available.
     pub async fn submit_faucet_request(
         &self,
         side: Side,
-    ) -> Result<Option<ParsedTransactionWithEvents>, TransactionSubmitError> {
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
         if let Some(ref faucet_client) = self.faucet_client {
             let res = match side {
                 Side::Buy => {
@@ -97,9 +99,11 @@ impl TakerContext {
                         .await?
                 }
             };
-            Ok(Some(res))
+            Ok(res)
         } else {
-            Ok(None)
+            let msg = "Out of tokens and couldn't request from faucet";
+            tracing::error!("{msg}");
+            Err(TransactionSubmitError::Other(anyhow::anyhow!(msg)))
         }
     }
 }

@@ -1665,6 +1665,8 @@ dependencies = [
  "spl-token-2022-interface",
  "spl-token-interface",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

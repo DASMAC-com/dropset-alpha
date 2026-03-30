@@ -50,11 +50,26 @@ pub enum TaskUpdate {
     Price(Decimal),
 }
 
+use client::{
+    fmt_kv,
+    LogColor,
+};
+
 impl fmt::Display for TaskUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn write_timestamped(f: &mut fmt::Formatter<'_>, message: impl ToString) -> fmt::Result {
+            let timestamp =
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
+            let timestamp_str = format!("[{timestamp}]");
+            let timestamped_log_message =
+                fmt_kv!(timestamp_str, message, LogColor::Gray, LogColor::Debug);
+
+            write!(f, "{timestamped_log_message}")
+        }
+
         match self {
-            TaskUpdate::MakerState => write!(f, "Maker's orders changed"),
-            TaskUpdate::Price(p) => write!(f, "Price feed update — {p}"),
+            TaskUpdate::MakerState => write_timestamped(f, "Maker's orders changed"),
+            TaskUpdate::Price(p) => write_timestamped(f, format!("Price feed update — {p}")),
         }
     }
 }
