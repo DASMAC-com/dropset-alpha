@@ -121,12 +121,20 @@ async fn handle_faucet_request(
         .parsed_transaction
         .parsed_balances()?
         .get_post_token_balance(&quote_ata)
-        .expect("Quote balance should be mapped");
+        .ok_or_else(|| {
+            TransactionSubmitError::Other(anyhow::anyhow!(
+                "Couldn't find maker's quote ATA ({quote_ata}) in parsed balances"
+            ))
+        })?;
     let base_after = base_request
         .parsed_transaction
         .parsed_balances()?
         .get_post_token_balance(&base_ata)
-        .expect("Base balance should be mapped");
+        .ok_or_else(|| {
+            TransactionSubmitError::Other(anyhow::anyhow!(
+                "Couldn't find maker's base ATA ({base_ata}) in parsed balances"
+            ))
+        })?;
 
     let deposits = {
         let ctx = maker_ctx
