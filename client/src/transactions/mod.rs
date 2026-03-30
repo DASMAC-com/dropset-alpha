@@ -11,7 +11,6 @@ use anyhow::{
     Context,
 };
 pub use instruction_data_at_index::*;
-use itertools::Itertools;
 use solana_address::Address;
 use solana_client::{
     client_error::{
@@ -254,8 +253,7 @@ async fn sign_transaction_with_config(
     let bh = rpc
         .get_latest_blockhash()
         .await
-        .or(Err(()))
-        .expect("Should be able to get blockhash.");
+        .map_err(|e| anyhow::anyhow!("Couldn't get latest blockhash: ({e})"))?;
 
     let final_instructions: &[Instruction] = &[
         config.compute_budget.map_or(vec![], |budget| {
@@ -295,17 +293,20 @@ async fn send_transaction_with_config(
         Ok(signature) => {
             let encoded = fetch_transaction_json(rpc, signature).await?;
             let parsed_transaction = parse_transaction(encoded).expect("Should parse transaction");
-            let dropset_events = parsed_transaction
-                .instructions
-                .iter()
-                .flat_map(|outer| {
-                    outer.inner_instructions.iter().flat_map(|inner_ixn| {
-                        inner_ixn
+
+            let dropset_events = {
+                let mut res = vec![];
+                for outer in &parsed_transaction.instructions {
+                    for inner in &outer.inner_instructions {
+                        let parsed_events = inner
                             .parse_events()
-                            .expect("Should be able to parse events")
-                    })
-                })
-                .collect_vec();
+                            .map_err(|e| TransactionSubmitError::Other(e.into()))?;
+                        res.extend(parsed_events);
+                    }
+                }
+
+                res
+            };
 
             if matches!(config.debug_logs, Some(true)) {
                 let pretty = PrettyTransaction {

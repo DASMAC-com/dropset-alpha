@@ -131,3 +131,9 @@ impl DropsetEvent {
         }
     }
 }
+
+impl From<EventError> for anyhow::Error {
+    fn from(e: EventError) -> Self {
+        anyhow::anyhow!("{e:?}")
+    }
+}
