@@ -58,7 +58,7 @@ solana-account-view = "1.0"
 solana-account-decoder-client-types = "3.1.6"
 solana-address = "2.0.0"
 solana-client = "3.1.6"
-solana-cluster-type = "3.1.0"
+solana-cluster-type = { version = "3.1.0", features = ["serde"] }
 solana-commitment-config = "3.1.0"
 solana-cpi = "3.1.0"
 solana-compute-budget-interface = "3.0.0"

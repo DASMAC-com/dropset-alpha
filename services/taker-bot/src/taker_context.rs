@@ -31,7 +31,14 @@ pub struct TakerContext {
 
 impl TakerContext {
     pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
-        let faucet_client = FaucetClient::new(&shared).await;
+        let faucet_client = match FaucetClient::new(&rpc, &shared).await {
+            Ok(c) => Some(c),
+            Err(e) => {
+                tracing::warn!(error = %e, "Faucet client is unavailable");
+                None
+            }
+        };
+
         let ValidSharedConfig {
             keypair,
             base,

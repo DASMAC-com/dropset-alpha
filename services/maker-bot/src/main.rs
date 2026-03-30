@@ -104,7 +104,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let oanda_args = cfg.oanda_args.clone();
-    let faucet_client = FaucetClient::new(&cfg.shared).await;
+    let faucet_client = match FaucetClient::new(&rpc, &cfg.shared).await {
+        Ok(c) => Some(c),
+        Err(e) => {
+            tracing::warn!(error = %e, "Faucet client is unavailable");
+            None
+        }
+    };
     let ctx = MakerContext::init(&rpc, cfg).await?;
     let maker_ctx = Rc::new(RefCell::new(ctx));
 

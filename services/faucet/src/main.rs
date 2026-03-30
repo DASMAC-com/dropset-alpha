@@ -103,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
 async fn health_handler(State(state): State<Arc<FaucetState>>) -> impl IntoResponse {
     Json(HealthResponse {
         status: "ok".to_string(),
-        cluster: format!("{:?}", state.cluster),
+        cluster: state.cluster,
     })
 }
 

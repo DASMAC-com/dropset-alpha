@@ -15,6 +15,7 @@ use serde::{
     Serialize,
 };
 use solana_address::Address;
+use solana_cluster_type::ClusterType;
 use solana_keypair::{
     Keypair,
     Signer,
@@ -31,18 +32,32 @@ pub struct FaucetClient {
 }
 
 impl FaucetClient {
-    pub async fn new(shared: &ValidSharedConfig) -> Option<FaucetClient> {
+    pub async fn new(
+        rpc: &CustomRpcClient,
+        shared: &ValidSharedConfig,
+    ) -> anyhow::Result<FaucetClient> {
+        let rpc_cluster = rpc
+            .resolve_cluster()
+            .await
+            .context("Couldn't fetch input RPC cluster type")?;
         let client = reqwest::Client::new();
         let faucet_url = shared.faucet_url();
-        get_health(&client, &faucet_url)
-            .await
-            .is_ok()
-            .then(|| Self {
-                client,
-                faucet_url,
-                base: shared.base.clone(),
-                quote: shared.quote.clone(),
-            })
+
+        let health_response = get_health(&client, &faucet_url).await?;
+
+        if health_response.cluster != rpc_cluster {
+            anyhow::bail!(
+                "RPC cluster {rpc_cluster:?} and faucet cluster: {:?} don't match",
+                health_response.cluster
+            );
+        }
+
+        Ok(Self {
+            client,
+            faucet_url,
+            base: shared.base.clone(),
+            quote: shared.quote.clone(),
+        })
     }
 
     /// Wrapper for [get_health].
@@ -118,7 +133,7 @@ pub struct MintRequest {
 #[derive(Serialize, Deserialize)]
 pub struct HealthResponse {
     pub status: String,
-    pub cluster: String,
+    pub cluster: ClusterType,
 }
 
 #[derive(Serialize, Deserialize)]
