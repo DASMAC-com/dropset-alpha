@@ -105,8 +105,8 @@ async fn handle_faucet_request(
             .map_err(|e| TransactionSubmitError::Other(e.into()))?;
         let kp = ctx.keypair.insecure_clone();
         let (ask_size, bid_size) = (ctx.ask_order_size, ctx.bid_order_size);
-        let quote_amount = bid_size * 100;
-        let base_amount = ask_size * 100;
+        let quote_amount = bid_size.saturating_mul(100);
+        let base_amount = ask_size.saturating_mul(100);
         let addr = kp.pubkey();
         let base_ata = ctx.market_ctx.get_base_ata(&addr);
         let quote_ata = ctx.market_ctx.get_quote_ata(&addr);
