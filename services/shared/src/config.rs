@@ -208,14 +208,16 @@ pub fn load_raw_service_config(service_config: ServiceConfig) -> anyhow::Result<
     let path = &service_config.toml_config_path();
     let example_path = &service_config.toml_config_example_path();
 
-    /// Only display the path after `services/` since if it's running in a container it will display
-    /// the Docker's path instead of the host path. The host path is the intended displayed path
-    /// here since it's what's mounted to the container.
-    fn relative_path_starting_from_services(path: &Path) -> Option<PathBuf> {
-        let parts: Vec<_> = path.iter().collect();
-        let start = parts.iter().position(|part| *part == "services")?;
-
-        Some(parts[start..].iter().collect())
+    /// Only display the path after `services/`, since if this is running in a Docker container it
+    /// will display the container's path instead of the host path.
+    /// The host path is the intended displayed path here since it's what's actually mounted to the
+    /// container, but that's not readily available, so a relative path will have to suffice.
+    fn relative_path_starting_from_services(path: &Path) -> anyhow::Result<&Path> {
+        Ok(path.strip_prefix(
+            services_dir()
+                .parent()
+                .expect("Services directory should have a parent"),
+        )?)
     }
 
     let relative_config_path =
