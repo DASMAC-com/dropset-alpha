@@ -60,7 +60,7 @@ impl Logger {
     /// with `tracing`.
     pub fn log(&mut self, line: String) {
         if !self.visualize {
-            tracing::info!(line);
+            tracing::info!("{line}");
             return;
         }
         self.log_buffer.push_back(line);

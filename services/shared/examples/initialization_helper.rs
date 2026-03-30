@@ -118,7 +118,7 @@ fn write_keypair_to_file(service: ServiceConfig, kp: &Keypair) -> anyhow::Result
             anyhow::anyhow!("Couldn't open existing keypair file: {kp_path:#?}, err: ({e})")
         })?;
 
-        if existing_keypair == *kp {
+        if existing_keypair == kp {
             return Ok(());
         }
 
