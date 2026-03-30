@@ -13,6 +13,7 @@ itertools.workspace = true
 lazy-regex.workspace = true
 price = { path = "../price" }
 solana-address = { workspace = true, features = ["copy"] }
+solana-account-decoder-client-types.workspace = true
 solana-sdk.workspace = true
 solana-transaction-status.workspace = true
 solana-transaction-status-client-types.workspace = true
@@ -22,6 +23,7 @@ strum_macros.workspace = true
 [dev-dependencies]
 serde = { version = "1.0.228" }
 serde_json = { version = "1.0.145" }
+spl-associated-token-account-interface.workspace = true
 
 [lints]
 workspace = true

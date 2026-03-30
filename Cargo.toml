@@ -54,6 +54,7 @@ serde = { version = "1.0.0", features = ["derive"] }
 serde_json = { version = "1.0.0" }
 solana-account = "3.3.0"
 solana-account-view = "1.0"
+solana-account-decoder-client-types = "3.1.6"
 solana-address = "2.0.0"
 solana-client = "3.1.6"
 solana-commitment-config = "3.1.0"

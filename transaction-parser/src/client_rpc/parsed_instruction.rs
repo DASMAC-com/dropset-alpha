@@ -81,7 +81,7 @@ impl ParsedInstruction {
                     .map(|s| {
                         *parsed_accounts
                             .iter()
-                            .find(|p| &p.signer.to_string() == s)
+                            .find(|p| &p.address.to_string() == s)
                             .expect("Should find address")
                     })
                     .collect(),
@@ -91,6 +91,12 @@ impl ParsedInstruction {
                 compute_info: None,
             },
             // It's unclear how to parse already parsed ui transactions.
+            //
+            // NOTE: If this is ever implemented, the logic for how
+            // `ParsedTransaction::used_address_lookup_table` is determined would also need
+            // updating, since it doesn't hold true for `jsonParsed` encoded variants. This is
+            // because the `jsonParsed` version merges loaded addresses into `accountKeys` and omits
+            // `meta.loadedAddresses`.
             UiInstruction::Parsed(UiParsedInstruction::Parsed(_)) => unimplemented!(),
         }
     }
