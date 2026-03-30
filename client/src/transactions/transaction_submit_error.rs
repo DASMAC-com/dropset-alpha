@@ -55,13 +55,13 @@ impl TransactionSubmitError {
     /// - Then, try to parse it as a transaction error, returning a [Self::Other] if it isn't one.
     /// - If it's a transaction error, match on it being an [InstructionError::Custom] or a simply a
     ///   generic [InstructionError].
-    /// - All other case fall back to a simple [Self::Other] error.
+    /// - All other cases fall back to a simple [Self::Other] error.
     pub fn from_client_error(
         error: ClientError,
         instructions: &impl InstructionDataAtIndex,
     ) -> Self {
         if let Some((program_id, code)) = inner_simulation_error(&error) {
-            return TransactionSubmitError::from_custom_error_info(program_id, code);
+            return Self::from_custom_error_info(program_id, code);
         }
 
         let Some(tx_err) = error.get_transaction_error() else {
@@ -69,23 +69,26 @@ impl TransactionSubmitError {
         };
 
         match tx_err {
-            TransactionError::InstructionError(idx, InstructionError::Custom(code)) => {
-                let program_id = *instructions
-                    .program_id(idx as usize)
-                    .expect("Transaction should have been parsed correctly");
-                TransactionSubmitError::from_custom_error_info(program_id, code)
-            }
             TransactionError::InstructionError(idx, ixn_err) => {
-                let program_id = *instructions
-                    .program_id(idx as usize)
-                    .expect("Transaction should have been parsed correctly");
+                let Some(program_id) = instructions.program_id(idx as usize) else {
+                    let err: anyhow::Error = anyhow::Error::from(ixn_err);
+                    return TransactionSubmitError::Other(err.context(format!(
+                        "Couldn't get program ID for invalid instruction index \
+                        ({idx}) while parsing error"
+                    )));
+                };
 
-                match ProgramError::try_from(ixn_err) {
-                    Ok(e) => Self::Program {
-                        program_id,
-                        error: e,
+                match ixn_err {
+                    InstructionError::Custom(code) => {
+                        Self::from_custom_error_info(*program_id, code)
+                    }
+                    _ => match ProgramError::try_from(ixn_err.clone()) {
+                        Ok(e) => Self::Program {
+                            program_id: *program_id,
+                            error: e,
+                        },
+                        Err(_) => Self::Other(ixn_err.into()),
                     },
-                    Err(_) => Self::Other(error.into()),
                 }
             }
             _ => Self::Other(error.into()),
