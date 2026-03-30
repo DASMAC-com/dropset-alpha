@@ -1660,7 +1660,6 @@ dependencies = [
  "solana-client",
  "solana-instruction",
  "solana-keypair",
- "solana-program-error",
  "spl-token-2022-interface",
  "spl-token-interface",
  "tokio",
