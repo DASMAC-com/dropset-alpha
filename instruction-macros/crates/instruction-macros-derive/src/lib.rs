@@ -24,6 +24,7 @@ use derive::{
 };
 
 use crate::derive::{
+    derive_codama_type,
     derive_pack,
     derive_unpack,
 };
@@ -36,6 +37,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInstructionData {
         try_from_u8,
         instruction_data,
+        codama_program,
     } = match derive_instruction_data(input.clone(), false) {
         Ok(render) => render,
         Err(e) => return e.into_compile_error().into(),
@@ -68,6 +70,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         #try_from_u8
         #instruction_data
         #namespaced_outputs
+        #codama_program
     }
     .into()
 }
@@ -82,6 +85,7 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let DeriveInstructionData {
         try_from_u8,
         instruction_data,
+        codama_program,
     } = match derive_instruction_data(input, true) {
         Ok(render) => render,
         Err(e) => return e.into_compile_error().into(),
@@ -92,6 +96,7 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     quote! {
         #try_from_u8
         #instruction_data
+        #codama_program
     }
     .into()
 }
@@ -122,6 +127,22 @@ pub fn unpack(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     debug_paths_if_env_var_set(&[&unpack_impl]);
 
     unpack_impl.into()
+}
+
+/// The entrypoint for the proc macro derive [`CodamaType`].
+/// Generates a `CodamaType` impl that describes the struct's fields as a Codama type node,
+/// plus a `codama_defined_type()` method that returns the full `DefinedTypeNode`.
+#[proc_macro_derive(CodamaType)]
+pub fn codama_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let codama_impl = match derive_codama_type(input) {
+        Ok(render) => render,
+        Err(e) => return e.into_compile_error().into(),
+    };
+
+    debug_paths_if_env_var_set(&[&codama_impl]);
+
+    codama_impl.into()
 }
 
 /// Provides functionality for viewing all multi-segment paths.

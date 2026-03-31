@@ -23,3 +23,4 @@ workspace = true
 [features]
 default = []
 client = ["dep:rust_decimal", "dep:strum", "dep:strum_macros"]
+codama = ["instruction-macros/codama"]

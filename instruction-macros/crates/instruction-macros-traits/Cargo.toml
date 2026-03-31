@@ -9,3 +9,8 @@ workspace = true
 [dependencies]
 solana-address = { workspace = true, features = ["copy"] }
 solana-program-error.workspace = true
+serde = { version = "1.0.0", default-features = false, features = ["derive", "alloc"], optional = true }
+
+[features]
+default = []
+codama = ["dep:serde"]

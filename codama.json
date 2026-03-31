@@ -1,0 +1,12 @@
+{
+    "idl": "codama-idl-gen/idl.json",
+    "before": [],
+    "scripts": {
+        "js": {
+            "from": "@codama/renderers-js",
+            "args": [
+                "codama-idl-gen/js"
+            ]
+        }
+    }
+}

@@ -1,0 +1,13 @@
+[package]
+name = "codama-idl-gen"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+dropset-interface = { path = "../interface", default-features = false, features = ["codama"] }
+instruction-macros = { path = "../instruction-macros/crates/instruction-macros", features = ["codama"] }
+solana-address.workspace = true
+serde_json.workspace = true

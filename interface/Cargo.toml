@@ -41,3 +41,4 @@ client = [
   "dep:strum",
   "dep:strum_macros"
 ]
+codama = ["instruction-macros/codama", "price/codama"]

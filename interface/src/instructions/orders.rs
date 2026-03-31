@@ -204,6 +204,29 @@ unsafe impl Unpack for UnvalidatedOrders {
     }
 }
 
+#[cfg(feature = "codama")]
+impl instruction_macros::codama::CodamaType for UnvalidatedOrders {
+    fn codama_type_node() -> instruction_macros::codama::TypeNode {
+        instruction_macros::codama::defined_type_link("unvalidatedOrders")
+    }
+}
+
+#[cfg(feature = "codama")]
+impl UnvalidatedOrders {
+    pub fn codama_defined_type() -> instruction_macros::codama::DefinedTypeNode {
+        use instruction_macros::codama;
+        codama::DefinedTypeNode {
+            kind: "definedTypeNode",
+            name: codama::_alloc::string::String::from("unvalidatedOrders"),
+            docs: codama::_alloc::vec::Vec::new(),
+            ty: codama::array_type(
+                <OrderInfoArgs as codama::CodamaType>::codama_type_node(),
+                MAX_ORDERS_USIZE,
+            ),
+        }
+    }
+}
+
 mod private {
     use super::*;
 

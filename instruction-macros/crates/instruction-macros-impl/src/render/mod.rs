@@ -6,9 +6,12 @@ mod instruction_accounts;
 mod instruction_data;
 mod pack_impl;
 pub mod pack_struct_fields;
+pub mod codama_program_impl;
+mod codama_type_impl;
 mod try_from_u8;
 mod unpack_impl;
 
+pub use codama_type_impl::render as render_codama_type_impl;
 pub use feature::*;
 pub use feature_namespace::*;
 pub use instruction_accounts::render as render_instruction_accounts;

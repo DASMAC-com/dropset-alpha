@@ -6,3 +6,6 @@ pub use instruction_macros_traits::{
     Tagged,
     Unpack,
 };
+
+#[cfg(feature = "codama")]
+pub use instruction_macros_traits::codama;

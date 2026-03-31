@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@codama/renderer-js": "^2.1.0",
     "turbo": "^2.9.1"
   }
 }
