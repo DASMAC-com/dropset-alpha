@@ -8,10 +8,6 @@ use syn::{
 use crate::parse::{
     data_struct::require_data_struct,
     parsing_error::ParsingError,
-    require_repr::{
-        require_repr,
-        ReprType,
-    },
 };
 
 /// The validated, parsed struct identifier and all field names, lengths, and offsets in the struct.
@@ -24,7 +20,6 @@ pub struct ParsedStruct {
 impl ParsedStruct {
     pub fn new(input: DeriveInput) -> Result<Self, syn::Error> {
         let struct_ident = input.ident.clone();
-        require_repr(&input, ReprType::C)?;
         let data_struct = require_data_struct(input)?;
 
         let Fields::Named(fields) = data_struct.fields else {

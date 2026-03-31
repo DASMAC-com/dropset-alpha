@@ -30,7 +30,6 @@ use crate::{
 ///
 /// Each element is validated in the [Self::into_valid_order_infos_iter] iterator when passed to
 /// [price::to_order_info].
-#[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnvalidatedOrders {
     /// Instruction data that isn't read is free, so it's simpler to always use [MAX_ORDERS]

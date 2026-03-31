@@ -4,7 +4,6 @@ use instruction_macros::{
 };
 use solana_address::Address;
 
-#[repr(C)]
 #[derive(Pack, Unpack)]
 #[cfg_attr(not(feature = "no_extra_derives"), derive(Debug, Eq, PartialEq))]
 pub struct TestStruct {
@@ -17,7 +16,6 @@ pub struct TestStruct {
     g: Address,
 }
 
-#[repr(C)]
 #[derive(Pack, Unpack)]
 #[cfg_attr(not(feature = "no_extra_derives"), derive(Debug, Eq, PartialEq))]
 pub struct StructWithStructs {
