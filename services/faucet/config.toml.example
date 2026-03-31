@@ -1,6 +1,0 @@
-# Token mint addresses for the market.
-base_mint  = ""
-quote_mint = ""
-
-# The Solana RPC endpoint.
-rpc_url = "http://localhost:8899"

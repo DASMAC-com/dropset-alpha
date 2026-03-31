@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         .map(|pk| -> Instruction { e2e.market.create_seat(pk.address()) })
         .collect();
     e2e.rpc
-        .send_and_confirm_txn(
+        .sign_and_submit_instructions(
             test_accounts::default_payer(),
             &users.iter().map(|tr| tr.keypair).collect_vec(),
             &seat_creations,
@@ -88,11 +88,11 @@ async fn main() -> anyhow::Result<()> {
 
     let user_keypairs = &users.into_iter().map(|tr| tr.keypair).collect_vec();
     e2e.rpc
-        .send_and_confirm_txn(test_accounts::default_payer(), user_keypairs, &deposits)
+        .sign_and_submit_instructions(test_accounts::default_payer(), user_keypairs, &deposits)
         .await?;
 
     e2e.rpc
-        .send_and_confirm_txn(test_accounts::default_payer(), user_keypairs, &withdraws)
+        .sign_and_submit_instructions(test_accounts::default_payer(), user_keypairs, &withdraws)
         .await?;
 
     let expected_base = base_amounts

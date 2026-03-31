@@ -1,16 +1,30 @@
 //! Lightweight, nonblocking RPC client utilities for funding accounts, sending transactions,
 //! and pretty-printing `dropset`-related transaction logs.
 
+mod instruction_data_at_index;
+mod transaction_submit_error;
+
 use std::collections::HashSet;
 
 use anyhow::{
     bail,
     Context,
 };
-use dropset_interface::error::DropsetError;
-use itertools::Itertools;
+pub use instruction_data_at_index::*;
 use solana_address::Address;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::{
+    client_error::{
+        ClientError,
+        ClientErrorKind,
+    },
+    nonblocking::rpc_client::RpcClient,
+    rpc_request::{
+        RpcError,
+        RpcResponseErrorData,
+    },
+    rpc_response::RpcSimulateTransactionResult,
+};
+use solana_cluster_type::ClusterType;
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
@@ -31,45 +45,23 @@ use solana_transaction_status::{
 };
 use transaction_parser::{
     client_rpc::{
+        find_inner_instruction_custom_error_info,
         parse_transaction,
         ParsedTransaction,
     },
     events::dropset_event::DropsetEvent,
     ParseDropsetEvents,
 };
+pub use transaction_submit_error::*;
 
 use crate::{
     pretty::{
-        instruction_error::PrettyInstructionError,
         transaction::PrettyTransaction,
+        transaction_error::PrettyTransactionError,
     },
     print_kv,
     LogColor,
 };
-
-/// Error returned by transaction submission. Distinguishes dropset program errors (which callers
-/// may want to match on) from all other failures.
-pub enum TransactionSubmitError {
-    /// The transaction failed with a known dropset program error.
-    Dropset(DropsetError),
-    /// Any other failure (RPC, signing, parsing, etc).
-    Other(anyhow::Error),
-}
-
-impl From<TransactionSubmitError> for anyhow::Error {
-    fn from(e: TransactionSubmitError) -> Self {
-        match e {
-            TransactionSubmitError::Dropset(e) => anyhow::anyhow!("{e:?}"),
-            TransactionSubmitError::Other(e) => e,
-        }
-    }
-}
-
-impl From<anyhow::Error> for TransactionSubmitError {
-    fn from(e: anyhow::Error) -> Self {
-        TransactionSubmitError::Other(e)
-    }
-}
 
 pub struct CustomRpcClient {
     pub client: RpcClient,
@@ -121,6 +113,29 @@ impl CustomRpcClient {
         Ok(())
     }
 
+    /// Resolves which Solana cluster the RPC is connected to by matching the genesis hash returned
+    /// from the RPC.
+    ///
+    /// Returns the detected [`ClusterType`].
+    pub async fn resolve_cluster(&self) -> anyhow::Result<ClusterType> {
+        let genesis = self
+            .client
+            .get_genesis_hash()
+            .await
+            .context("Failed to fetch genesis hash")?;
+
+        let cluster = [
+            ClusterType::MainnetBeta,
+            ClusterType::Testnet,
+            ClusterType::Devnet,
+        ]
+        .into_iter()
+        .find(|c| c.get_genesis_hash().is_some_and(|h| h == genesis))
+        .unwrap_or(ClusterType::Development);
+
+        Ok(cluster)
+    }
+
     pub async fn fund_account(&self, address: &Address) -> anyhow::Result<()> {
         airdrop(&self.client, address).await
     }
@@ -132,8 +147,8 @@ impl CustomRpcClient {
         Ok(kp)
     }
 
-    /// Sends and confirms a single signer transaction with the signer passed in as the payer and
-    /// sole signer.
+    /// Signs, submits and confirms a single signer [Transaction] with the signer passed in as the
+    /// payer and sole signer.
     /// Instructions that require multiple signers should not be used here as they will obviously
     /// fail.
     pub async fn send_single_signer(
@@ -141,18 +156,32 @@ impl CustomRpcClient {
         signer: &Keypair,
         instructions: impl AsRef<[Instruction]>,
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-        self.send_and_confirm_txn(signer, &[signer], instructions.as_ref())
+        self.sign_and_submit_instructions(signer, &[signer], instructions.as_ref())
             .await
     }
 
-    /// Sends and confirms a transaction using [Self::config].
-    pub async fn send_and_confirm_txn(
+    /// Signs instructions and then creates, submits and confirms the resulting [Transaction].
+    pub async fn sign_and_submit_instructions(
         &self,
         payer: &Keypair,
         signers: &[&Keypair],
         instructions: &[Instruction],
     ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
-        send_transaction_with_config(&self.client, payer, signers, instructions, &self.config).await
+        let transaction =
+            sign_transaction_with_config(&self.client, payer, signers, instructions, &self.config)
+                .await?;
+
+        self.submit_and_confirm_transaction(payer.pubkey(), transaction)
+            .await
+    }
+
+    /// Submits and confirms an already signed [Transaction].
+    pub async fn submit_and_confirm_transaction(
+        &self,
+        payer_addr: Address,
+        transaction: Transaction,
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+        send_transaction_with_config(&self.client, payer_addr, transaction, &self.config).await
     }
 }
 
@@ -214,18 +243,17 @@ pub struct ParsedTransactionWithEvents {
     pub events: Vec<DropsetEvent>,
 }
 
-async fn send_transaction_with_config(
+async fn sign_transaction_with_config(
     rpc: &RpcClient,
     payer: &Keypair,
     signers: &[&Keypair],
     instructions: &[Instruction],
     config: &SendTransactionConfig,
-) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+) -> anyhow::Result<Transaction> {
     let bh = rpc
         .get_latest_blockhash()
         .await
-        .or(Err(()))
-        .expect("Should be able to get blockhash.");
+        .map_err(|e| anyhow::anyhow!("Couldn't get latest blockhash: ({e})"))?;
 
     let final_instructions: &[Instruction] = &[
         config.compute_budget.map_or(vec![], |budget| {
@@ -249,28 +277,42 @@ async fn send_transaction_with_config(
         .concat(),
         bh,
     )
-    .expect("Should sign");
+    .context("Failed to sign transaction")?;
 
-    let res = rpc.send_and_confirm_transaction(&tx).await;
+    Ok(tx)
+}
+
+async fn send_transaction_with_config(
+    rpc: &RpcClient,
+    payer_addr: Address,
+    transaction: Transaction,
+    config: &SendTransactionConfig,
+) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+    let res = rpc.send_and_confirm_transaction(&transaction).await;
     match res {
         Ok(signature) => {
             let encoded = fetch_transaction_json(rpc, signature).await?;
-            let parsed_transaction = parse_transaction(encoded).expect("Should parse transaction");
-            let dropset_events = parsed_transaction
-                .instructions
-                .iter()
-                .flat_map(|outer| {
-                    outer.inner_instructions.iter().flat_map(|inner_ixn| {
-                        inner_ixn
+            let parsed_transaction = parse_transaction(encoded).map_err(|e| {
+                TransactionSubmitError::Other(e.context("Failed to parse transaction"))
+            })?;
+
+            let dropset_events = {
+                let mut res = vec![];
+                for outer in &parsed_transaction.instructions {
+                    for inner in &outer.inner_instructions {
+                        let parsed_events = inner
                             .parse_events()
-                            .expect("Should be able to parse events")
-                    })
-                })
-                .collect_vec();
+                            .map_err(|e| TransactionSubmitError::Other(e.into()))?;
+                        res.extend(parsed_events);
+                    }
+                }
+
+                res
+            };
 
             if matches!(config.debug_logs, Some(true)) {
                 let pretty = PrettyTransaction {
-                    sender: payer.pubkey(),
+                    sender: payer_addr,
                     signature,
                     indent_size: 2,
                     transaction: &parsed_transaction,
@@ -292,19 +334,15 @@ async fn send_transaction_with_config(
             })
         }
         Err(error) => {
+            let txn_submit_error = TransactionSubmitError::from_client_error(error, &transaction);
             if matches!(config.debug_logs, Some(true)) {
-                PrettyInstructionError::new(&error, final_instructions).inspect(|err| {
-                    print!("{err}");
-                    print_kv!("Sender", payer.pubkey(), LogColor::Gray);
-                    println!();
-                });
+                let err = PrettyTransactionError::new(&txn_submit_error);
+                print!("{err}");
+                print_kv!("Sender", payer_addr, LogColor::Gray);
+                println!();
             }
-            match DropsetError::from_client_error(&error, final_instructions) {
-                Some(dropset_err) => Err(TransactionSubmitError::Dropset(dropset_err)),
-                None => Err(TransactionSubmitError::Other(
-                    anyhow::Error::from(error).context("Failed transaction submission"),
-                )),
-            }
+
+            Err(txn_submit_error)
         }
     }
 }
@@ -333,4 +371,22 @@ pub async fn account_exists(rpc: &RpcClient, address: &Address) -> anyhow::Resul
         .context("Couldn't retrieve account data")?
         .value
         .is_some())
+}
+
+/// Returns the program ID and error code for the first inner instruction error, if the simulation
+/// resulted in one.
+pub fn inner_simulation_error(error: &ClientError) -> Option<(Address, u32)> {
+    if let ClientErrorKind::RpcError(RpcError::RpcResponseError {
+        data:
+            RpcResponseErrorData::SendTransactionPreflightFailure(RpcSimulateTransactionResult {
+                logs: Some(logs),
+                ..
+            }),
+        ..
+    }) = error.kind()
+    {
+        return find_inner_instruction_custom_error_info(logs);
+    }
+
+    None
 }

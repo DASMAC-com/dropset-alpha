@@ -3,7 +3,20 @@
 set -euo pipefail
 
 if ! command -v pnpm &>/dev/null; then
-  echo "pnpm is not installed. Please install it: https://pnpm.io/installation"
+  echo "\`pnpm\` is not installed. Please install it: " \
+       "https://pnpm.io/installation"
+  exit 1
+fi
+
+if ! command -v solana &>/dev/null; then
+  echo "\`solana\` is not installed. Please install it: " \
+       "https://docs.anza.xyz/cli/install"
+  exit 1
+fi
+
+if ! command -v docker &>/dev/null; then
+  echo "\`docker\` is not installed. Please install it: " \
+       "https://docs.docker.com/get-started/get-docker"
   exit 1
 fi
 
@@ -46,9 +59,9 @@ pnpm run deploy
 # patches the base and quote mints into their respective toml config files.
 cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_FLAG
 
+pnpm run services:faucet:docker
 pnpm run services:maker:docker
 pnpm run services:taker:docker
-pnpm run services:faucet:docker
 
 echo "Waiting to see if services are healthy..."
 sleep 3
@@ -57,7 +70,7 @@ for service in maker-bot taker-bot faucet; do
     status=$(docker inspect --format='{{.State.Status}}' $service 2>/dev/null)
     if [ "$status" = "exited" ] || [ "$status" = "restarting" ]; then
         echo "Error: $service failed to start (status: $status):"
-        docker logs --tail 5 $service 2>&1
+        docker logs --tail 10 $service 2>&1
         exit 1
     fi
 done

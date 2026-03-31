@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
         .collect_vec();
 
     e2e.rpc
-        .send_and_confirm_txn(user, &[user], &ask_instructions)
+        .sign_and_submit_instructions(user, &[user], &ask_instructions)
         .await?;
 
     println!(

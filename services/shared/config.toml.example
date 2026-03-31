@@ -1,0 +1,23 @@
+# The Solana RPC endpoint.
+rpc_url = "http://localhost:8899"
+
+# SPL token mint addresses. Patched by the initialization helper.
+base_mint = ""
+quote_mint = ""
+
+# The base faucet URL (without the port).
+faucet_base_url = "http://localhost"
+
+# Port the faucet HTTP server listens on.
+faucet_port = 9090
+
+# Maximum number of whole tokens a non-allowlisted address receives per request.
+# Multiplied by 10^mint_decimals at runtime based on the requested mint.
+max_public_tokens = 10
+
+# Maximum number of whole tokens an allowlisted address receives per request.
+# Multiplied by 10^mint_decimals at runtime based on the requested mint.
+max_allowlist_tokens = 10000
+
+# Addresses that receive the elevated cap.
+allowlist = []

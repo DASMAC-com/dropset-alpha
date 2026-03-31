@@ -48,7 +48,7 @@ fn get_sig_figs(value: NonZeroU64) -> (u64, i16) {
 /// atoms doesn't equal the price ratio in UI-based (aka human-readable) units if the base and quote
 /// tokens don't use the same amount of decimals.
 ///
-/// To convert a price in human-readable units to atoms, use [normalize_non_atoms_price].
+/// To convert a price in human-readable units to atoms, use [ui_price_to_atoms_price].
 pub fn to_order_info_args(
     price: Decimal,
     order_size_base_atoms: u64,
@@ -84,17 +84,19 @@ pub fn decimal_pow10(value: Decimal, pow: i64) -> Result<Decimal, OrderInfoError
         .ok_or(OrderInfoError::ArithmeticOverflow)
 }
 
+/// Converts an amount denominated in atoms to an amount denominated with a token's decimals.
+pub fn atoms_to_ui_amount(atoms_amount: u64, mint_decimals: u8) -> Result<Decimal, OrderInfoError> {
+    decimal_pow10(Decimal::from(atoms_amount), -(mint_decimals as i64))
+}
+
 /// Converts a token price not denominated in atoms to a token price denominated in atoms using
 /// exponentiation based on the base and quote token's decimals.
-pub fn normalize_non_atoms_price(
-    non_atoms_price: Decimal,
+pub fn ui_price_to_atoms_price(
+    ui_price: Decimal,
     base_decimals: u8,
     quote_decimals: u8,
 ) -> Result<Decimal, OrderInfoError> {
-    decimal_pow10(
-        non_atoms_price,
-        quote_decimals as i64 - base_decimals as i64,
-    )
+    decimal_pow10(ui_price, quote_decimals as i64 - base_decimals as i64)
 }
 
 /// Converts a u32 encoded price to a decoded decimal price. Typical usage would be converting the
@@ -198,23 +200,23 @@ mod tests {
     #[test]
     fn varying_decimal_pair() -> Result<(), OrderInfoError> {
         // Equal decimals => do nothing.
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 6)?, dec!(1.27));
+        assert_eq!(ui_price_to_atoms_price(dec!(1.27), 6, 6)?, dec!(1.27));
 
         // 10 ^ (quote - base) == 10 ^ 1 == multiply by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 5, 6)?, dec!(12.7));
+        assert_eq!(ui_price_to_atoms_price(dec!(1.27), 5, 6)?, dec!(12.7));
 
         // 10 ^ (quote - base) == 10 ^ -1 == divide by 10
-        assert_eq!(normalize_non_atoms_price(dec!(1.27), 6, 5)?, dec!(0.127));
+        assert_eq!(ui_price_to_atoms_price(dec!(1.27), 6, 5)?, dec!(0.127));
 
         // 10 ^ (quote - base) == 10 ^ (19 - 11) == multiply by 10 ^ 8
         assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 11, 19)?,
+            ui_price_to_atoms_price(dec!(1.27), 11, 19)?,
             dec!(127_000_000)
         );
 
         // 10 ^ (quote - base) == 10 ^ (11 - 19) = divide by 10 ^ 8
         assert_eq!(
-            normalize_non_atoms_price(dec!(1.27), 19, 11)?,
+            ui_price_to_atoms_price(dec!(1.27), 19, 11)?,
             dec!(0.0000000127)
         );
 

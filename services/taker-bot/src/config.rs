@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use dropset_services_shared::config::{
     deserialize_service_config,
-    Service,
+    ServiceConfig,
     ValidSharedConfig,
 };
 use serde::Deserialize;
@@ -12,7 +12,7 @@ use crate::taker::{
     TakerStrategy,
 };
 
-const SERVICE: Service = Service::Taker;
+const SERVICE: ServiceConfig = ServiceConfig::Taker;
 
 pub struct ValidTakerConfig {
     pub shared: ValidSharedConfig,
@@ -22,9 +22,6 @@ pub struct ValidTakerConfig {
 
 #[derive(Deserialize)]
 pub struct TakerConfigInput {
-    pub base_mint: String,
-    pub quote_mint: String,
-    pub rpc_url: String,
     #[serde(default)]
     pub verbose: bool,
     pub strategy: TakerStrategyConfig,
@@ -80,20 +77,13 @@ impl TakerStrategyConfig {
 pub async fn validate_config_and_endpoint(
     input: TakerConfigInput,
 ) -> anyhow::Result<ValidTakerConfig> {
-    let TakerConfigInput {
-        base_mint,
-        quote_mint,
-        rpc_url,
-        verbose,
-        strategy,
-    } = input;
+    let TakerConfigInput { verbose, strategy } = input;
 
     if strategy.interval_ms == 0 {
         anyhow::bail!("The taker strategy's interval value must be greater than zero");
     }
 
-    let shared =
-        ValidSharedConfig::new(SERVICE.keypair_path(), base_mint, quote_mint, rpc_url).await?;
+    let shared = ValidSharedConfig::new_validated(SERVICE).await?;
 
     let taker_strategy = strategy.into_strategy()?;
 

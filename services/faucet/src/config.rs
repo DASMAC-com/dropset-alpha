@@ -1,45 +1,45 @@
 use dropset_services_shared::config::{
-    deserialize_service_config,
-    Service,
+    ServiceConfig,
+    SharedConfigInput,
     ValidSharedConfig,
 };
-use serde::Deserialize;
+use solana_keypair::Signer;
 
-const SERVICE: Service = Service::Faucet;
+const SERVICE: ServiceConfig = ServiceConfig::Faucet;
 
-pub struct ValidFaucetConfig {
-    pub shared: ValidSharedConfig,
+pub type ValidFaucetConfig = ValidSharedConfig;
+
+pub type FaucetConfigInput = SharedConfigInput;
+
+async fn validate_config_and_endpoint() -> anyhow::Result<ValidFaucetConfig> {
+    let shared = ValidSharedConfig::new_validated(SERVICE).await?;
+    validate_mint_authorities(&shared)?;
+
+    Ok(shared)
 }
 
-#[derive(Deserialize)]
-pub struct FaucetConfigInput {
-    pub base_mint: String,
-    pub quote_mint: String,
-    pub rpc_url: String,
-}
+fn validate_mint_authorities(shared: &ValidSharedConfig) -> anyhow::Result<()> {
+    for is_base in [true, false] {
+        let token = if is_base { &shared.base } else { &shared.quote };
+        let token_type = if is_base { "Base" } else { "Quote" };
 
-pub async fn validate_config_and_endpoint(
-    input: FaucetConfigInput,
-) -> anyhow::Result<ValidFaucetConfig> {
-    let FaucetConfigInput {
-        base_mint: base_mint_input,
-        quote_mint: quote_mint_input,
-        rpc_url: rpc_url_input,
-    } = input;
+        match token.mint_authority {
+            Some(ma) => anyhow::ensure!(
+                ma == shared.keypair.pubkey(),
+                "{token_type} token mint authority {:#?} doesn't match faucet address {:#?}",
+                token.mint_authority,
+                shared.keypair.pubkey(),
+            ),
+            None => anyhow::bail!(
+                "Faucet {} token doesn't have a mint authority",
+                token_type.to_lowercase()
+            ),
+        };
+    }
 
-    let shared = ValidSharedConfig::new(
-        SERVICE.keypair_path(),
-        base_mint_input,
-        quote_mint_input,
-        rpc_url_input,
-    )
-    .await?;
-
-    Ok(ValidFaucetConfig { shared })
+    Ok(())
 }
 
 pub async fn get_validated_config() -> anyhow::Result<ValidFaucetConfig> {
-    let cfg: FaucetConfigInput = deserialize_service_config(SERVICE)?;
-
-    validate_config_and_endpoint(cfg).await
+    validate_config_and_endpoint().await
 }

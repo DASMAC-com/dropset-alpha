@@ -28,6 +28,7 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+axum = "0.8"
 bincode = "1.3.3"
 borsh = { version = "1", default-features = false, features = ["derive"] }
 bytemuck = { version = "1.23.2", features = ["derive"] }
@@ -47,7 +48,7 @@ pinocchio-token = { version = "0.5.0" }
 pinocchio-token-2022 = { version = "0.2.0" }
 rand = "0.10.0"
 regex = "1.12.2"
-reqwest = "0.13.1"
+reqwest = { version = "0.13.1", features = ["json"] }
 rand_distr = "0.6.0"
 rust_decimal = { version = "1.40.0", features = ["macros"] }
 serde = { version = "1.0.0", features = ["derive"] }
@@ -57,6 +58,7 @@ solana-account-view = "1.0"
 solana-account-decoder-client-types = "3.1.6"
 solana-address = "2.0.0"
 solana-client = "3.1.6"
+solana-cluster-type = { version = "3.1.0", features = ["serde"] }
 solana-commitment-config = "3.1.0"
 solana-cpi = "3.1.0"
 solana-compute-budget-interface = "3.0.0"
@@ -65,6 +67,7 @@ solana-instruction-error = "2.1.0"
 solana-instruction-view = "1.0"
 solana-keypair = "3.1.0"
 solana-msg = "3.0.0"
+solana-rpc-client = "3.1.6"
 solana-sdk = "3.0.0"
 solana-system-interface = "3.0.0"
 solana-program-error = { version = "3.0.0" }
@@ -81,8 +84,11 @@ strum = "0.27.2"
 strum_macros = "0.27.2"
 toml = "0.8"
 toml_edit = "0.22"
-tokio = "1.49.0"
+tokio = { version = "1.49.0", features = ["macros", "rt", "rt-multi-thread"] }
 tokio-stream = "0.1.17"
+tower-http = "0.6"
+tracing = "0.1"
+tracing-subscriber = "0.3.23"
 yellowstone-grpc-client = "10.2.0"
 yellowstone-grpc-proto = "10.1.1"
 

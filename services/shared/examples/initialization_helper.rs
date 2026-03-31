@@ -20,9 +20,12 @@ use client::{
 use dropset_interface::state::sector::NIL;
 use dropset_services_shared::config::{
     load_raw_service_config,
-    Service,
+    ServiceConfig,
 };
-use solana_keypair::Keypair;
+use solana_keypair::{
+    read_keypair_file,
+    Keypair,
+};
 use solana_sdk::signer::Signer;
 use toml_edit::DocumentMut;
 
@@ -71,7 +74,9 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
     // Mint the initial amounts to each account.
-    let e2e = E2e::new_users_and_market_with_mint_decimals(
+    // Pass the faucet keypair as the mint authority so the faucet service
+    // can mint tokens on demand.
+    let e2e = E2e::new_users_and_market_with_options(
         Some(rpc),
         [
             User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
@@ -80,6 +85,7 @@ async fn main() -> anyhow::Result<()> {
         ],
         Some(6),
         Some(6),
+        Some(faucet),
     )
     .await?;
 
@@ -88,14 +94,12 @@ async fn main() -> anyhow::Result<()> {
     deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
 
     // Write each keypair to the appropriate file.
-    write_keypair_to_file(Service::Faucet, faucet)?;
-    write_keypair_to_file(Service::Maker, maker)?;
-    write_keypair_to_file(Service::Taker, taker)?;
+    write_keypair_to_file(ServiceConfig::Faucet, faucet)?;
+    write_keypair_to_file(ServiceConfig::Maker, maker)?;
+    write_keypair_to_file(ServiceConfig::Taker, taker)?;
 
-    // Patch base_mint and quote_mint into each toml file in-place.
-    update_base_and_quote_mints(Service::Faucet, &e2e)?;
-    update_base_and_quote_mints(Service::Maker, &e2e)?;
-    update_base_and_quote_mints(Service::Taker, &e2e)?;
+    // Patch base_mint and quote_mint into the shared config file in-place.
+    update_base_and_quote_mints(&e2e)?;
 
     println!("Faucet address : {}", faucet.pubkey());
     println!("Maker address : {}", maker.pubkey());
@@ -107,14 +111,30 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn write_keypair_to_file(service: Service, kp: &Keypair) -> anyhow::Result<()> {
+fn write_keypair_to_file(service: ServiceConfig, kp: &Keypair) -> anyhow::Result<()> {
     let kp_path = service.keypair_path();
-    if std::fs::exists(kp_path.clone())? && !should_force_overwrite() {
-        anyhow::bail!(
-            "{:#?} already exists. Pass `--force` to overwrite it.",
-            kp_path.clone(),
-        );
+    if std::fs::exists(kp_path.clone())? {
+        let existing_keypair = read_keypair_file(&kp_path).map_err(|e| {
+            anyhow::anyhow!("Couldn't open existing keypair file: {kp_path:#?}, err: ({e})")
+        })?;
+
+        if existing_keypair == kp {
+            return Ok(());
+        }
+
+        // If the keypair already exists and doesn't match the one passed in, throw an error if a
+        // forced overwrite flag wasn't passed. Otherwise, just write it.
+        if !should_force_overwrite() {
+            let existing_pub = existing_keypair.pubkey();
+            let new_pub = kp.pubkey();
+            anyhow::bail!(
+                "{kp_path:#?} already exists.\n\
+                 Pass `--force` to overwrite the existing keypair \
+                 for {existing_pub} with the keypair for {new_pub}"
+            );
+        }
     }
+
     Ok(std::fs::write(
         kp_path,
         serde_json::to_string(&kp.to_bytes().to_vec())?,
@@ -146,8 +166,9 @@ async fn deposit_base_and_quote_to_market(
     Ok(())
 }
 
-fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()> {
-    let cfg_path = service.toml_config_path();
+fn update_base_and_quote_mints(e2e: &E2e) -> anyhow::Result<()> {
+    let shared_config = ServiceConfig::Shared;
+    let cfg_path = shared_config.toml_config_path();
 
     // Try to `rmdir` the path if it's a directory, which fails if it's empty.
     // If the directory is empty, it's most likely because Docker mounted an empty directory
@@ -159,7 +180,7 @@ fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()
             Err(e) => match e.kind() {
                 ErrorKind::DirectoryNotEmpty => {
                     // Force an early return with an appropriate error message if it's not empty.
-                    load_raw_service_config(service)?;
+                    load_raw_service_config(shared_config)?;
                 }
                 e_kind => anyhow::bail!("Failed to remove empty directory: {e_kind}"),
             },
@@ -168,16 +189,16 @@ fn update_base_and_quote_mints(service: Service, e2e: &E2e) -> anyhow::Result<()
 
     // Copy from the example template if there's nothing at the config path.
     if !cfg_path.exists() {
-        std::fs::copy(service.toml_config_example_path(), cfg_path.clone()).context(
+        std::fs::copy(shared_config.toml_config_example_path(), cfg_path.clone()).context(
             anyhow::anyhow!(
                 "Failed to copy {:#?} to {:#?}",
-                service.toml_config_example_path(),
+                shared_config.toml_config_example_path(),
                 cfg_path,
             ),
         )?;
     }
 
-    let raw = load_raw_service_config(service)?;
+    let raw = load_raw_service_config(shared_config)?;
     let mut doc: DocumentMut = raw.parse()?;
     doc["base_mint"] = toml_edit::value(e2e.market.base.mint_address.to_string());
     doc["quote_mint"] = toml_edit::value(e2e.market.quote.mint_address.to_string());

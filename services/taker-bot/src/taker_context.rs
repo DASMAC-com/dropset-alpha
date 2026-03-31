@@ -1,9 +1,5 @@
-use anyhow::Context;
 use client::{
-    context::{
-        market::MarketContext,
-        token::TokenContext,
-    },
+    context::market::MarketContext,
     transactions::{
         CustomRpcClient,
         ParsedTransactionWithEvents,
@@ -11,45 +7,44 @@ use client::{
     },
 };
 use dropset_interface::instructions::MarketOrderInstructionData;
-use dropset_services_shared::config::ValidSharedConfig;
+use dropset_services_shared::{
+    config::ValidSharedConfig,
+    faucet_client::FaucetClient,
+};
 use solana_address::Address;
 use solana_keypair::{
     Keypair,
     Signer,
 };
 
-use crate::taker::TakerFill;
+use crate::taker::{
+    Side,
+    TakerFill,
+};
 
 pub struct TakerContext {
     pub rpc: CustomRpcClient,
     pub keypair: Keypair,
     pub market_ctx: MarketContext,
+    pub faucet_client: Option<FaucetClient>,
 }
 
 impl TakerContext {
     pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
+        let faucet_client = match FaucetClient::new(&rpc, &shared).await {
+            Ok(c) => Some(c),
+            Err(e) => {
+                tracing::warn!(error = %e, "Faucet client is unavailable");
+                None
+            }
+        };
+
         let ValidSharedConfig {
             keypair,
-            base_mint,
-            quote_mint,
+            base,
+            quote,
             ..
         } = shared;
-
-        let base_account = rpc
-            .client
-            .get_account(&base_mint)
-            .await
-            .context("Couldn't find base mint account on-chain")?;
-        let base =
-            TokenContext::from_account_data(base_mint, base_account.owner, &base_account.data)?;
-
-        let quote_account = rpc
-            .client
-            .get_account(&quote_mint)
-            .await
-            .context("Couldn't find quote mint account on-chain")?;
-        let quote =
-            TokenContext::from_account_data(quote_mint, quote_account.owner, &quote_account.data)?;
 
         let market_ctx = MarketContext::new(base, quote);
 
@@ -57,6 +52,7 @@ impl TakerContext {
             rpc,
             keypair,
             market_ctx,
+            faucet_client,
         })
     }
 
@@ -79,5 +75,42 @@ impl TakerContext {
                 )],
             )
             .await
+    }
+
+    /// Tries to request a faucet airdrop and then submits the transaction, returning the
+    /// [TransactionSubmitError] if it fails or if the faucet service isn't available.
+    pub async fn submit_faucet_request(
+        &self,
+        side: Side,
+    ) -> Result<ParsedTransactionWithEvents, TransactionSubmitError> {
+        if let Some(ref faucet_client) = self.faucet_client {
+            let res = match side {
+                Side::Buy => {
+                    faucet_client
+                        .request_quote_sign_and_submit(
+                            &self.address(),
+                            &self.keypair,
+                            &self.rpc,
+                            None,
+                        )
+                        .await?
+                }
+                Side::Sell => {
+                    faucet_client
+                        .request_base_sign_and_submit(
+                            &self.address(),
+                            &self.keypair,
+                            &self.rpc,
+                            None,
+                        )
+                        .await?
+                }
+            };
+            Ok(res)
+        } else {
+            let msg = "Out of tokens and couldn't request from faucet";
+            tracing::error!("{msg}");
+            Err(TransactionSubmitError::Other(anyhow::anyhow!(msg)))
+        }
     }
 }

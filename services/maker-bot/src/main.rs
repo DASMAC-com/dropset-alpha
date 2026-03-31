@@ -22,7 +22,10 @@ use client::transactions::{
     CustomRpcClient,
     SendTransactionConfig,
 };
-use dropset_services_shared::oanda_types::CandlestickGranularity;
+use dropset_services_shared::{
+    faucet_client::FaucetClient,
+    oanda_types::CandlestickGranularity,
+};
 use maker_state::*;
 use order_flow::*;
 use rust_decimal::Decimal;
@@ -31,6 +34,7 @@ use solana_client::{
     rpc_config::CommitmentConfig,
 };
 use tokio::sync::watch;
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::get_validated_config,
@@ -46,11 +50,26 @@ pub enum TaskUpdate {
     Price(Decimal),
 }
 
+use client::{
+    fmt_kv,
+    LogColor,
+};
+
 impl fmt::Display for TaskUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn write_timestamped(f: &mut fmt::Formatter<'_>, message: impl ToString) -> fmt::Result {
+            let timestamp =
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false);
+            let timestamp_str = format!("[{timestamp}]");
+            let timestamped_log_message =
+                fmt_kv!(timestamp_str, message, LogColor::Gray, LogColor::Debug);
+
+            write!(f, "{timestamped_log_message}")
+        }
+
         match self {
-            TaskUpdate::MakerState => write!(f, "Orders filled"),
-            TaskUpdate::Price(p) => write!(f, "Price feed update — {p}"),
+            TaskUpdate::MakerState => write_timestamped(f, "Maker's orders changed"),
+            TaskUpdate::Price(p) => write_timestamped(f, format!("Price feed update — {p}")),
         }
     }
 }
@@ -63,6 +82,10 @@ async fn main() -> anyhow::Result<()> {
     if health_check {
         return Ok(());
     }
+
+    // Default to `error`.
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("error"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let poll_interval = cfg.price_feed_poll_interval;
     let throttle_window = cfg.order_update_throttle_window;
@@ -81,6 +104,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let oanda_args = cfg.oanda_args.clone();
+    let faucet_client = match FaucetClient::new(&rpc, &cfg.shared).await {
+        Ok(c) => Some(c),
+        Err(e) => {
+            tracing::warn!(error = %e, "Faucet client is unavailable");
+            None
+        }
+    };
     let ctx = MakerContext::init(&rpc, cfg).await?;
     let maker_ctx = Rc::new(RefCell::new(ctx));
 
@@ -90,13 +120,13 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         r1 = tasks::program_subscribe(maker_ctx.clone(), sender.clone(), ws_url.as_str()) => {
-            println!("Program subscription terminated: {r1:#?}");
+            tracing::error!("Program subscription terminated: {r1:#?}");
         },
         r2 = tasks::poll_price_feed(maker_ctx.clone(), sender.clone(), reqwest_client, &oanda_args, poll_interval) => {
-            println!("Price feed poll loop terminated: {r2:#?}");
+            tracing::error!("Price feed poll loop terminated: {r2:#?}");
         },
-        r3 = tasks::throttled_order_update(maker_ctx.clone(), receiver, &rpc, throttle_window) => {
-            println!("Throttled order update loop terminated: {r3:#?}");
+        r3 = tasks::throttled_order_update(maker_ctx.clone(), receiver, &rpc, throttle_window, faucet_client) => {
+            tracing::error!("Throttled order update loop terminated: {r3:#?}");
         }
     }
 

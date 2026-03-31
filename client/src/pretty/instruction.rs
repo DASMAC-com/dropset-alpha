@@ -85,7 +85,7 @@ impl PrettyInstruction<'_> {
 
 #[derive(strum_macros::Display)]
 #[strum(serialize_all = "snake_case")]
-enum KnownProgram {
+pub enum KnownProgram {
     Dropset,
     SplToken,
     SplToken2022,
