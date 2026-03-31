@@ -1,5 +1,6 @@
 packages:
   - frontend
+  - ts-sdk
 
 ignoredBuiltDependencies:
   - sharp
@@ -9,4 +10,3 @@ catalog:
   "@biomejs/biome": 2.2.0
   "@types/node": ^24
   "typescript": ^5
-

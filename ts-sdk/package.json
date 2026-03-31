@@ -1,0 +1,45 @@
+{
+  "dependencies": {
+    "server-only": "^0.0.1",
+  },
+  "description": "TypeScript SDK for DASMAC's `dropset` alpha protocol",
+  "devDependencies": { },
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "require": {
+        "types": "./dist/common/index.d.ts",
+        "default": "./dist/common/index.js"
+      },
+      "import": {
+        "types": "./dist/esm/index.d.mts",
+        "default": "./dist/esm/index.mjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "homepage": "https://github.com/dasmac-com/dropset-alpha#readme",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "module": "dist/esm/index.mjs",
+  "name": "@dasmac-com/dropset-alpha-sdk",
+  "repository": "github:dasmac-com/dropset-alpha",
+  "scripts": {
+    "_format": "biome format",
+    "build": "tsc",
+    "build:publish": "tsup",
+    "check": "tsc",
+    "clean": "rm -rf node_modules && rm -rf dist",
+    "format": "biome format --write",
+    "lint": "biome check"
+  },
+  "typings": "dist/common/index.d.ts",
+  "version": "0.1.0"
+}
