@@ -7,6 +7,8 @@
 #![allow(unused_imports)]
 
 mod client;
+#[cfg(feature = "codama")]
+mod codama;
 mod events;
 mod pack_and_unpack;
 mod program;
@@ -15,11 +17,11 @@ use solana_address::Address;
 
 pub const ID: Address = Address::from_str_const("TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q");
 
-#[macro_export]
 /// Each test fixture outputs different proc macro generated code based on the features enabled,
 /// so they all must declare/create the struct.
 /// This means test logic can't be consolidated with helper functions, so the best solution to avoid
 /// repeating this in every file is just to output it with a macro to make it readable and DRY.
+#[macro_export]
 macro_rules! create_big_order_info_pack_and_unpack_test {
     () => {
         /// Helper to keep this macro easy to read. Avoids 50 extra lines from formatting.

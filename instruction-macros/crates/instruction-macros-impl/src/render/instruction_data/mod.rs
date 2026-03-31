@@ -86,6 +86,7 @@ fn render_variant(
     quote! {
         #struct_doc
         #[derive(#pack_trait, #unpack_trait, Clone, Debug, PartialEq, Eq)]
+        #[cfg_attr(feature = "codama", derive(::instruction_macros::CodamaType))]
         pub struct #struct_name {
             #(
                 #doc_descriptions

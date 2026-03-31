@@ -74,6 +74,7 @@ pub enum ProgramDropsetInstruction {
 }
 
 #[derive(Debug, Clone, Pack, Unpack, PartialEq, Eq)]
+#[cfg_attr(feature = "codama", derive(instruction_macros::CodamaType))]
 pub struct BigOrderInfo {
     pub byte_1: u8,
     pub deposit_1: DepositInstructionData,
