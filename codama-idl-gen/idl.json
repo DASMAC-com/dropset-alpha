@@ -22,9 +22,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -32,9 +30,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user closing their seat."
-            ]
+            "docs": ["The user closing their seat."]
           },
           {
             "kind": "instructionAccountNode",
@@ -42,9 +38,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -52,9 +46,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated base token account."
-            ]
+            "docs": ["The user's associated base token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -62,9 +54,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated quote token account."
-            ]
+            "docs": ["The user's associated quote token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -72,9 +62,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated base token account."
-            ]
+            "docs": ["The market's associated base token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -82,9 +70,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated quote token account."
-            ]
+            "docs": ["The market's associated quote token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -92,9 +78,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base token mint account."
-            ]
+            "docs": ["The base token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -102,9 +86,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote token mint account."
-            ]
+            "docs": ["The quote token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -112,9 +94,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base mint's token program."
-            ]
+            "docs": ["The base mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -122,9 +102,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote mint's token program."
-            ]
+            "docs": ["The quote mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -132,9 +110,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -197,9 +173,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -207,9 +181,7 @@
             "isWritable": true,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user depositing or registering their seat."
-            ]
+            "docs": ["The user depositing or registering their seat."]
           },
           {
             "kind": "instructionAccountNode",
@@ -217,9 +189,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -227,9 +197,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated token account."
-            ]
+            "docs": ["The user's associated token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -237,9 +205,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated token account."
-            ]
+            "docs": ["The market's associated token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -247,9 +213,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The token mint account."
-            ]
+            "docs": ["The token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -257,9 +221,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The mint's token program."
-            ]
+            "docs": ["The mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -267,9 +229,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The system program."
-            ]
+            "docs": ["The system program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -277,9 +237,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -301,9 +259,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "amount",
-            "docs": [
-              "The amount to deposit."
-            ],
+            "docs": ["The amount to deposit."],
             "type": {
               "kind": "numberTypeNode",
               "format": "u64",
@@ -354,9 +310,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -364,9 +318,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user withdrawing."
-            ]
+            "docs": ["The user withdrawing."]
           },
           {
             "kind": "instructionAccountNode",
@@ -374,9 +326,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -384,9 +334,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated token account."
-            ]
+            "docs": ["The user's associated token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -394,9 +342,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated token account."
-            ]
+            "docs": ["The market's associated token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -404,9 +350,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The token mint account."
-            ]
+            "docs": ["The token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -414,9 +358,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The mint's token program."
-            ]
+            "docs": ["The mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -424,9 +366,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -448,9 +388,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "amount",
-            "docs": [
-              "The amount to withdraw."
-            ],
+            "docs": ["The amount to withdraw."],
             "type": {
               "kind": "numberTypeNode",
               "format": "u64",
@@ -501,9 +439,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -511,9 +447,7 @@
             "isWritable": true,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user registering the market."
-            ]
+            "docs": ["The user registering the market."]
           },
           {
             "kind": "instructionAccountNode",
@@ -521,9 +455,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -531,9 +463,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated token account for the base mint."
-            ]
+            "docs": ["The market's associated token account for the base mint."]
           },
           {
             "kind": "instructionAccountNode",
@@ -551,9 +481,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base token mint account."
-            ]
+            "docs": ["The base token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -561,9 +489,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote token mint account."
-            ]
+            "docs": ["The quote token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -571,9 +497,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base mint's token program."
-            ]
+            "docs": ["The base mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -581,9 +505,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote mint's token program."
-            ]
+            "docs": ["The quote mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -591,9 +513,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The associated token account program."
-            ]
+            "docs": ["The associated token account program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -601,9 +521,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The system program."
-            ]
+            "docs": ["The system program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -611,9 +529,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -635,9 +551,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "numSectors",
-            "docs": [
-              "The number of sectors to preallocate for the market."
-            ],
+            "docs": ["The number of sectors to preallocate for the market."],
             "type": {
               "kind": "numberTypeNode",
               "format": "u16",
@@ -676,9 +590,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -686,9 +598,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user posting an order."
-            ]
+            "docs": ["The user posting an order."]
           },
           {
             "kind": "instructionAccountNode",
@@ -696,9 +606,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -706,9 +614,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -730,9 +636,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "orderInfoArgs",
-            "docs": [
-              "The order info arguments."
-            ],
+            "docs": ["The order info arguments."],
             "type": {
               "kind": "definedTypeLinkNode",
               "name": "orderInfoArgs"
@@ -796,9 +700,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -806,9 +708,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user canceling an order."
-            ]
+            "docs": ["The user canceling an order."]
           },
           {
             "kind": "instructionAccountNode",
@@ -816,9 +716,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -826,9 +724,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -850,9 +746,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "encodedPrice",
-            "docs": [
-              "The encoded price for the order to cancel."
-            ],
+            "docs": ["The encoded price for the order to cancel."],
             "type": {
               "kind": "numberTypeNode",
               "format": "u32",
@@ -917,9 +811,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -927,9 +819,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user batch replacing orders."
-            ]
+            "docs": ["The user batch replacing orders."]
           },
           {
             "kind": "instructionAccountNode",
@@ -937,9 +827,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -947,9 +835,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -983,9 +869,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "newBids",
-            "docs": [
-              "The new bids to replace the user's current bids."
-            ],
+            "docs": ["The new bids to replace the user's current bids."],
             "type": {
               "kind": "definedTypeLinkNode",
               "name": "unvalidatedOrders"
@@ -994,9 +878,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "newAsks",
-            "docs": [
-              "The new asks to replace the user's current asks."
-            ],
+            "docs": ["The new asks to replace the user's current asks."],
             "type": {
               "kind": "definedTypeLinkNode",
               "name": "unvalidatedOrders"
@@ -1034,9 +916,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1044,9 +924,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The user creating the market order, aka the taker."
-            ]
+            "docs": ["The user creating the market order, aka the taker."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1054,9 +932,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1064,9 +940,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated base token account."
-            ]
+            "docs": ["The user's associated base token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1074,9 +948,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The user's associated quote token account."
-            ]
+            "docs": ["The user's associated quote token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1084,9 +956,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated base token account."
-            ]
+            "docs": ["The market's associated base token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1094,9 +964,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market's associated quote token account."
-            ]
+            "docs": ["The market's associated quote token account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1104,9 +972,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base token mint account."
-            ]
+            "docs": ["The base token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1114,9 +980,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote token mint account."
-            ]
+            "docs": ["The quote token mint account."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1124,9 +988,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The base mint's token program."
-            ]
+            "docs": ["The base mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1134,9 +996,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The quote mint's token program."
-            ]
+            "docs": ["The quote mint's token program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1144,9 +1004,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           }
         ],
         "arguments": [
@@ -1168,9 +1026,7 @@
           {
             "kind": "instructionArgumentNode",
             "name": "orderSize",
-            "docs": [
-              "The order size; aka the number of atoms to fill."
-            ],
+            "docs": ["The order size; aka the number of atoms to fill."],
             "type": {
               "kind": "numberTypeNode",
               "format": "u64",
@@ -1237,9 +1093,7 @@
             "isWritable": false,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           }
         ],
         "arguments": [
@@ -1290,9 +1144,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The event authority PDA signer."
-            ]
+            "docs": ["The event authority PDA signer."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1300,9 +1152,7 @@
             "isWritable": true,
             "isSigner": true,
             "isOptional": false,
-            "docs": [
-              "The account paying for the market account expansion."
-            ]
+            "docs": ["The account paying for the market account expansion."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1310,9 +1160,7 @@
             "isWritable": true,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The market account PDA."
-            ]
+            "docs": ["The market account PDA."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1320,9 +1168,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The dropset program."
-            ]
+            "docs": ["The dropset program."]
           },
           {
             "kind": "instructionAccountNode",
@@ -1330,9 +1176,7 @@
             "isWritable": false,
             "isSigner": false,
             "isOptional": false,
-            "docs": [
-              "The system program."
-            ]
+            "docs": ["The system program."]
           }
         ],
         "arguments": [
