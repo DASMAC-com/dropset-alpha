@@ -5,8 +5,11 @@
   "description": "TypeScript SDK for DASMAC's `dropset` alpha protocol",
   "devDependencies": {
     "@jest/globals": "catalog:",
+    "@types/node": "catalog:",
     "jest": "catalog:",
-    "ts-jest": "catalog:"
+    "ts-jest": "catalog:",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.14.1"
