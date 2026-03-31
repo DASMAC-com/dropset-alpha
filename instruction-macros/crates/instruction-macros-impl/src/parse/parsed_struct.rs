@@ -23,7 +23,7 @@ impl ParsedStruct {
         let data_struct = require_data_struct(input)?;
 
         let Fields::Named(fields) = data_struct.fields else {
-            return Err(ParsingError::NotAStruct.new_err(data_struct.fields));
+            return Err(ParsingError::UnnamedFields.new_err(data_struct.fields));
         };
 
         let (field_names, field_types) = fields
