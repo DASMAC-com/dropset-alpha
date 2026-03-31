@@ -1,5 +1,6 @@
 //! Renders the parsed instruction model into generated modules, helpers, and macros.
 
+mod codama_helpers;
 pub mod codama_program_impl;
 mod codama_type_impl;
 mod feature;

@@ -8,6 +8,10 @@ use quote::{
     ToTokens,
 };
 
+use super::codama_helpers::{
+    codama_traits_path,
+    to_camel_case,
+};
 use crate::parse::{
     argument_type::{
         ArgumentType,
@@ -20,7 +24,7 @@ use crate::parse::{
 /// Renders a `CodamaProgram` impl for the instruction enum.
 pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> TokenStream {
     let enum_ident = &parsed_enum.enum_ident;
-    let codama = quote! { ::instruction_macros::codama };
+    let codama = codama_traits_path();
     let string = quote! { ::instruction_macros::codama::_alloc::string::String };
     let vec_macro = quote! { ::instruction_macros::codama::_alloc::vec };
 
@@ -31,7 +35,6 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
             let name = to_camel_case(&v.variant_name.to_string());
             let disc = v.discriminant;
 
-            // Accounts
             let account_nodes: Vec<TokenStream> = v
                 .accounts
                 .iter()
@@ -58,7 +61,6 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 })
                 .collect();
 
-            // Arguments: start with the discriminator
             let mut arg_nodes: Vec<TokenStream> = vec![quote! {
                 #codama::InstructionArgumentNode {
                     kind: "instructionArgumentNode",
@@ -151,36 +153,7 @@ fn argument_type_to_codama_expr(ty: &ArgumentType, codama: &TokenStream) -> Toke
             quote! { <#fully_qualified as #codama::CodamaType>::codama_type_node() }
         }
         ArgumentType::UnknownType(syn_ty) => {
-            // For unknown types, call CodamaType::codama_type_node() — this will return a
-            // defined_type_link if the type has derive(CodamaType), or fail at compile time
-            // if it doesn't.
             quote! { <#syn_ty as #codama::CodamaType>::codama_type_node() }
         }
     }
-}
-
-fn to_camel_case(s: &str) -> String {
-    if s.contains('_') {
-        let mut result = String::new();
-        let mut capitalize_next = false;
-        for ch in s.chars() {
-            if ch == '_' {
-                capitalize_next = true;
-            } else if capitalize_next {
-                result.extend(ch.to_uppercase());
-                capitalize_next = false;
-            } else {
-                result.push(ch);
-            }
-        }
-        return result;
-    }
-
-    if s.chars().next().is_some_and(|c| c.is_uppercase()) {
-        let mut chars = s.chars();
-        let first = chars.next().unwrap();
-        return first.to_lowercase().chain(chars).collect();
-    }
-
-    s.to_string()
 }

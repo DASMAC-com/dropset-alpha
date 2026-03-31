@@ -64,7 +64,12 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         })
         .collect::<proc_macro2::TokenStream>();
 
-    debug_paths_if_env_var_set(&[&try_from_u8, &instruction_data, &namespaced_outputs, &codama_program]);
+    debug_paths_if_env_var_set(&[
+        &try_from_u8,
+        &instruction_data,
+        &namespaced_outputs,
+        &codama_program,
+    ]);
 
     quote! {
         #try_from_u8

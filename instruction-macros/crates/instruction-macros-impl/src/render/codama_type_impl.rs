@@ -3,18 +3,15 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::parse::{
-    known_type::KnownType,
-    parsed_struct::ParsedStruct,
+use super::codama_helpers::{
+    codama_traits_path,
+    to_camel_case,
 };
-
-fn codama_traits_path() -> TokenStream {
-    quote! { ::instruction_macros::codama }
-}
+use crate::parse::parsed_struct::ParsedStruct;
 
 /// Renders a `CodamaType` impl for a struct. Each field's type node is obtained by calling
-/// `CodamaType::codama_type_node()` on the field type (for known types) or emitting a
-/// `defined_type_link` (for unknown/custom types).
+/// `CodamaType::codama_type_node()` on the field type. If a field type doesn't impl
+/// `CodamaType`, the generated code produces a compile error.
 pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
     let ParsedStruct {
         struct_ident,
@@ -28,27 +25,12 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
         .iter()
         .zip(field_types.iter())
         .map(|(name, ty)| {
-            let name_str = name.to_string();
-            let camel_name = to_camel_case(&name_str);
-
-            // Determine how to get the type node for this field.
-            let type_node_expr = match KnownType::new(ty.clone()) {
-                Some(_) => {
-                    // Known type: call CodamaType::codama_type_node() directly.
-                    quote! { <#ty as #codama::CodamaType>::codama_type_node() }
-                }
-                None => {
-                    // Unknown type: call CodamaType::codama_type_node(). If the type doesn't
-                    // impl CodamaType, this produces a compile error — enforcing that all
-                    // instruction argument types are IDL-representable.
-                    quote! { <#ty as #codama::CodamaType>::codama_type_node() }
-                }
-            };
+            let camel_name = to_camel_case(&name.to_string());
 
             quote! {
                 #codama::StructFieldTypeNode::new(
                     ::instruction_macros::codama::_alloc::string::String::from(#camel_name),
-                    #type_node_expr,
+                    <#ty as #codama::CodamaType>::codama_type_node(),
                 )
             }
         })
@@ -60,7 +42,6 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
         #[cfg(feature = "codama")]
         impl #codama::CodamaType for #struct_ident {
             fn codama_type_node() -> #codama::TypeNode {
-                // When referenced as a field in another struct, return a link to the defined type.
                 #codama::defined_type_link(#struct_name_str)
             }
         }
@@ -82,32 +63,4 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
             }
         }
     }
-}
-
-fn to_camel_case(s: &str) -> String {
-    // snake_case -> camelCase
-    if s.contains('_') {
-        let mut result = String::new();
-        let mut capitalize_next = false;
-        for ch in s.chars() {
-            if ch == '_' {
-                capitalize_next = true;
-            } else if capitalize_next {
-                result.extend(ch.to_uppercase());
-                capitalize_next = false;
-            } else {
-                result.push(ch);
-            }
-        }
-        return result;
-    }
-
-    // PascalCase -> camelCase
-    if s.chars().next().is_some_and(|c| c.is_uppercase()) {
-        let mut chars = s.chars();
-        let first = chars.next().unwrap();
-        return first.to_lowercase().chain(chars).collect();
-    }
-
-    s.to_string()
 }
