@@ -1,16 +1,9 @@
 {
-  "dependencies": {
-    "server-only": "^0.0.1"
-  },
+  "name": "@dasmac-com/dropset-alpha-sdk",
+  "version": "0.1.0",
   "description": "TypeScript SDK for DASMAC's `dropset` alpha protocol",
-  "devDependencies": {
-    "@jest/globals": "catalog:",
-    "@types/node": "catalog:",
-    "jest": "catalog:",
-    "ts-jest": "catalog:",
-    "tsup": "^8.5.1",
-    "typescript": "catalog:"
-  },
+  "homepage": "https://github.com/dasmac-com/dropset-alpha#readme",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=24.14.1"
   },
@@ -32,11 +25,8 @@
     "dist",
     "src"
   ],
-  "homepage": "https://github.com/dasmac-com/dropset-alpha#readme",
-  "license": "Apache-2.0",
   "main": "dist/index.js",
   "module": "dist/esm/index.mjs",
-  "name": "@dasmac-com/dropset-alpha-sdk",
   "repository": "github:dasmac-com/dropset-alpha",
   "scripts": {
     "_format": "biome format",
@@ -49,5 +39,15 @@
     "lint:fix": "pnpm lint --write"
   },
   "typings": "dist/common/index.d.ts",
-  "version": "0.1.0"
+  "dependencies": {
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@jest/globals": "catalog:",
+    "@types/node": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:"
+  }
 }

@@ -55,7 +55,6 @@ rust_decimal = { version = "1.40.0", features = ["macros"] }
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = { version = "1.0.0" }
 solana-account = "3.3.0"
-solana-account-info = "3.1.1"
 solana-account-view = "1.0"
 solana-account-decoder-client-types = "3.1.6"
 solana-address = "2.0.0"
