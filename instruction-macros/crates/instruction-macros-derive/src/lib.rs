@@ -64,7 +64,7 @@ pub fn instruction(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         })
         .collect::<proc_macro2::TokenStream>();
 
-    debug_paths_if_env_var_set(&[&try_from_u8, &namespaced_outputs]);
+    debug_paths_if_env_var_set(&[&try_from_u8, &instruction_data, &namespaced_outputs, &codama_program]);
 
     quote! {
         #try_from_u8
@@ -91,7 +91,7 @@ pub fn instruction_event(input: proc_macro::TokenStream) -> proc_macro::TokenStr
         Err(e) => return e.into_compile_error().into(),
     };
 
-    debug_paths_if_env_var_set(&[&try_from_u8, &instruction_data]);
+    debug_paths_if_env_var_set(&[&try_from_u8, &instruction_data, &codama_program]);
 
     quote! {
         #try_from_u8
