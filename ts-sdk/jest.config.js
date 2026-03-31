@@ -6,7 +6,9 @@ module.exports = {
   preset: "ts-jest",
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
-    ...pathsToModuleNameMapper(compilerOptions.paths || {}, { prefix: "<rootDir>/" }),
+    ...pathsToModuleNameMapper(compilerOptions.paths || {}, {
+      prefix: "<rootDir>/",
+    }),
   },
   workerThreads: true,
   testEnvironment: "node",
@@ -26,4 +28,3 @@ module.exports = {
   },
   maxWorkers: 4,
 };
-

@@ -1,9 +1,13 @@
 {
   "dependencies": {
-    "server-only": "^0.0.1",
+    "server-only": "^0.0.1"
   },
   "description": "TypeScript SDK for DASMAC's `dropset` alpha protocol",
-  "devDependencies": { },
+  "devDependencies": {
+    "@jest/globals": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:"
+  },
   "engines": {
     "node": ">=24.14.1"
   },
@@ -35,10 +39,11 @@
     "_format": "biome format",
     "build": "tsc",
     "build:publish": "tsup",
-    "check": "tsc",
-    "clean": "rm -rf node_modules && rm -rf dist",
-    "format": "biome format --write",
-    "lint": "biome check"
+    "check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "format": "pnpm _format --write",
+    "lint": "biome check",
+    "lint:fix": "pnpm lint --write"
   },
   "typings": "dist/common/index.d.ts",
   "version": "0.1.0"

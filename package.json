@@ -11,6 +11,7 @@
     "check": "pnpm run check:rust && pnpm run check:ts",
     "check:all": "pnpm run check && pnpm run check:bench",
     "check:ts": "turbo run check",
+    "check:test:ts": "turbo run check:test",
     "check:rust": "cargo check --workspace --all-targets",
     "check:bench": "pnpm run check:bench:manifest && pnpm run check:bench:phoenix",
     "check:bench:manifest": "cd cu-bench/manifest && cargo check --tests",
@@ -51,7 +52,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@codama/renderer-js": "^2.1.0",
+    "@codama/renderers-js": "^2.1.0",
     "turbo": "^2.9.1"
   }
 }

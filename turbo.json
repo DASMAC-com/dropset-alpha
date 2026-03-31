@@ -11,6 +11,10 @@
       "dependsOn": ["^check"],
       "outputs": []
     },
+  "check:test": {
+  "dependsOn": ["^check:test"],
+  "outputs": []
+    },
     "clean": {
       "cache": false
     },

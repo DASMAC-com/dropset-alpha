@@ -9,11 +9,7 @@
     "experimentalDecorators": false,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
@@ -28,17 +24,16 @@
     "sourceMap": true,
     "strict": true,
     "target": "esnext",
-    "types": [
-      "node",
-      "jest"
-    ],
+    "types": ["node"],
     "verbatimModuleSyntax": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "__tests__/**"
   ],
-  "include": [
-    "src",
-    "tsup.config.ts"
-  ]
+  "include": ["src", "tsup.config.ts"]
 }
