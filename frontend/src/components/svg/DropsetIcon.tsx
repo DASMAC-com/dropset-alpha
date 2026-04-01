@@ -8,8 +8,10 @@ export function DropsetIcon(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 201 201"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      aria-label="Dropset icon"
       {...props}
     >
+      <title>Dropset icon</title>
       <g clipPath="url(#icon-clip0)">
         <rect width="200.771" height="200.771" rx="100.385" fill="#0F0F0F" />
         <g filter="url(#icon-filter0)">

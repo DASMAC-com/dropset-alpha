@@ -8,8 +8,10 @@ export function DropsetLogo(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 770 308"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      aria-label="Dropset logo"
       {...props}
     >
+      <title>Dropset logo</title>
       <rect
         width="1920"
         height="1080"
