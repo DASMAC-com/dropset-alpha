@@ -1286,8 +1286,49 @@
         "type": {
           "kind": "arrayTypeNode",
           "item": {
-            "kind": "definedTypeLinkNode",
-            "name": "orderInfoArgs"
+            "kind": "structTypeNode",
+            "fields": [
+              {
+                "kind": "structFieldTypeNode",
+                "name": "priceMantissa",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u32",
+                  "endian": "le"
+                },
+                "docs": []
+              },
+              {
+                "kind": "structFieldTypeNode",
+                "name": "baseScalar",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u64",
+                  "endian": "le"
+                },
+                "docs": []
+              },
+              {
+                "kind": "structFieldTypeNode",
+                "name": "baseExponentBiased",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                },
+                "docs": []
+              },
+              {
+                "kind": "structFieldTypeNode",
+                "name": "quoteExponentBiased",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                },
+                "docs": []
+              }
+            ]
           },
           "count": {
             "kind": "fixedCountNode",

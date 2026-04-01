@@ -163,12 +163,16 @@ pub struct ProgramNode {
     pub public_key: String,
     pub version: &'static str,
     pub docs: Vec<String>,
+    // Not yet implemented. Serializes to `[]` in the IDL.
     pub accounts: Vec<()>,
     pub instructions: Vec<InstructionNode>,
     #[serde(rename = "definedTypes")]
     pub defined_types: Vec<DefinedTypeNode>,
+    // Not yet implemented. Serializes to `[]` in the IDL.
     pub pdas: Vec<()>,
+    // Not yet implemented. Serializes to `[]` in the IDL.
     pub errors: Vec<()>,
+    // Not yet implemented. Serializes to `[]` in the IDL.
     pub events: Vec<()>,
 }
 

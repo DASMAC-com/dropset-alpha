@@ -1,6 +1,10 @@
-//! Renders the `CodamaProgram` trait implementation for a `derive(ProgramInstruction)` enum.
+//! Renders the `CodamaProgram` trait implementation for a `derive(CodamaProgram)` enum.
 //! This produces the full Codama IDL tree: instructions, accounts, arguments, discriminators,
-//! and references to defined types.
+//! and defined types.
+//!
+//! Custom (non-primitive) argument types are automatically collected from instruction variants,
+//! wrapped in [`DefinedTypeNode`]s, and added to the program's `definedTypes`. Instruction
+//! arguments reference them via [`DefinedTypeLinkNode`]s.
 
 use proc_macro2::TokenStream;
 use quote::{
@@ -83,7 +87,7 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 } else {
                     quote! { #vec_macro![#string::from(#desc)] }
                 };
-                let type_node_expr = argument_type_to_codama_expr(&arg.ty, &codama);
+                let type_node_expr = argument_type_to_inline_expr(&arg.ty, &codama);
                 arg_nodes.push(quote! {
                     #codama::InstructionArgumentNode {
                         kind: "instructionArgumentNode",
@@ -110,8 +114,9 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
         })
         .collect();
 
-    // Collect all unique UnknownType argument types across all variants. These are the
-    // custom types that need DefinedTypeNode entries in the IDL.
+    // Collect all unique custom argument types. For each one, call
+    // `CodamaType::codama_type_node()` to get the full TypeNode, then wrap it
+    // in a DefinedTypeNode with a camelCase name.
     let mut seen_type_names = std::collections::HashSet::new();
     let mut defined_type_exprs: Vec<TokenStream> = Vec::new();
 
@@ -119,9 +124,15 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
         for arg in &v.arguments {
             if let ArgumentType::UnknownType(syn_ty) = &arg.ty {
                 let type_name = syn_ty.to_token_stream().to_string();
-                if seen_type_names.insert(type_name) {
+                if seen_type_names.insert(type_name.clone()) {
+                    let camel_name = to_camel_case(&type_name);
                     defined_type_exprs.push(quote! {
-                        <#syn_ty>::codama_defined_type()
+                        #codama::DefinedTypeNode {
+                            kind: "definedTypeNode",
+                            name: #string::from(#camel_name),
+                            docs: #vec_macro::Vec::new(),
+                            ty: <#syn_ty as #codama::CodamaType>::codama_type_node(),
+                        }
                     });
                 }
             }
@@ -145,14 +156,18 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
     }
 }
 
-fn argument_type_to_codama_expr(ty: &ArgumentType, codama: &TokenStream) -> TokenStream {
+/// For instruction arguments: primitives get inlined via `CodamaType::codama_type_node()`,
+/// custom types get a `DefinedTypeLinkNode` (the full definition is in `definedTypes`).
+fn argument_type_to_inline_expr(ty: &ArgumentType, codama: &TokenStream) -> TokenStream {
     match ty {
         ArgumentType::KnownType(kt) => {
             let fully_qualified = kt.as_fully_qualified_type();
             quote! { <#fully_qualified as #codama::CodamaType>::codama_type_node() }
         }
         ArgumentType::UnknownType(syn_ty) => {
-            quote! { <#syn_ty as #codama::CodamaType>::codama_type_node() }
+            let type_name = syn_ty.to_token_stream().to_string();
+            let camel_name = to_camel_case(&type_name);
+            quote! { #codama::defined_type_link(#camel_name) }
         }
     }
 }
