@@ -59,7 +59,6 @@ pub enum ClientDropsetInstruction {
     Batch,
 }
 
-#[repr(C)]
 #[derive(Debug, Clone, Pack, Unpack, PartialEq, Eq)]
 pub struct BigOrderInfo {
     pub byte_1: u8,
