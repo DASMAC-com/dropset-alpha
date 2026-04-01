@@ -2,7 +2,7 @@ import { type ClusterUrl, createSolanaRpc } from "@solana/kit";
 import type { createHttpTransport } from "@solana/rpc-transport-http";
 
 import { LOCALNET_URL } from "@/const";
-import { DROPSET_PROGRAM_ADDRESS } from "@/generated";
+import { DROPSET_PROGRAM_ADDRESS, getMarketAccountDecoder } from "@/generated";
 import type { Flatten } from "../types";
 
 type HttpTransportConfig = Flatten<Parameters<typeof createHttpTransport>[0]>;
@@ -32,7 +32,14 @@ export async function getDropsetMarkets(
   rpcClient: ReturnType<typeof getRpcClient>,
 ) {
   rpcClient;
-  return await rpcClient
+  const markets = await rpcClient
     .getProgramAccounts(DROPSET_PROGRAM_ADDRESS, { encoding: "base64" })
     .send();
+
+  const decoder = getMarketAccountDecoder();
+
+  return markets.map((market) => [
+    market.pubkey,
+    decoder.decode(Buffer.from(market.account.data[0], "base64")),
+  ]);
 }
