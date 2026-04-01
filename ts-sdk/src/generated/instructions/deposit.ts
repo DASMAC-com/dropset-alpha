@@ -7,32 +7,32 @@
  */
 
 import {
+  type AccountMeta,
+  type AccountSignerMeta,
+  type Address,
   combineCodec,
+  type FixedSizeCodec,
+  type FixedSizeDecoder,
+  type FixedSizeEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   getU32Decoder,
   getU32Encoder,
   getU64Decoder,
   getU64Encoder,
-  getU8Decoder,
-  getU8Encoder,
-  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-  SolanaError,
-  transformEncoder,
-  type AccountMeta,
-  type AccountSignerMeta,
-  type Address,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   type TransactionSigner,
+  transformEncoder,
   type WritableAccount,
+  type WritableSignerAccount,
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
@@ -40,13 +40,13 @@ import {
 } from "@solana/program-client-core";
 import { DROPSET_PROGRAM_ADDRESS } from "../programs";
 
-export const WITHDRAW_DISCRIMINATOR = 2;
+export const DEPOSIT_DISCRIMINATOR = 1;
 
-export function getWithdrawDiscriminatorBytes() {
-  return getU8Encoder().encode(WITHDRAW_DISCRIMINATOR);
+export function getDepositDiscriminatorBytes() {
+  return getU8Encoder().encode(DEPOSIT_DISCRIMINATOR);
 }
 
-export type WithdrawInstruction<
+export type DepositInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountUser extends string | AccountMeta<string> = string,
@@ -55,6 +55,7 @@ export type WithdrawInstruction<
   TAccountMarketAta extends string | AccountMeta<string> = string,
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends string | AccountMeta<string> = string,
+  TAccountSystemProgram extends string | AccountMeta<string> = string,
   TAccountDropsetProgram extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -65,7 +66,7 @@ export type WithdrawInstruction<
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
       TAccountUser extends string
-        ? ReadonlySignerAccount<TAccountUser> & AccountSignerMeta<TAccountUser>
+        ? WritableSignerAccount<TAccountUser> & AccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountMarketAccount extends string
         ? WritableAccount<TAccountMarketAccount>
@@ -82,6 +83,9 @@ export type WithdrawInstruction<
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       TAccountDropsetProgram extends string
         ? ReadonlyAccount<TAccountDropsetProgram>
         : TAccountDropsetProgram,
@@ -89,33 +93,33 @@ export type WithdrawInstruction<
     ]
   >;
 
-export type WithdrawInstructionData = {
+export type DepositInstructionData = {
   discriminator: number;
-  /** The amount to withdraw. */
+  /** The amount to deposit. */
   amount: bigint;
-  /** A hint indicating which sector the user's seat resides in. */
+  /** A hint indicating which sector the user's seat resides in (pass `NIL` when registering a new seat). */
   sectorIndexHint: number;
 };
 
-export type WithdrawInstructionDataArgs = {
-  /** The amount to withdraw. */
+export type DepositInstructionDataArgs = {
+  /** The amount to deposit. */
   amount: number | bigint;
-  /** A hint indicating which sector the user's seat resides in. */
+  /** A hint indicating which sector the user's seat resides in (pass `NIL` when registering a new seat). */
   sectorIndexHint: number;
 };
 
-export function getWithdrawInstructionDataEncoder(): FixedSizeEncoder<WithdrawInstructionDataArgs> {
+export function getDepositInstructionDataEncoder(): FixedSizeEncoder<DepositInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ["discriminator", getU8Encoder()],
       ["amount", getU64Encoder()],
       ["sectorIndexHint", getU32Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: 2 }),
+    (value) => ({ ...value, discriminator: 1 }),
   );
 }
 
-export function getWithdrawInstructionDataDecoder(): FixedSizeDecoder<WithdrawInstructionData> {
+export function getDepositInstructionDataDecoder(): FixedSizeDecoder<DepositInstructionData> {
   return getStructDecoder([
     ["discriminator", getU8Decoder()],
     ["amount", getU64Decoder()],
@@ -123,17 +127,17 @@ export function getWithdrawInstructionDataDecoder(): FixedSizeDecoder<WithdrawIn
   ]);
 }
 
-export function getWithdrawInstructionDataCodec(): FixedSizeCodec<
-  WithdrawInstructionDataArgs,
-  WithdrawInstructionData
+export function getDepositInstructionDataCodec(): FixedSizeCodec<
+  DepositInstructionDataArgs,
+  DepositInstructionData
 > {
   return combineCodec(
-    getWithdrawInstructionDataEncoder(),
-    getWithdrawInstructionDataDecoder(),
+    getDepositInstructionDataEncoder(),
+    getDepositInstructionDataDecoder(),
   );
 }
 
-export type WithdrawInput<
+export type DepositInput<
   TAccountEventAuthority extends string = string,
   TAccountUser extends string = string,
   TAccountMarketAccount extends string = string,
@@ -141,11 +145,12 @@ export type WithdrawInput<
   TAccountMarketAta extends string = string,
   TAccountMint extends string = string,
   TAccountTokenProgram extends string = string,
+  TAccountSystemProgram extends string = string,
   TAccountDropsetProgram extends string = string,
 > = {
   /** The event authority PDA signer. */
   eventAuthority: Address<TAccountEventAuthority>;
-  /** The user withdrawing. */
+  /** The user depositing or registering their seat. */
   user: TransactionSigner<TAccountUser>;
   /** The market account PDA. */
   marketAccount: Address<TAccountMarketAccount>;
@@ -157,13 +162,15 @@ export type WithdrawInput<
   mint: Address<TAccountMint>;
   /** The mint's token program. */
   tokenProgram: Address<TAccountTokenProgram>;
+  /** The system program. */
+  systemProgram: Address<TAccountSystemProgram>;
   /** The dropset program. */
   dropsetProgram: Address<TAccountDropsetProgram>;
-  amount: WithdrawInstructionDataArgs["amount"];
-  sectorIndexHint: WithdrawInstructionDataArgs["sectorIndexHint"];
+  amount: DepositInstructionDataArgs["amount"];
+  sectorIndexHint: DepositInstructionDataArgs["sectorIndexHint"];
 };
 
-export function getWithdrawInstruction<
+export function getDepositInstruction<
   TAccountEventAuthority extends string,
   TAccountUser extends string,
   TAccountMarketAccount extends string,
@@ -171,10 +178,11 @@ export function getWithdrawInstruction<
   TAccountMarketAta extends string,
   TAccountMint extends string,
   TAccountTokenProgram extends string,
+  TAccountSystemProgram extends string,
   TAccountDropsetProgram extends string,
   TProgramAddress extends Address = typeof DROPSET_PROGRAM_ADDRESS,
 >(
-  input: WithdrawInput<
+  input: DepositInput<
     TAccountEventAuthority,
     TAccountUser,
     TAccountMarketAccount,
@@ -182,10 +190,11 @@ export function getWithdrawInstruction<
     TAccountMarketAta,
     TAccountMint,
     TAccountTokenProgram,
+    TAccountSystemProgram,
     TAccountDropsetProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): WithdrawInstruction<
+): DepositInstruction<
   TProgramAddress,
   TAccountEventAuthority,
   TAccountUser,
@@ -194,6 +203,7 @@ export function getWithdrawInstruction<
   TAccountMarketAta,
   TAccountMint,
   TAccountTokenProgram,
+  TAccountSystemProgram,
   TAccountDropsetProgram
 > {
   // Program address.
@@ -202,12 +212,13 @@ export function getWithdrawInstruction<
   // Original accounts.
   const originalAccounts = {
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
-    user: { value: input.user ?? null, isWritable: false },
+    user: { value: input.user ?? null, isWritable: true },
     marketAccount: { value: input.marketAccount ?? null, isWritable: true },
     userAta: { value: input.userAta ?? null, isWritable: true },
     marketAta: { value: input.marketAta ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     dropsetProgram: { value: input.dropsetProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -228,13 +239,14 @@ export function getWithdrawInstruction<
       getAccountMeta("marketAta", accounts.marketAta),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
+      getAccountMeta("systemProgram", accounts.systemProgram),
       getAccountMeta("dropsetProgram", accounts.dropsetProgram),
     ],
-    data: getWithdrawInstructionDataEncoder().encode(
-      args as WithdrawInstructionDataArgs,
+    data: getDepositInstructionDataEncoder().encode(
+      args as DepositInstructionDataArgs,
     ),
     programAddress,
-  } as WithdrawInstruction<
+  } as DepositInstruction<
     TProgramAddress,
     TAccountEventAuthority,
     TAccountUser,
@@ -243,11 +255,12 @@ export function getWithdrawInstruction<
     TAccountMarketAta,
     TAccountMint,
     TAccountTokenProgram,
+    TAccountSystemProgram,
     TAccountDropsetProgram
   >);
 }
 
-export type ParsedWithdrawInstruction<
+export type ParsedDepositInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -255,7 +268,7 @@ export type ParsedWithdrawInstruction<
   accounts: {
     /** The event authority PDA signer. */
     eventAuthority: TAccountMetas[0];
-    /** The user withdrawing. */
+    /** The user depositing or registering their seat. */
     user: TAccountMetas[1];
     /** The market account PDA. */
     marketAccount: TAccountMetas[2];
@@ -267,26 +280,28 @@ export type ParsedWithdrawInstruction<
     mint: TAccountMetas[5];
     /** The mint's token program. */
     tokenProgram: TAccountMetas[6];
+    /** The system program. */
+    systemProgram: TAccountMetas[7];
     /** The dropset program. */
-    dropsetProgram: TAccountMetas[7];
+    dropsetProgram: TAccountMetas[8];
   };
-  data: WithdrawInstructionData;
+  data: DepositInstructionData;
 };
 
-export function parseWithdrawInstruction<
+export function parseDepositInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedWithdrawInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+): ParsedDepositInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 9) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 8,
+        expectedAccountMetas: 9,
       },
     );
   }
@@ -306,8 +321,9 @@ export function parseWithdrawInstruction<
       marketAta: getNextAccount(),
       mint: getNextAccount(),
       tokenProgram: getNextAccount(),
+      systemProgram: getNextAccount(),
       dropsetProgram: getNextAccount(),
     },
-    data: getWithdrawInstructionDataDecoder().decode(instruction.data),
+    data: getDepositInstructionDataDecoder().decode(instruction.data),
   };
 }

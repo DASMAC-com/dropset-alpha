@@ -30,7 +30,7 @@ it.
 cargo run -p codama-idl-gen
 
 # 2. (Optional) Generate `codama.json`. It must point to the generated IDL json.
-cd codama-idl-gen && pnpm dlx codama init
+cd codama-idl-gen && pnpm dlx codama init codama-idl-gen/codama.json
 
 # 3. Then generate the TypeScript client from the IDL:
 pnpm dlx codama run --all

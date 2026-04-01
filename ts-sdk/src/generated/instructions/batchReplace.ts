@@ -7,31 +7,29 @@
  */
 
 import {
-  combineCodec,
-  getBooleanDecoder,
-  getBooleanEncoder,
-  getStructDecoder,
-  getStructEncoder,
-  getU32Decoder,
-  getU32Encoder,
-  getU8Decoder,
-  getU8Encoder,
-  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-  SolanaError,
-  transformEncoder,
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
+  combineCodec,
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  getStructDecoder,
+  getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
+  getU32Decoder,
+  getU32Encoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   type TransactionSigner,
+  transformEncoder,
   type WritableAccount,
 } from "@solana/kit";
 import {
@@ -40,19 +38,19 @@ import {
 } from "@solana/program-client-core";
 import { DROPSET_PROGRAM_ADDRESS } from "../programs";
 import {
-  getOrderInfoArgsDecoder,
-  getOrderInfoArgsEncoder,
-  type OrderInfoArgs,
-  type OrderInfoArgsArgs,
+  getUnvalidatedOrdersDecoder,
+  getUnvalidatedOrdersEncoder,
+  type UnvalidatedOrders,
+  type UnvalidatedOrdersArgs,
 } from "../types";
 
-export const POST_ORDER_DISCRIMINATOR = 4;
+export const BATCH_REPLACE_DISCRIMINATOR = 6;
 
-export function getPostOrderDiscriminatorBytes() {
-  return getU8Encoder().encode(POST_ORDER_DISCRIMINATOR);
+export function getBatchReplaceDiscriminatorBytes() {
+  return getU8Encoder().encode(BATCH_REPLACE_DISCRIMINATOR);
 }
 
-export type PostOrderInstruction<
+export type BatchReplaceInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountUser extends string | AccountMeta<string> = string,
@@ -79,57 +77,57 @@ export type PostOrderInstruction<
     ]
   >;
 
-export type PostOrderInstructionData = {
+export type BatchReplaceInstructionData = {
   discriminator: number;
-  /** The order info arguments. */
-  orderInfoArgs: OrderInfoArgs;
-  /** Whether or not the order is a bid. If false, the order is an ask. */
-  isBid: boolean;
   /** A hint indicating which sector the user's seat resides in. */
   userSectorIndexHint: number;
+  /** The new bids to replace the user's current bids. */
+  newBids: UnvalidatedOrders;
+  /** The new asks to replace the user's current asks. */
+  newAsks: UnvalidatedOrders;
 };
 
-export type PostOrderInstructionDataArgs = {
-  /** The order info arguments. */
-  orderInfoArgs: OrderInfoArgsArgs;
-  /** Whether or not the order is a bid. If false, the order is an ask. */
-  isBid: boolean;
+export type BatchReplaceInstructionDataArgs = {
   /** A hint indicating which sector the user's seat resides in. */
   userSectorIndexHint: number;
+  /** The new bids to replace the user's current bids. */
+  newBids: UnvalidatedOrdersArgs;
+  /** The new asks to replace the user's current asks. */
+  newAsks: UnvalidatedOrdersArgs;
 };
 
-export function getPostOrderInstructionDataEncoder(): FixedSizeEncoder<PostOrderInstructionDataArgs> {
+export function getBatchReplaceInstructionDataEncoder(): FixedSizeEncoder<BatchReplaceInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ["discriminator", getU8Encoder()],
-      ["orderInfoArgs", getOrderInfoArgsEncoder()],
-      ["isBid", getBooleanEncoder()],
       ["userSectorIndexHint", getU32Encoder()],
+      ["newBids", getUnvalidatedOrdersEncoder()],
+      ["newAsks", getUnvalidatedOrdersEncoder()],
     ]),
-    (value) => ({ ...value, discriminator: 4 }),
+    (value) => ({ ...value, discriminator: 6 }),
   );
 }
 
-export function getPostOrderInstructionDataDecoder(): FixedSizeDecoder<PostOrderInstructionData> {
+export function getBatchReplaceInstructionDataDecoder(): FixedSizeDecoder<BatchReplaceInstructionData> {
   return getStructDecoder([
     ["discriminator", getU8Decoder()],
-    ["orderInfoArgs", getOrderInfoArgsDecoder()],
-    ["isBid", getBooleanDecoder()],
     ["userSectorIndexHint", getU32Decoder()],
+    ["newBids", getUnvalidatedOrdersDecoder()],
+    ["newAsks", getUnvalidatedOrdersDecoder()],
   ]);
 }
 
-export function getPostOrderInstructionDataCodec(): FixedSizeCodec<
-  PostOrderInstructionDataArgs,
-  PostOrderInstructionData
+export function getBatchReplaceInstructionDataCodec(): FixedSizeCodec<
+  BatchReplaceInstructionDataArgs,
+  BatchReplaceInstructionData
 > {
   return combineCodec(
-    getPostOrderInstructionDataEncoder(),
-    getPostOrderInstructionDataDecoder(),
+    getBatchReplaceInstructionDataEncoder(),
+    getBatchReplaceInstructionDataDecoder(),
   );
 }
 
-export type PostOrderInput<
+export type BatchReplaceInput<
   TAccountEventAuthority extends string = string,
   TAccountUser extends string = string,
   TAccountMarketAccount extends string = string,
@@ -137,32 +135,32 @@ export type PostOrderInput<
 > = {
   /** The event authority PDA signer. */
   eventAuthority: Address<TAccountEventAuthority>;
-  /** The user posting an order. */
+  /** The user batch replacing orders. */
   user: TransactionSigner<TAccountUser>;
   /** The market account PDA. */
   marketAccount: Address<TAccountMarketAccount>;
   /** The dropset program. */
   dropsetProgram: Address<TAccountDropsetProgram>;
-  orderInfoArgs: PostOrderInstructionDataArgs["orderInfoArgs"];
-  isBid: PostOrderInstructionDataArgs["isBid"];
-  userSectorIndexHint: PostOrderInstructionDataArgs["userSectorIndexHint"];
+  userSectorIndexHint: BatchReplaceInstructionDataArgs["userSectorIndexHint"];
+  newBids: BatchReplaceInstructionDataArgs["newBids"];
+  newAsks: BatchReplaceInstructionDataArgs["newAsks"];
 };
 
-export function getPostOrderInstruction<
+export function getBatchReplaceInstruction<
   TAccountEventAuthority extends string,
   TAccountUser extends string,
   TAccountMarketAccount extends string,
   TAccountDropsetProgram extends string,
   TProgramAddress extends Address = typeof DROPSET_PROGRAM_ADDRESS,
 >(
-  input: PostOrderInput<
+  input: BatchReplaceInput<
     TAccountEventAuthority,
     TAccountUser,
     TAccountMarketAccount,
     TAccountDropsetProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): PostOrderInstruction<
+): BatchReplaceInstruction<
   TProgramAddress,
   TAccountEventAuthority,
   TAccountUser,
@@ -195,11 +193,11 @@ export function getPostOrderInstruction<
       getAccountMeta("marketAccount", accounts.marketAccount),
       getAccountMeta("dropsetProgram", accounts.dropsetProgram),
     ],
-    data: getPostOrderInstructionDataEncoder().encode(
-      args as PostOrderInstructionDataArgs,
+    data: getBatchReplaceInstructionDataEncoder().encode(
+      args as BatchReplaceInstructionDataArgs,
     ),
     programAddress,
-  } as PostOrderInstruction<
+  } as BatchReplaceInstruction<
     TProgramAddress,
     TAccountEventAuthority,
     TAccountUser,
@@ -208,7 +206,7 @@ export function getPostOrderInstruction<
   >);
 }
 
-export type ParsedPostOrderInstruction<
+export type ParsedBatchReplaceInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -216,24 +214,24 @@ export type ParsedPostOrderInstruction<
   accounts: {
     /** The event authority PDA signer. */
     eventAuthority: TAccountMetas[0];
-    /** The user posting an order. */
+    /** The user batch replacing orders. */
     user: TAccountMetas[1];
     /** The market account PDA. */
     marketAccount: TAccountMetas[2];
     /** The dropset program. */
     dropsetProgram: TAccountMetas[3];
   };
-  data: PostOrderInstructionData;
+  data: BatchReplaceInstructionData;
 };
 
-export function parsePostOrderInstruction<
+export function parseBatchReplaceInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedPostOrderInstruction<TProgram, TAccountMetas> {
+): ParsedBatchReplaceInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 4) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -257,6 +255,6 @@ export function parsePostOrderInstruction<
       marketAccount: getNextAccount(),
       dropsetProgram: getNextAccount(),
     },
-    data: getPostOrderInstructionDataDecoder().decode(instruction.data),
+    data: getBatchReplaceInstructionDataDecoder().decode(instruction.data),
   };
 }

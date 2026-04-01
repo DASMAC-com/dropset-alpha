@@ -40,6 +40,7 @@
   },
   "typings": "dist/common/index.d.ts",
   "dependencies": {
+    "@solana/program-client-core": "^6.5.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
@@ -49,5 +50,8 @@
     "ts-jest": "catalog:",
     "tsup": "^8.5.1",
     "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^6.1.0"
   }
 }

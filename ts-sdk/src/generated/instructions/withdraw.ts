@@ -7,31 +7,31 @@
  */
 
 import {
-  combineCodec,
-  getBooleanDecoder,
-  getBooleanEncoder,
-  getStructDecoder,
-  getStructEncoder,
-  getU32Decoder,
-  getU32Encoder,
-  getU8Decoder,
-  getU8Encoder,
-  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-  SolanaError,
-  transformEncoder,
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
+  combineCodec,
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  getStructDecoder,
+  getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
+  getU32Decoder,
+  getU32Encoder,
+  getU64Decoder,
+  getU64Encoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   type TransactionSigner,
+  transformEncoder,
   type WritableAccount,
 } from "@solana/kit";
 import {
@@ -40,17 +40,21 @@ import {
 } from "@solana/program-client-core";
 import { DROPSET_PROGRAM_ADDRESS } from "../programs";
 
-export const CANCEL_ORDER_DISCRIMINATOR = 5;
+export const WITHDRAW_DISCRIMINATOR = 2;
 
-export function getCancelOrderDiscriminatorBytes() {
-  return getU8Encoder().encode(CANCEL_ORDER_DISCRIMINATOR);
+export function getWithdrawDiscriminatorBytes() {
+  return getU8Encoder().encode(WITHDRAW_DISCRIMINATOR);
 }
 
-export type CancelOrderInstruction<
+export type WithdrawInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountUser extends string | AccountMeta<string> = string,
   TAccountMarketAccount extends string | AccountMeta<string> = string,
+  TAccountUserAta extends string | AccountMeta<string> = string,
+  TAccountMarketAta extends string | AccountMeta<string> = string,
+  TAccountMint extends string | AccountMeta<string> = string,
+  TAccountTokenProgram extends string | AccountMeta<string> = string,
   TAccountDropsetProgram extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -66,6 +70,18 @@ export type CancelOrderInstruction<
       TAccountMarketAccount extends string
         ? WritableAccount<TAccountMarketAccount>
         : TAccountMarketAccount,
+      TAccountUserAta extends string
+        ? WritableAccount<TAccountUserAta>
+        : TAccountUserAta,
+      TAccountMarketAta extends string
+        ? WritableAccount<TAccountMarketAta>
+        : TAccountMarketAta,
+      TAccountMint extends string
+        ? ReadonlyAccount<TAccountMint>
+        : TAccountMint,
+      TAccountTokenProgram extends string
+        ? ReadonlyAccount<TAccountTokenProgram>
+        : TAccountTokenProgram,
       TAccountDropsetProgram extends string
         ? ReadonlyAccount<TAccountDropsetProgram>
         : TAccountDropsetProgram,
@@ -73,94 +89,111 @@ export type CancelOrderInstruction<
     ]
   >;
 
-export type CancelOrderInstructionData = {
+export type WithdrawInstructionData = {
   discriminator: number;
-  /** The encoded price for the order to cancel. */
-  encodedPrice: number;
-  /** Whether or not the order is a bid. If false, the order is an ask. */
-  isBid: boolean;
+  /** The amount to withdraw. */
+  amount: bigint;
   /** A hint indicating which sector the user's seat resides in. */
-  userSectorIndexHint: number;
+  sectorIndexHint: number;
 };
 
-export type CancelOrderInstructionDataArgs = {
-  /** The encoded price for the order to cancel. */
-  encodedPrice: number;
-  /** Whether or not the order is a bid. If false, the order is an ask. */
-  isBid: boolean;
+export type WithdrawInstructionDataArgs = {
+  /** The amount to withdraw. */
+  amount: number | bigint;
   /** A hint indicating which sector the user's seat resides in. */
-  userSectorIndexHint: number;
+  sectorIndexHint: number;
 };
 
-export function getCancelOrderInstructionDataEncoder(): FixedSizeEncoder<CancelOrderInstructionDataArgs> {
+export function getWithdrawInstructionDataEncoder(): FixedSizeEncoder<WithdrawInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ["discriminator", getU8Encoder()],
-      ["encodedPrice", getU32Encoder()],
-      ["isBid", getBooleanEncoder()],
-      ["userSectorIndexHint", getU32Encoder()],
+      ["amount", getU64Encoder()],
+      ["sectorIndexHint", getU32Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: 5 }),
+    (value) => ({ ...value, discriminator: 2 }),
   );
 }
 
-export function getCancelOrderInstructionDataDecoder(): FixedSizeDecoder<CancelOrderInstructionData> {
+export function getWithdrawInstructionDataDecoder(): FixedSizeDecoder<WithdrawInstructionData> {
   return getStructDecoder([
     ["discriminator", getU8Decoder()],
-    ["encodedPrice", getU32Decoder()],
-    ["isBid", getBooleanDecoder()],
-    ["userSectorIndexHint", getU32Decoder()],
+    ["amount", getU64Decoder()],
+    ["sectorIndexHint", getU32Decoder()],
   ]);
 }
 
-export function getCancelOrderInstructionDataCodec(): FixedSizeCodec<
-  CancelOrderInstructionDataArgs,
-  CancelOrderInstructionData
+export function getWithdrawInstructionDataCodec(): FixedSizeCodec<
+  WithdrawInstructionDataArgs,
+  WithdrawInstructionData
 > {
   return combineCodec(
-    getCancelOrderInstructionDataEncoder(),
-    getCancelOrderInstructionDataDecoder(),
+    getWithdrawInstructionDataEncoder(),
+    getWithdrawInstructionDataDecoder(),
   );
 }
 
-export type CancelOrderInput<
+export type WithdrawInput<
   TAccountEventAuthority extends string = string,
   TAccountUser extends string = string,
   TAccountMarketAccount extends string = string,
+  TAccountUserAta extends string = string,
+  TAccountMarketAta extends string = string,
+  TAccountMint extends string = string,
+  TAccountTokenProgram extends string = string,
   TAccountDropsetProgram extends string = string,
 > = {
   /** The event authority PDA signer. */
   eventAuthority: Address<TAccountEventAuthority>;
-  /** The user canceling an order. */
+  /** The user withdrawing. */
   user: TransactionSigner<TAccountUser>;
   /** The market account PDA. */
   marketAccount: Address<TAccountMarketAccount>;
+  /** The user's associated token account. */
+  userAta: Address<TAccountUserAta>;
+  /** The market's associated token account. */
+  marketAta: Address<TAccountMarketAta>;
+  /** The token mint account. */
+  mint: Address<TAccountMint>;
+  /** The mint's token program. */
+  tokenProgram: Address<TAccountTokenProgram>;
   /** The dropset program. */
   dropsetProgram: Address<TAccountDropsetProgram>;
-  encodedPrice: CancelOrderInstructionDataArgs["encodedPrice"];
-  isBid: CancelOrderInstructionDataArgs["isBid"];
-  userSectorIndexHint: CancelOrderInstructionDataArgs["userSectorIndexHint"];
+  amount: WithdrawInstructionDataArgs["amount"];
+  sectorIndexHint: WithdrawInstructionDataArgs["sectorIndexHint"];
 };
 
-export function getCancelOrderInstruction<
+export function getWithdrawInstruction<
   TAccountEventAuthority extends string,
   TAccountUser extends string,
   TAccountMarketAccount extends string,
+  TAccountUserAta extends string,
+  TAccountMarketAta extends string,
+  TAccountMint extends string,
+  TAccountTokenProgram extends string,
   TAccountDropsetProgram extends string,
   TProgramAddress extends Address = typeof DROPSET_PROGRAM_ADDRESS,
 >(
-  input: CancelOrderInput<
+  input: WithdrawInput<
     TAccountEventAuthority,
     TAccountUser,
     TAccountMarketAccount,
+    TAccountUserAta,
+    TAccountMarketAta,
+    TAccountMint,
+    TAccountTokenProgram,
     TAccountDropsetProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): CancelOrderInstruction<
+): WithdrawInstruction<
   TProgramAddress,
   TAccountEventAuthority,
   TAccountUser,
   TAccountMarketAccount,
+  TAccountUserAta,
+  TAccountMarketAta,
+  TAccountMint,
+  TAccountTokenProgram,
   TAccountDropsetProgram
 > {
   // Program address.
@@ -171,6 +204,10 @@ export function getCancelOrderInstruction<
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     user: { value: input.user ?? null, isWritable: false },
     marketAccount: { value: input.marketAccount ?? null, isWritable: true },
+    userAta: { value: input.userAta ?? null, isWritable: true },
+    marketAta: { value: input.marketAta ?? null, isWritable: true },
+    mint: { value: input.mint ?? null, isWritable: false },
+    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     dropsetProgram: { value: input.dropsetProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -187,22 +224,30 @@ export function getCancelOrderInstruction<
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("user", accounts.user),
       getAccountMeta("marketAccount", accounts.marketAccount),
+      getAccountMeta("userAta", accounts.userAta),
+      getAccountMeta("marketAta", accounts.marketAta),
+      getAccountMeta("mint", accounts.mint),
+      getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("dropsetProgram", accounts.dropsetProgram),
     ],
-    data: getCancelOrderInstructionDataEncoder().encode(
-      args as CancelOrderInstructionDataArgs,
+    data: getWithdrawInstructionDataEncoder().encode(
+      args as WithdrawInstructionDataArgs,
     ),
     programAddress,
-  } as CancelOrderInstruction<
+  } as WithdrawInstruction<
     TProgramAddress,
     TAccountEventAuthority,
     TAccountUser,
     TAccountMarketAccount,
+    TAccountUserAta,
+    TAccountMarketAta,
+    TAccountMint,
+    TAccountTokenProgram,
     TAccountDropsetProgram
   >);
 }
 
-export type ParsedCancelOrderInstruction<
+export type ParsedWithdrawInstruction<
   TProgram extends string = typeof DROPSET_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -210,30 +255,38 @@ export type ParsedCancelOrderInstruction<
   accounts: {
     /** The event authority PDA signer. */
     eventAuthority: TAccountMetas[0];
-    /** The user canceling an order. */
+    /** The user withdrawing. */
     user: TAccountMetas[1];
     /** The market account PDA. */
     marketAccount: TAccountMetas[2];
+    /** The user's associated token account. */
+    userAta: TAccountMetas[3];
+    /** The market's associated token account. */
+    marketAta: TAccountMetas[4];
+    /** The token mint account. */
+    mint: TAccountMetas[5];
+    /** The mint's token program. */
+    tokenProgram: TAccountMetas[6];
     /** The dropset program. */
-    dropsetProgram: TAccountMetas[3];
+    dropsetProgram: TAccountMetas[7];
   };
-  data: CancelOrderInstructionData;
+  data: WithdrawInstructionData;
 };
 
-export function parseCancelOrderInstruction<
+export function parseWithdrawInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedCancelOrderInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+): ParsedWithdrawInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 8) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 4,
+        expectedAccountMetas: 8,
       },
     );
   }
@@ -249,8 +302,12 @@ export function parseCancelOrderInstruction<
       eventAuthority: getNextAccount(),
       user: getNextAccount(),
       marketAccount: getNextAccount(),
+      userAta: getNextAccount(),
+      marketAta: getNextAccount(),
+      mint: getNextAccount(),
+      tokenProgram: getNextAccount(),
       dropsetProgram: getNextAccount(),
     },
-    data: getCancelOrderInstructionDataDecoder().decode(instruction.data),
+    data: getWithdrawInstructionDataDecoder().decode(instruction.data),
   };
 }

@@ -4,7 +4,7 @@
   "scripts": {
     "js": {
       "from": "@codama/renderers-js",
-      "args": ["codama-idl-gen/js"]
+      "args": ["ts-sdk"]
     }
   }
 }
