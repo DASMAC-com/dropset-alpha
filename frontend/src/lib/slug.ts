@@ -3,9 +3,7 @@
  * Returns a map from full address → shortest unambiguous prefix.
  * Minimum prefix length is 6 characters.
  */
-export function buildPrefixMap(
-  addresses: string[],
-): Map<string, string> {
+export function buildPrefixMap(addresses: string[]): Map<string, string> {
   const MIN_LEN = 6;
   const map = new Map<string, string>();
 
@@ -27,10 +25,7 @@ export function buildPrefixMap(
  * Resolve a (possibly truncated) slug to a full market address.
  * Returns the full address if exactly one match, or null if ambiguous / none.
  */
-export function resolveSlug(
-  slug: string,
-  addresses: string[],
-): string | null {
+export function resolveSlug(slug: string, addresses: string[]): string | null {
   // Exact match first
   if (addresses.includes(slug)) return slug;
 

@@ -22,15 +22,21 @@ export function MarketView({ address }: { address: string }) {
           </div>
           <div className="market-detail-card">
             <span className="market-detail-label">Liquidity</span>
-            <span className="market-detail-value">${market.liquidity.toLocaleString()}</span>
+            <span className="market-detail-value">
+              ${market.liquidity.toLocaleString()}
+            </span>
           </div>
           <div className="market-detail-card">
             <span className="market-detail-label">24h Volume</span>
-            <span className="market-detail-value">${market.volume24h.toLocaleString()}</span>
+            <span className="market-detail-value">
+              ${market.volume24h.toLocaleString()}
+            </span>
           </div>
           <div className="market-detail-card">
             <span className="market-detail-label">Open Interest</span>
-            <span className="market-detail-value">${market.openInterest.toLocaleString()}</span>
+            <span className="market-detail-value">
+              ${market.openInterest.toLocaleString()}
+            </span>
           </div>
         </div>
       )}

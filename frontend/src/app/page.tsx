@@ -13,7 +13,9 @@ function formatNumber(n: number): string {
 export default function Home() {
   const { data: markets, isLoading, error } = useAllMarkets();
 
-  const prefixMap = markets ? buildPrefixMap(markets.map((m) => m.address)) : new Map();
+  const prefixMap = markets
+    ? buildPrefixMap(markets.map((m) => m.address))
+    : new Map();
 
   return (
     <div className="page-container">
@@ -38,7 +40,8 @@ export default function Home() {
             </thead>
             <tbody>
               {markets.map((market) => {
-                const shortSlug = prefixMap.get(market.address) ?? market.address;
+                const shortSlug =
+                  prefixMap.get(market.address) ?? market.address;
                 return (
                   <tr key={market.address}>
                     <td>
@@ -51,8 +54,12 @@ export default function Home() {
                       </Link>
                     </td>
                     <td className="numeric">{market.traders}</td>
-                    <td className="numeric">${formatNumber(market.liquidity)}</td>
-                    <td className="numeric">${formatNumber(market.volume24h)}</td>
+                    <td className="numeric">
+                      ${formatNumber(market.liquidity)}
+                    </td>
+                    <td className="numeric">
+                      ${formatNumber(market.volume24h)}
+                    </td>
                   </tr>
                 );
               })}

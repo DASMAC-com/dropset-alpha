@@ -88,7 +88,9 @@ body {
   font-size: 0.875rem;
   color: var(--muted-fg);
   text-decoration: none;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .header-nav-link:hover {
