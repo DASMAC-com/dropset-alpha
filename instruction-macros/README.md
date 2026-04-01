@@ -7,7 +7,16 @@ To see the different outputs based on the feature flags, view the
 
 ## Codama IDL Generation
 
-The `codama` feature flag enables `#[derive(CodamaType)]` and auto-generates
-`CodamaProgram` impls on instruction enums. These produce a
-[Codama IDL](https://github.com/codama-idl/codama) for TypeScript client generation.
-See [`codama-idl-gen/`](../codama-idl-gen/) for usage and details.
+To produce a [Codama IDL], add the appropriate Codama derives to your types:
+- For structs: add `#[derive(CodamaType)]`
+- For program instruction enums: `#[derive(CodamaProgram)]`
+
+And then run the [`codama-idl-gen`] binary to generate a TypeScript client.
+
+The `codama` feature flag must be enabled on `instruction-macros` to make the
+Codama types available.
+
+See [`codama-idl-gen`] for usage.
+
+[`codama-idl-gen`]: ../codama-idl-gen/
+[Codama IDL]: https://github.com/codama-idl/codama

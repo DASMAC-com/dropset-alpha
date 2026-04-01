@@ -1,7 +1,8 @@
-//! Test fixture for `CodamaType` derive and `CodamaProgram` generation.
+//! Test fixture for `CodamaType` and `CodamaProgram` derives.
 //! Run `cargo expand --features codama` to see the generated output.
 
 use instruction_macros::{
+    CodamaProgram,
     CodamaType,
     Pack,
     ProgramInstruction,
@@ -25,7 +26,7 @@ pub struct NestedArgs {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, ProgramInstruction)]
+#[derive(Clone, Copy, Debug, PartialEq, ProgramInstruction, CodamaProgram)]
 #[program_id(crate::ID)]
 pub enum CodamaTestInstruction {
     #[account(0, signer, name = "user", desc = "The user.")]

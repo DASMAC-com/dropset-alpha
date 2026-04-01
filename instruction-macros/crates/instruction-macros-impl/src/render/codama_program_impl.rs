@@ -129,7 +129,6 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
     }
 
     quote! {
-        #[cfg(feature = "codama")]
         impl #codama::CodamaProgram for #enum_ident {
             fn codama_root(program_name: &str, program_id: &str) -> #codama::RootNode {
                 let instructions = #vec_macro![#(#instruction_nodes),*];

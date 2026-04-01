@@ -39,14 +39,12 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
     let struct_name_str = to_camel_case(&struct_ident.to_string());
 
     quote! {
-        #[cfg(feature = "codama")]
         impl #codama::CodamaType for #struct_ident {
             fn codama_type_node() -> #codama::TypeNode {
                 #codama::defined_type_link(#struct_name_str)
             }
         }
 
-        #[cfg(feature = "codama")]
         impl #struct_ident {
             /// Returns the full struct type node for this type's IDL definition.
             pub fn codama_defined_type() -> #codama::DefinedTypeNode {

@@ -7,7 +7,6 @@ use instruction_macros_impl::{
         parsed_enum::ParsedEnum,
     },
     render::{
-        codama_program_impl,
         render_instruction_data,
         render_try_from_u8,
     },
@@ -18,7 +17,6 @@ use syn::DeriveInput;
 pub struct DeriveInstructionData {
     pub try_from_u8: TokenStream,
     pub instruction_data: TokenStream,
-    pub codama_program: TokenStream,
 }
 
 pub fn derive_instruction_data(
@@ -29,12 +27,10 @@ pub fn derive_instruction_data(
     let instruction_variants = parse_instruction_variants(&parsed_enum)?;
 
     let try_from_u8 = render_try_from_u8(&parsed_enum, &instruction_variants);
-    let codama_program = codama_program_impl::render(&parsed_enum, &instruction_variants);
     let instruction_data = render_instruction_data(&parsed_enum, instruction_variants);
 
     Ok(DeriveInstructionData {
         try_from_u8,
         instruction_data,
-        codama_program,
     })
 }
