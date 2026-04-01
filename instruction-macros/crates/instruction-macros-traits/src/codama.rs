@@ -33,6 +33,11 @@ pub trait CodamaType {
 
     /// The full type node describing this type's layout.
     fn type_node() -> TypeNode;
+
+    /// Wraps this type as a [`DefinedTypeNode`] for inclusion in `ProgramNode.definedTypes`.
+    fn defined_type_node() -> DefinedTypeNode {
+        DefinedTypeNode::new(Self::name(), Self::type_node())
+    }
 }
 
 /// Describes a full program's Codama IDL. Derived on instruction enums to produce the complete
@@ -318,11 +323,22 @@ pub struct ConstantValueNode {
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/DefinedTypeNode.md>
 #[derive(Debug, Clone, Serialize)]
 pub struct DefinedTypeNode {
-    pub kind: &'static str,
+    kind: &'static str,
     pub name: String,
     pub docs: Vec<String>,
     #[serde(rename = "type")]
     pub ty: TypeNode,
+}
+
+impl DefinedTypeNode {
+    pub fn new(name: impl Into<String>, ty: TypeNode) -> Self {
+        Self {
+            kind: "definedTypeNode",
+            name: name.into(),
+            docs: Vec::new(),
+            ty,
+        }
+    }
 }
 
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/AccountNode.md>

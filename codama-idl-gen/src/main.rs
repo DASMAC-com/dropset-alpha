@@ -1,8 +1,22 @@
 use dropset_interface::{
     instructions::DropsetInstruction,
-    state::codama_types::dropset_market_account_node,
+    state::{
+        codama_types::dropset_market_account_node,
+        market_header::MarketHeader,
+        market_seat::MarketSeat,
+        order::Order,
+        sector::Sector,
+        user_order_sectors::{
+            OrderSectors,
+            PriceToIndexEntry,
+            UserOrderSectors,
+        },
+    },
 };
-use instruction_macros::codama::CodamaProgram;
+use instruction_macros::codama::{
+    CodamaProgram,
+    CodamaType,
+};
 
 const PROGRAM_ID: solana_address::Address = dropset_interface::program::ID;
 
@@ -39,6 +53,17 @@ fn main() {
     };
 
     let mut root = DropsetInstruction::codama_root("dropset", &PROGRAM_ID.to_string());
+
+    // Add the manual implementations.
+    root.program.defined_types.extend([
+        MarketSeat::defined_type_node(),
+        UserOrderSectors::defined_type_node(),
+        OrderSectors::defined_type_node(),
+        PriceToIndexEntry::defined_type_node(),
+        Order::defined_type_node(),
+        Sector::defined_type_node(),
+        MarketHeader::defined_type_node(),
+    ]);
     root.program.accounts = vec![dropset_market_account_node()];
 
     let json = serde_json::to_string_pretty(&root).expect("Failed to serialize IDL");

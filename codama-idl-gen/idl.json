@@ -1555,6 +1555,576 @@
             "value": 10
           }
         }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "marketSeat",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "user",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "baseAvailable",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "quoteAvailable",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "userOrderSectors",
+              "type": {
+                "kind": "structTypeNode",
+                "fields": [
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "bids",
+                    "type": {
+                      "kind": "arrayTypeNode",
+                      "item": {
+                        "kind": "structTypeNode",
+                        "fields": [
+                          {
+                            "kind": "structFieldTypeNode",
+                            "name": "encodedPrice",
+                            "type": {
+                              "kind": "numberTypeNode",
+                              "format": "u32",
+                              "endian": "le"
+                            },
+                            "docs": []
+                          },
+                          {
+                            "kind": "structFieldTypeNode",
+                            "name": "sectorIndex",
+                            "type": {
+                              "kind": "numberTypeNode",
+                              "format": "u32",
+                              "endian": "le"
+                            },
+                            "docs": []
+                          }
+                        ]
+                      },
+                      "count": {
+                        "kind": "fixedCountNode",
+                        "value": 10
+                      }
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "asks",
+                    "type": {
+                      "kind": "arrayTypeNode",
+                      "item": {
+                        "kind": "structTypeNode",
+                        "fields": [
+                          {
+                            "kind": "structFieldTypeNode",
+                            "name": "encodedPrice",
+                            "type": {
+                              "kind": "numberTypeNode",
+                              "format": "u32",
+                              "endian": "le"
+                            },
+                            "docs": []
+                          },
+                          {
+                            "kind": "structFieldTypeNode",
+                            "name": "sectorIndex",
+                            "type": {
+                              "kind": "numberTypeNode",
+                              "format": "u32",
+                              "endian": "le"
+                            },
+                            "docs": []
+                          }
+                        ]
+                      },
+                      "count": {
+                        "kind": "fixedCountNode",
+                        "value": 10
+                      }
+                    },
+                    "docs": []
+                  }
+                ]
+              },
+              "docs": []
+            }
+          ]
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "userOrderSectors",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "bids",
+              "type": {
+                "kind": "arrayTypeNode",
+                "item": {
+                  "kind": "structTypeNode",
+                  "fields": [
+                    {
+                      "kind": "structFieldTypeNode",
+                      "name": "encodedPrice",
+                      "type": {
+                        "kind": "numberTypeNode",
+                        "format": "u32",
+                        "endian": "le"
+                      },
+                      "docs": []
+                    },
+                    {
+                      "kind": "structFieldTypeNode",
+                      "name": "sectorIndex",
+                      "type": {
+                        "kind": "numberTypeNode",
+                        "format": "u32",
+                        "endian": "le"
+                      },
+                      "docs": []
+                    }
+                  ]
+                },
+                "count": {
+                  "kind": "fixedCountNode",
+                  "value": 10
+                }
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "asks",
+              "type": {
+                "kind": "arrayTypeNode",
+                "item": {
+                  "kind": "structTypeNode",
+                  "fields": [
+                    {
+                      "kind": "structFieldTypeNode",
+                      "name": "encodedPrice",
+                      "type": {
+                        "kind": "numberTypeNode",
+                        "format": "u32",
+                        "endian": "le"
+                      },
+                      "docs": []
+                    },
+                    {
+                      "kind": "structFieldTypeNode",
+                      "name": "sectorIndex",
+                      "type": {
+                        "kind": "numberTypeNode",
+                        "format": "u32",
+                        "endian": "le"
+                      },
+                      "docs": []
+                    }
+                  ]
+                },
+                "count": {
+                  "kind": "fixedCountNode",
+                  "value": 10
+                }
+              },
+              "docs": []
+            }
+          ]
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "orderSectors",
+        "docs": [],
+        "type": {
+          "kind": "arrayTypeNode",
+          "item": {
+            "kind": "structTypeNode",
+            "fields": [
+              {
+                "kind": "structFieldTypeNode",
+                "name": "encodedPrice",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u32",
+                  "endian": "le"
+                },
+                "docs": []
+              },
+              {
+                "kind": "structFieldTypeNode",
+                "name": "sectorIndex",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u32",
+                  "endian": "le"
+                },
+                "docs": []
+              }
+            ]
+          },
+          "count": {
+            "kind": "fixedCountNode",
+            "value": 10
+          }
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "priceToIndexEntry",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "encodedPrice",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "sectorIndex",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            }
+          ]
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "order",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "encodedPrice",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "userSeatIndex",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "baseRemaining",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "quoteRemaining",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "_padding",
+              "type": {
+                "kind": "arrayTypeNode",
+                "item": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                },
+                "count": {
+                  "kind": "fixedCountNode",
+                  "value": 184
+                }
+              },
+              "docs": []
+            }
+          ]
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "sector",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "next",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "prev",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "payload",
+              "type": {
+                "kind": "arrayTypeNode",
+                "item": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                },
+                "count": {
+                  "kind": "fixedCountNode",
+                  "value": 208
+                }
+              },
+              "docs": []
+            }
+          ]
+        }
+      },
+      {
+        "kind": "definedTypeNode",
+        "name": "marketHeader",
+        "docs": [],
+        "type": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "discriminant",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "numSeats",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "numBids",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "numAsks",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "numFreeSectors",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "freeStackTop",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "seatsDllHead",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "seatsDllTail",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "bidsDllHead",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "bidsDllTail",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "asksDllHead",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "asksDllTail",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u32",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "baseMint",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "quoteMint",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "marketBump",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "numEvents",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "_padding",
+              "type": {
+                "kind": "arrayTypeNode",
+                "item": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                },
+                "count": {
+                  "kind": "fixedCountNode",
+                  "value": 3
+                }
+              },
+              "docs": []
+            }
+          ]
+        }
       }
     ],
     "pdas": [],

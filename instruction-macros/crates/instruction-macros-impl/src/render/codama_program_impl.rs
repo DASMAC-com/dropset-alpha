@@ -125,12 +125,7 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 let type_name = syn_ty.to_token_stream().to_string();
                 if seen_type_names.insert(type_name) {
                     defined_type_exprs.push(quote! {
-                        #codama::DefinedTypeNode {
-                            kind: "definedTypeNode",
-                            name: #string::from(<#syn_ty as #codama::CodamaType>::name()),
-                            docs: #vec_macro::Vec::new(),
-                            ty: <#syn_ty as #codama::CodamaType>::type_node(),
-                        }
+                        <#syn_ty as #codama::CodamaType>::defined_type_node()
                     });
                 }
             }

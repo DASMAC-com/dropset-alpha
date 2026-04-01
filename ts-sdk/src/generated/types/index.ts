@@ -6,5 +6,12 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./marketHeader";
+export * from "./marketSeat";
+export * from "./order";
 export * from "./orderInfoArgs";
+export * from "./orderSectors";
+export * from "./priceToIndexEntry";
+export * from "./sector";
 export * from "./unvalidatedOrders";
+export * from "./userOrderSectors";
