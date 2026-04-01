@@ -90,7 +90,7 @@ export function identifyDropsetAccount(
   account: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): DropsetAccount {
   const data = "data" in account ? account.data : account;
-  if (containsBytes(data, getU64Encoder().encode(14991639490685104000), 0)) {
+  if (containsBytes(data, getU64Encoder().encode(1030976753677), 0)) {
     return DropsetAccount.MarketAccount;
   }
   throw new SolanaError(

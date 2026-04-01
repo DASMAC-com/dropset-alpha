@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-pub const MARKET_ACCOUNT_DISCRIMINANT: u64 = 0xd00d00b00b00f00du64;
+pub const MARKET_ACCOUNT_DISCRIMINANT: u64 = 0xf00b00d00du64;
 
 /// The lightweight header for each market account. This header contains metadata used to interpret
 /// a market's account data properly.

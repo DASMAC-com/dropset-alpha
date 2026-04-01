@@ -40,7 +40,7 @@ import {
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
-export const MARKET_ACCOUNT_DISCRIMINATOR = 14991639490685104000;
+export const MARKET_ACCOUNT_DISCRIMINATOR = 1030976753677;
 
 export function getMarketAccountDiscriminatorBytes() {
   return getU64Encoder().encode(MARKET_ACCOUNT_DISCRIMINATOR);
