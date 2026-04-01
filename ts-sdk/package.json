@@ -36,11 +36,14 @@
     "clean": "rm -rf dist",
     "format": "pnpm _format --write",
     "lint": "biome check",
-    "lint:fix": "pnpm lint --write"
+    "lint:fix": "pnpm lint --write",
+    "test:e2e": "pnpm jest tests/e2e",
+    "test:unit": "pnpm jest tests/unit"
   },
   "typings": "dist/common/index.d.ts",
   "dependencies": {
     "@solana/program-client-core": "^6.5.0",
+    "@solana/rpc-transport-http": "^6.5.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

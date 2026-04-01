@@ -114,6 +114,9 @@ importers:
       '@solana/program-client-core':
         specifier: ^6.5.0
         version: 6.7.0(typescript@5.9.3)
+      '@solana/rpc-transport-http':
+        specifier: ^6.5.0
+        version: 6.7.0(typescript@5.9.3)
       server-only:
         specifier: ^0.0.1
         version: 0.0.1

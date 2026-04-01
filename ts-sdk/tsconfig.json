@@ -17,7 +17,9 @@
     "noErrorTruncation": false,
     "noImplicitAny": true,
     "noImplicitThis": true,
-    "paths": {},
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "preserveWatchOutput": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -27,13 +29,5 @@
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
-    "__tests__/**"
-  ],
   "include": ["src", "tsup.config.ts"]
 }
