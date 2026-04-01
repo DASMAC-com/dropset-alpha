@@ -8,7 +8,227 @@
     "publicKey": "TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q",
     "version": "0.1.0",
     "docs": [],
-    "accounts": [],
+    "accounts": [
+      {
+        "kind": "accountNode",
+        "name": "marketAccount",
+        "docs": [],
+        "data": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "header",
+              "type": {
+                "kind": "structTypeNode",
+                "fields": [
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "discriminant",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u64",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "numSeats",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "numBids",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "numAsks",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "numFreeSectors",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "freeStackTop",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "seatsDllHead",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "seatsDllTail",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "bidsDllHead",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "bidsDllTail",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "asksDllHead",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "asksDllTail",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u32",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "baseMint",
+                    "type": {
+                      "kind": "publicKeyTypeNode"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "quoteMint",
+                    "type": {
+                      "kind": "publicKeyTypeNode"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "marketBump",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u8",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "numEvents",
+                    "type": {
+                      "kind": "numberTypeNode",
+                      "format": "u64",
+                      "endian": "le"
+                    },
+                    "docs": []
+                  },
+                  {
+                    "kind": "structFieldTypeNode",
+                    "name": "_padding",
+                    "type": {
+                      "kind": "arrayTypeNode",
+                      "item": {
+                        "kind": "numberTypeNode",
+                        "format": "u8",
+                        "endian": "le"
+                      },
+                      "count": {
+                        "kind": "fixedCountNode",
+                        "value": 3
+                      }
+                    },
+                    "docs": []
+                  }
+                ]
+              },
+              "docs": []
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "sectors",
+              "type": {
+                "kind": "bytesTypeNode"
+              },
+              "docs": []
+            }
+          ]
+        },
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 14991639490685104141
+              }
+            }
+          }
+        ]
+      }
+    ],
     "instructions": [
       {
         "kind": "instructionNode",

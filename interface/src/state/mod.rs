@@ -3,6 +3,8 @@
 
 pub mod asks_dll;
 pub mod bids_dll;
+#[cfg(feature = "codama")]
+pub mod codama_types;
 pub mod free_stack;
 pub mod linked_list;
 pub mod market;

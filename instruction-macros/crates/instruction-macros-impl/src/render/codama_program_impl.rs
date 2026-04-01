@@ -70,10 +70,10 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                     kind: "instructionArgumentNode",
                     name: #string::from("discriminator"),
                     docs: #vec_macro::Vec::new(),
-                    ty: #codama::number_type("u8"),
+                    ty: #codama::NumberFormat::U8.le(),
                     default_value: Some(#codama::NumberValueNode {
                         kind: "numberValueNode",
-                        number: #disc,
+                        number: #disc as u64,
                     }),
                     default_value_strategy: Some("omitted"),
                 }
@@ -108,15 +108,14 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                     optional_account_strategy: "programId",
                     accounts: #vec_macro![#(#account_nodes),*],
                     arguments: #vec_macro![#(#arg_nodes),*],
-                    discriminators: #vec_macro![#codama::discriminator(#disc)],
+                    discriminators: #vec_macro![#codama::discriminator(#codama::NumberFormat::U8, #disc as u64)],
                 }
             }
         })
         .collect();
 
-    // Collect all unique custom argument types. For each one, call
-    // `CodamaType::codama_type_node()` to get the full TypeNode, then wrap it
-    // in a DefinedTypeNode with a camelCase name.
+    // Collect all unique custom argument types. For each one, use
+    // `CodamaType::name()` and `CodamaType::type_node()` to build a DefinedTypeNode.
     let mut seen_type_names = std::collections::HashSet::new();
     let mut defined_type_exprs: Vec<TokenStream> = Vec::new();
 
@@ -124,14 +123,13 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
         for arg in &v.arguments {
             if let ArgumentType::UnknownType(syn_ty) = &arg.ty {
                 let type_name = syn_ty.to_token_stream().to_string();
-                if seen_type_names.insert(type_name.clone()) {
-                    let camel_name = to_camel_case(&type_name);
+                if seen_type_names.insert(type_name) {
                     defined_type_exprs.push(quote! {
                         #codama::DefinedTypeNode {
                             kind: "definedTypeNode",
-                            name: #string::from(#camel_name),
+                            name: #string::from(<#syn_ty as #codama::CodamaType>::name()),
                             docs: #vec_macro::Vec::new(),
-                            ty: <#syn_ty as #codama::CodamaType>::codama_type_node(),
+                            ty: <#syn_ty as #codama::CodamaType>::type_node(),
                         }
                     });
                 }
@@ -156,18 +154,16 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
     }
 }
 
-/// For instruction arguments: primitives get inlined via `CodamaType::codama_type_node()`,
+/// For instruction arguments: primitives get inlined via `CodamaType::type_node()`,
 /// custom types get a `DefinedTypeLinkNode` (the full definition is in `definedTypes`).
 fn argument_type_to_inline_expr(ty: &ArgumentType, codama: &TokenStream) -> TokenStream {
     match ty {
         ArgumentType::KnownType(kt) => {
             let fully_qualified = kt.as_fully_qualified_type();
-            quote! { <#fully_qualified as #codama::CodamaType>::codama_type_node() }
+            quote! { <#fully_qualified as #codama::CodamaType>::type_node() }
         }
         ArgumentType::UnknownType(syn_ty) => {
-            let type_name = syn_ty.to_token_stream().to_string();
-            let camel_name = to_camel_case(&type_name);
-            quote! { #codama::defined_type_link(#camel_name) }
+            quote! { #codama::defined_type_link(<#syn_ty as #codama::CodamaType>::name()) }
         }
     }
 }

@@ -9,21 +9,33 @@
 import {
   type Address,
   assertIsInstructionWithAccounts,
+  type ClientWithRpc,
   type ClientWithTransactionPlanning,
   type ClientWithTransactionSending,
   containsBytes,
+  type GetAccountInfoApi,
+  type GetMultipleAccountsApi,
   getU8Encoder,
+  getU64Encoder,
   type Instruction,
   type InstructionWithData,
   type ReadonlyUint8Array,
+  SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
   SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
   SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
   SolanaError,
 } from "@solana/kit";
 import {
+  addSelfFetchFunctions,
   addSelfPlanAndSendFunctions,
+  type SelfFetchFunctions,
   type SelfPlanAndSendFunctions,
 } from "@solana/program-client-core";
+import {
+  getMarketAccountCodec,
+  type MarketAccount,
+  type MarketAccountArgs,
+} from "../accounts";
 import {
   type BatchReplaceInput,
   type CancelOrderInput,
@@ -69,6 +81,23 @@ import {
 
 export const DROPSET_PROGRAM_ADDRESS =
   "TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q" as Address<"TESTnXwv2eHoftsSd5NEdpH4zEu7XRC8jviuoNPdB2Q">;
+
+export enum DropsetAccount {
+  MarketAccount,
+}
+
+export function identifyDropsetAccount(
+  account: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
+): DropsetAccount {
+  const data = "data" in account ? account.data : account;
+  if (containsBytes(data, getU64Encoder().encode(14991639490685104000), 0)) {
+    return DropsetAccount.MarketAccount;
+  }
+  throw new SolanaError(
+    SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
+    { accountData: data, programName: "dropset" },
+  );
+}
 
 export enum DropsetInstruction {
   CloseSeat,
@@ -240,7 +269,15 @@ export function parseDropsetInstruction<TProgram extends string>(
   }
 }
 
-export type DropsetPlugin = { instructions: DropsetPluginInstructions };
+export type DropsetPlugin = {
+  accounts: DropsetPluginAccounts;
+  instructions: DropsetPluginInstructions;
+};
+
+export type DropsetPluginAccounts = {
+  marketAccount: ReturnType<typeof getMarketAccountCodec> &
+    SelfFetchFunctions<MarketAccountArgs, MarketAccount>;
+};
 
 export type DropsetPluginInstructions = {
   closeSeat: (
@@ -276,7 +313,10 @@ export type DropsetPluginInstructions = {
   ) => ReturnType<typeof getExpandMarketInstruction> & SelfPlanAndSendFunctions;
 };
 
-export type DropsetPluginRequirements = ClientWithTransactionPlanning &
+export type DropsetPluginRequirements = ClientWithRpc<
+  GetAccountInfoApi & GetMultipleAccountsApi
+> &
+  ClientWithTransactionPlanning &
   ClientWithTransactionSending;
 
 export function dropsetProgram() {
@@ -284,6 +324,9 @@ export function dropsetProgram() {
     return {
       ...client,
       dropset: <DropsetPlugin>{
+        accounts: {
+          marketAccount: addSelfFetchFunctions(client, getMarketAccountCodec()),
+        },
         instructions: {
           closeSeat: (input) =>
             addSelfPlanAndSendFunctions(client, getCloseSeatInstruction(input)),

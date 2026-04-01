@@ -1,4 +1,7 @@
-use dropset_interface::instructions::DropsetInstruction;
+use dropset_interface::{
+    instructions::DropsetInstruction,
+    state::codama_types::dropset_market_account_node,
+};
 use instruction_macros::codama::CodamaProgram;
 
 const PROGRAM_ID: solana_address::Address = dropset_interface::program::ID;
@@ -35,9 +38,10 @@ fn main() {
         None => workspace_dir.join("codama-idl-gen/idl.json"),
     };
 
-    let root = DropsetInstruction::codama_root("dropset", &PROGRAM_ID.to_string());
-    let json = serde_json::to_string_pretty(&root).expect("Failed to serialize IDL");
+    let mut root = DropsetInstruction::codama_root("dropset", &PROGRAM_ID.to_string());
+    root.program.accounts = vec![dropset_market_account_node()];
 
+    let json = serde_json::to_string_pretty(&root).expect("Failed to serialize IDL");
     std::fs::write(&out, &json).expect("Failed to write IDL file");
     println!("Wrote Codama IDL to {}", out.display());
 }

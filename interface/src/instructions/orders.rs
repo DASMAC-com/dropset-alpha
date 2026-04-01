@@ -206,9 +206,13 @@ unsafe impl Unpack for UnvalidatedOrders {
 
 #[cfg(feature = "codama")]
 impl instruction_macros::codama::CodamaType for UnvalidatedOrders {
-    fn codama_type_node() -> instruction_macros::codama::TypeNode {
+    fn name() -> &'static str {
+        "unvalidatedOrders"
+    }
+
+    fn type_node() -> instruction_macros::codama::TypeNode {
         instruction_macros::codama::array_type(
-            <OrderInfoArgs as instruction_macros::codama::CodamaType>::codama_type_node(),
+            <OrderInfoArgs as instruction_macros::codama::CodamaType>::type_node(),
             MAX_ORDERS_USIZE,
         )
     }

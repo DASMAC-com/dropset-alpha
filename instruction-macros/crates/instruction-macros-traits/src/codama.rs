@@ -26,9 +26,13 @@ use alloc::{
 use serde::Serialize;
 
 /// Describes a type's Codama IDL representation. Implement this for any type that appears as an
-/// instruction argument so the IDL generator can produce the correct type node.
+/// instruction argument or account field so the IDL generator can produce the correct type node.
 pub trait CodamaType {
-    fn codama_type_node() -> TypeNode;
+    /// The camelCase name of this type in the Codama IDL.
+    fn name() -> &'static str;
+
+    /// The full type node describing this type's layout.
+    fn type_node() -> TypeNode;
 }
 
 /// Describes a full program's Codama IDL. Derived on instruction enums to produce the complete
@@ -54,6 +58,8 @@ pub enum TypeNode {
     Struct(StructTypeNode),
     #[serde(rename = "arrayTypeNode")]
     Array(ArrayTypeNode),
+    #[serde(rename = "bytesTypeNode")]
+    Bytes(BytesTypeNode),
     #[serde(rename = "definedTypeLinkNode")]
     DefinedTypeLink(DefinedTypeLinkNode),
 }
@@ -61,8 +67,30 @@ pub enum TypeNode {
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/typeNodes/NumberTypeNode.md>
 #[derive(Debug, Clone, Serialize)]
 pub struct NumberTypeNode {
-    pub format: String,
-    pub endian: String,
+    pub format: NumberFormat,
+    pub endian: Endian,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NumberFormat {
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Endian {
+    Le,
+    Be,
 }
 
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/typeNodes/BooleanTypeNode.md>
@@ -93,14 +121,30 @@ pub struct StructFieldTypeNode {
 }
 
 impl StructFieldTypeNode {
-    pub fn new(name: String, ty: TypeNode) -> Self {
+    pub fn new(field_name: impl Into<String>, ty: TypeNode) -> Self {
         Self {
             kind: "structFieldTypeNode",
-            name,
+            name: field_name.into(),
             ty,
             docs: Vec::new(),
         }
     }
+
+    pub fn array<T: CodamaType>(field_name: impl Into<String>, count: usize) -> Self {
+        Self::new(field_name, array_type(T::type_node(), count))
+    }
+}
+
+#[rustfmt::skip]
+impl StructFieldTypeNode {
+    pub fn u8(name: impl Into<String>) -> Self { Self::new(name, NumberFormat::U8.le()) }
+    pub fn u16(name: impl Into<String>) -> Self { Self::new(name, NumberFormat::U16.le()) }
+    pub fn u32(name: impl Into<String>) -> Self { Self::new(name, NumberFormat::U32.le()) }
+    pub fn u64(name: impl Into<String>) -> Self { Self::new(name, NumberFormat::U64.le()) }
+    pub fn u128(name: impl Into<String>) -> Self { Self::new(name, NumberFormat::U128.le()) }
+    pub fn bool(name: impl Into<String>) -> Self { Self::new(name, boolean_type()) }
+    pub fn address(name: impl Into<String>) -> Self { Self::new(name, address_type()) }
+    pub fn bytes(name: impl Into<String>) -> Self { Self::new(name, bytes_type()) }
 }
 
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/typeNodes/ArrayTypeNode.md>
@@ -122,6 +166,12 @@ pub enum CountNode {
 pub struct FixedCountNode {
     pub value: usize,
 }
+
+/// Raw bytes with no inherent size. Size is determined by context (e.g. remainder of account data).
+///
+/// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/typeNodes/BytesTypeNode.md>
+#[derive(Debug, Clone, Serialize)]
+pub struct BytesTypeNode {}
 
 /// References a reusable type defined in the program's `definedTypes` array.
 ///
@@ -163,8 +213,7 @@ pub struct ProgramNode {
     pub public_key: String,
     pub version: &'static str,
     pub docs: Vec<String>,
-    // Not yet implemented. Serializes to `[]` in the IDL.
-    pub accounts: Vec<()>,
+    pub accounts: Vec<AccountNode>,
     pub instructions: Vec<InstructionNode>,
     #[serde(rename = "definedTypes")]
     pub defined_types: Vec<DefinedTypeNode>,
@@ -247,7 +296,7 @@ pub struct InstructionArgumentNode {
 #[derive(Debug, Clone, Serialize)]
 pub struct NumberValueNode {
     pub kind: &'static str,
-    pub number: u8,
+    pub number: u64,
 }
 
 /// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/discriminatorNodes/ConstantDiscriminatorNode.md>
@@ -276,24 +325,57 @@ pub struct DefinedTypeNode {
     pub ty: TypeNode,
 }
 
-pub fn number_type(format: &str) -> TypeNode {
-    TypeNode::Number(NumberTypeNode {
-        format: String::from(format),
-        endian: String::from("le"),
-    })
+/// <https://github.com/codama-idl/codama/blob/main/packages/nodes/docs/AccountNode.md>
+#[derive(Debug, Clone, Serialize)]
+pub struct AccountNode {
+    pub kind: &'static str,
+    pub name: String,
+    pub docs: Vec<String>,
+    pub data: TypeNode,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<usize>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub discriminators: Vec<ConstantDiscriminatorNode>,
+}
+
+impl AccountNode {
+    pub fn new(name: impl Into<String>, data: TypeNode) -> Self {
+        Self {
+            kind: "accountNode",
+            name: name.into(),
+            docs: Vec::new(),
+            data,
+            size: None,
+            discriminators: Vec::new(),
+        }
+    }
+}
+
+impl NumberFormat {
+    /// Creates a little-endian [`TypeNode::Number`] from this format.
+    pub fn le(self) -> TypeNode {
+        TypeNode::Number(NumberTypeNode {
+            format: self,
+            endian: Endian::Le,
+        })
+    }
 }
 
 pub fn boolean_type() -> TypeNode {
     TypeNode::Boolean(BooleanTypeNode {
         size: NumberTypeNode {
-            format: String::from("u8"),
-            endian: String::from("le"),
+            format: NumberFormat::U8,
+            endian: Endian::Le,
         },
     })
 }
 
-pub fn public_key_type() -> TypeNode {
+pub fn address_type() -> TypeNode {
     TypeNode::PublicKey(PublicKeyTypeNode {})
+}
+
+pub fn bytes_type() -> TypeNode {
+    TypeNode::Bytes(BytesTypeNode {})
 }
 
 pub fn defined_type_link(name: &str) -> TypeNode {
@@ -310,54 +392,82 @@ pub fn array_type(item: TypeNode, count: usize) -> TypeNode {
 }
 
 impl CodamaType for u8 {
-    fn codama_type_node() -> TypeNode {
-        number_type("u8")
+    fn name() -> &'static str {
+        "u8"
+    }
+
+    fn type_node() -> TypeNode {
+        NumberFormat::U8.le()
     }
 }
 
 impl CodamaType for u16 {
-    fn codama_type_node() -> TypeNode {
-        number_type("u16")
+    fn name() -> &'static str {
+        "u16"
+    }
+
+    fn type_node() -> TypeNode {
+        NumberFormat::U16.le()
     }
 }
 
 impl CodamaType for u32 {
-    fn codama_type_node() -> TypeNode {
-        number_type("u32")
+    fn name() -> &'static str {
+        "u32"
+    }
+
+    fn type_node() -> TypeNode {
+        NumberFormat::U32.le()
     }
 }
 
 impl CodamaType for u64 {
-    fn codama_type_node() -> TypeNode {
-        number_type("u64")
+    fn name() -> &'static str {
+        "u64"
+    }
+
+    fn type_node() -> TypeNode {
+        NumberFormat::U64.le()
     }
 }
 
 impl CodamaType for u128 {
-    fn codama_type_node() -> TypeNode {
-        number_type("u128")
+    fn name() -> &'static str {
+        "u128"
+    }
+
+    fn type_node() -> TypeNode {
+        NumberFormat::U128.le()
     }
 }
 
 impl CodamaType for bool {
-    fn codama_type_node() -> TypeNode {
+    fn name() -> &'static str {
+        "bool"
+    }
+
+    fn type_node() -> TypeNode {
         boolean_type()
     }
 }
 
 impl CodamaType for solana_address::Address {
-    fn codama_type_node() -> TypeNode {
-        public_key_type()
+    fn name() -> &'static str {
+        "publicKey"
+    }
+
+    fn type_node() -> TypeNode {
+        address_type()
     }
 }
 
-pub fn discriminator(value: u8) -> ConstantDiscriminatorNode {
+pub fn discriminator(format: NumberFormat, value: u64) -> ConstantDiscriminatorNode {
     ConstantDiscriminatorNode {
         kind: "constantDiscriminatorNode",
         offset: 0,
         constant: ConstantValueNode {
             kind: "constantValueNode",
-            ty: number_type("u8"),
+            ty: format.le(),
             value: NumberValueNode {
                 kind: "numberValueNode",
                 number: value,

@@ -29,16 +29,19 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
 
             quote! {
                 #codama::StructFieldTypeNode::new(
-                    ::instruction_macros::codama::_alloc::string::String::from(#camel_name),
-                    <#ty as #codama::CodamaType>::codama_type_node(),
+                    #camel_name,
+                    <#ty as #codama::CodamaType>::type_node(),
                 )
             }
         })
         .collect();
 
+    let struct_name_str = to_camel_case(&struct_ident.to_string());
+
     quote! {
         impl #codama::CodamaType for #struct_ident {
-            fn codama_type_node() -> #codama::TypeNode {
+            fn name() -> &'static str { #struct_name_str }
+            fn type_node() -> #codama::TypeNode {
                 #codama::TypeNode::Struct(#codama::StructTypeNode {
                     fields: ::instruction_macros::codama::_alloc::vec![
                         #(#field_nodes),*

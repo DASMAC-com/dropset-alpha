@@ -94,7 +94,7 @@ pub trait OrdersCollection: LinkedListHeaderOperations {
     fn has_higher_price_priority(a: &EncodedPrice, b: &EncodedPrice) -> bool;
 }
 
-const ORDER_PADDING: usize =
+pub const ORDER_PADDING: usize =
     PAYLOAD_SIZE - (size_of::<LeEncodedPrice>() + size_of::<LeSectorIndex>() + U64_SIZE + U64_SIZE);
 
 /// Represents a maker order in the order book.
