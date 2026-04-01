@@ -27,6 +27,21 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/generated/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "complexity": {
+            "noBannedTypes": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {
