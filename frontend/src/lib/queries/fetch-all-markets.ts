@@ -10,8 +10,6 @@ export type MarketSummary = {
  * TODO: implement actual RPC / indexer call.
  */
 export async function fetchAllMarkets(): Promise<MarketSummary[]> {
-
-
   // Stub data — replace with real fetch
   return [
     {
