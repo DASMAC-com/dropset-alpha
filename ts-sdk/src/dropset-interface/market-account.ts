@@ -127,13 +127,13 @@ export function toMarketViewAll(market: MarketAccount): MarketViewAll {
   // Instantiate all user data with their corresponding seat and empty bids/asks.
   const users = new Map(
     seats.map((seat) => {
-      const new_user_data: MarketUserData = {
+      const newUserData: MarketUserData = {
         seat,
         bids: [],
         asks: [],
       };
 
-      return [seat.user, new_user_data];
+      return [seat.user, newUserData];
     }),
   );
 
