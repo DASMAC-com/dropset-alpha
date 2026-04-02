@@ -45,8 +45,7 @@
   "typings": "dist/common/index.d.ts",
   "dependencies": {
     "@solana/program-client-core": "^6.5.0",
-    "@solana/rpc-transport-http": "^6.5.0",
-    "server-only": "^0.0.1"
+    "@solana/rpc-transport-http": "^6.5.0"
   },
   "devDependencies": {
     "@jest/globals": "catalog:",

@@ -1,11 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
+import { NIL } from "@/const";
 import { toMarketViewAll } from "@/dropset-interface/market-account";
 import { getMarketAccountDecoder } from "@/generated/accounts";
 import fixtureBytes from "../fixtures/market-account.json";
 
-const NIL = 0xffffffff;
-
-describe("Deserializing dropset market accounts", () => {
+describe("Dropset market account deserialization", () => {
   const bytes = new Uint8Array(fixtureBytes);
   const decoder = getMarketAccountDecoder();
 

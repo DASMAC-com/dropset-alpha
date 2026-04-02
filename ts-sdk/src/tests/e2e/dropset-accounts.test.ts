@@ -1,13 +1,21 @@
-import { describe, it } from "@jest/globals";
+import { describe, expect, it } from "@jest/globals";
 import { toMarketViewAll } from "@/dropset-interface";
-import { getDropsetMarkets, getRpcClient } from "@/utils";
+import { deriveMarketAddress, getDropsetMarkets, getRpcClient } from "@/utils";
 
 describe("Dropset market accounts", () => {
   it("should decode all dropset market accounts", async () => {
     const rpcClient = getRpcClient();
     const markets = await getDropsetMarkets(rpcClient);
-    const marketViews = markets.map(([_, mkt]) => toMarketViewAll(mkt));
+    const res = markets.map(
+      ([address, market]) => [address, toMarketViewAll(market)] as const,
+    );
 
-    console.dir(marketViews, { depth: null });
+    for (const [address, view] of res) {
+      const [derivedMarketAddress, _] = await deriveMarketAddress(
+        view.header.baseMint,
+        view.header.quoteMint,
+      );
+      expect(derivedMarketAddress).toBe(address);
+    }
   });
 });
