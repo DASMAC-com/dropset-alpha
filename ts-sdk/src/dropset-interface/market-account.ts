@@ -3,7 +3,7 @@ import type {
   FixedSizeDecoder,
   ReadonlyUint8Array,
 } from "@solana/kit";
-import { MARKET_HEADER_SIZE, NIL, SECTOR_SIZE } from "@/const";
+import { NIL, SECTOR_SIZE } from "@/const";
 import type {
   MarketAccount,
   MarketHeader,
@@ -12,7 +12,6 @@ import type {
   Sector,
 } from "@/generated";
 import {
-  getMarketHeaderDecoder,
   getMarketSeatDecoder,
   getOrderDecoder,
   getSectorDecoder,
@@ -64,10 +63,21 @@ export function collectSectors(
   let curr = head;
   let iters = 0;
 
-  const maxNumSectors = sectorsBytes.length - MARKET_HEADER_SIZE / SECTOR_SIZE;
+  if (sectorsBytes.length % SECTOR_SIZE !== 0) {
+    const msg = `Malformed sectors bytes, ${sectorsBytes.length} is not divisible by ${SECTOR_SIZE}`;
+    throw new Error(msg);
+  }
+  const maxNumSectors = sectorsBytes.length / SECTOR_SIZE;
 
   while (curr !== NIL) {
     const offset = curr * SECTOR_SIZE;
+
+    const bytesAfterOffset = sectorsBytes.length - offset;
+    if (bytesAfterOffset < SECTOR_SIZE) {
+      const msg = `Bytes after offset (${bytesAfterOffset}) is < \`SECTOR_SIZE\` (${SECTOR_SIZE})`;
+      throw new Error(msg);
+    }
+
     const sector = decoder.decode(sectorsBytes, offset);
     result.push([curr, sector]);
     curr = sector.next;
