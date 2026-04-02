@@ -18,9 +18,9 @@ describe("Dropset market account derivation", () => {
     const expectedBump = 247;
     const expectedAddress = "2jxZxWuK6X9banZdkAHVki8v3VCMdEV2rBcCJKBovr5V";
 
-    expect(implicitDerivedAddress === expectedAddress);
-    expect(explicitDerivedAddress === expectedAddress);
-    expect(implicitBump === expectedBump);
-    expect(explicitBump === expectedBump);
+    expect(implicitDerivedAddress).toEqual(expectedAddress);
+    expect(explicitDerivedAddress).toEqual(expectedAddress);
+    expect(implicitBump).toEqual(expectedBump);
+    expect(explicitBump).toEqual(expectedBump);
   });
 });
