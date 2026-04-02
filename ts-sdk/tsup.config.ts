@@ -24,7 +24,7 @@ const DEFAULT_CONFIG: Options = {
 // Common.js config
 const COMMON_CONFIG: MandatoryOptions = {
   ...DEFAULT_CONFIG,
-  entry: ["src/**/*.ts"],
+  entry: ["src/**/*.ts", "!src/tests/**"],
   format: "cjs",
   outDir: "dist/common",
 };
@@ -32,7 +32,7 @@ const COMMON_CONFIG: MandatoryOptions = {
 // ESM config
 const ESM_CONFIG: MandatoryOptions = {
   ...DEFAULT_CONFIG,
-  entry: ["src/**/*.ts"],
+  entry: ["src/**/*.ts", "!src/tests/**"],
   format: "esm",
   outDir: "dist/esm",
 };
