@@ -33,6 +33,7 @@
     "build": "tsc",
     "build:publish": "tsup",
     "check": "tsc --noEmit",
+    "check:test": "tsc -p tsconfig.test.json --noEmit",
     "clean": "rm -rf dist",
     "format": "pnpm _format --write",
     "lint": "biome check",
