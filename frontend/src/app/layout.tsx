@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Header } from "@/components/header";
-import { Providers } from "@/lib/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dropset",
   description: "Dropset alpha prototype",
-  icons: {
-    icon: "/dropset.ico",
-  },
 };
 
 export default function RootLayout({
@@ -32,12 +27,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <Providers>
-          <Header />
-          <main className="flex-1">{children}</main>
-        </Providers>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

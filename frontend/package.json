@@ -8,7 +8,7 @@
     "build": "next build",
     "check": "tsc --noEmit",
     "clean": "rm -rf .next",
-    "lint": "biome check",
+    "lint": "biome check .",
     "lint:fix": "pnpm lint --write",
     "format": "pnpm _format --write",
     "start": "next start"
