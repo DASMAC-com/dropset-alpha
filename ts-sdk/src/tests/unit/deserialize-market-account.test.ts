@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { NIL } from "@/const";
-import { toMarketViewAll } from "@/dropset-interface/market-account";
+import { toMarketViewAll } from "@/dropset-interface/market-view-all";
 import { getMarketAccountDecoder } from "@/generated/accounts";
 import fixtureBytes from "../fixtures/market-account.json";
 
