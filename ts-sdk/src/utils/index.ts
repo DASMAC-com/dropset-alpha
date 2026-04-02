@@ -38,8 +38,11 @@ export async function getDropsetMarkets(
 
   const decoder = getMarketAccountDecoder();
 
-  return markets.map((market) => [
-    market.pubkey,
-    decoder.decode(Buffer.from(market.account.data[0], "base64")),
-  ]);
+  return markets.map(
+    (market) =>
+      [
+        market.pubkey,
+        decoder.decode(Buffer.from(market.account.data[0], "base64")),
+      ] as const,
+  );
 }
