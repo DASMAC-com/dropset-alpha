@@ -3,7 +3,7 @@ import type {
   FixedSizeDecoder,
   ReadonlyUint8Array,
 } from "@solana/kit";
-import { NIL, SECTOR_SIZE } from "@/const";
+import { MARKET_HEADER_SIZE, NIL, SECTOR_SIZE } from "@/const";
 import type {
   MarketAccount,
   MarketHeader,
@@ -12,6 +12,7 @@ import type {
   Sector,
 } from "@/generated";
 import {
+  getMarketHeaderDecoder,
   getMarketSeatDecoder,
   getOrderDecoder,
   getSectorDecoder,
@@ -61,12 +62,21 @@ export function collectSectors(
   const decoder = getSectorDecoder();
   const result: [SectorIndex, Sector][] = [];
   let curr = head;
+  let iters = 0;
+
+  const maxNumSectors = sectorsBytes.length - MARKET_HEADER_SIZE / SECTOR_SIZE;
 
   while (curr !== NIL) {
     const offset = curr * SECTOR_SIZE;
     const sector = decoder.decode(sectorsBytes, offset);
     result.push([curr, sector]);
     curr = sector.next;
+
+    if (iters >= maxNumSectors) {
+      const msg = `Sector iterator ran more than the max # of sectors (${maxNumSectors}) times`;
+      throw new Error(msg);
+    }
+    iters += 1;
   }
 
   return result;
