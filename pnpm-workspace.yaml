@@ -7,6 +7,6 @@ ignoredBuiltDependencies:
 
 catalog:
   "@biomejs/biome": 2.2.0
+  "@types/node": ^24
   "typescript": ^5
-  "@types/node": ^25.3.5
 
