@@ -1,4 +1,10 @@
-import { ensureU8, ensureU64, type U8, type U32, type U64 } from "../rust-types";
+import {
+  ensureU8,
+  ensureU64,
+  type U8,
+  type U32,
+  type U64,
+} from "../rust-types";
 import { type EncodedPrice, encodePrice } from "./encoded-price";
 import { PriceError } from "./error";
 import {

@@ -24,7 +24,8 @@ export function encodePrice(
   if (exp > PRICE_EXPONENT_MAX) {
     throw new Error(PriceError.InvalidBiasedExponent);
   }
-  return (((exp << PRICE_MANTISSA_BITS) | mantissa.value) >>> 0) as EncodedPrice;
+  return (((exp << PRICE_MANTISSA_BITS) | mantissa.value) >>>
+    0) as EncodedPrice;
 }
 
 export function isEncodedPriceInfinity(encoded: EncodedPrice): boolean {

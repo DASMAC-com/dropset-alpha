@@ -1,5 +1,11 @@
 import { Decimal } from "decimal.js";
-import { ensureU8, ensureU64, type U8, type U32, type U64 } from "../rust-types";
+import {
+  ensureU8,
+  ensureU64,
+  type U8,
+  type U32,
+  type U64,
+} from "../rust-types";
 import { decodedPriceToDecimal, decodePrice } from "./decoded-price";
 import { PriceError } from "./error";
 import {
