@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useAllMarkets } from "@/lib/hooks/use-all-markets";
 import { buildPrefixMap } from "@/lib/slug";
+import { ensureU64 } from "@/ts-sdk/rust-types";
 
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+function formatNumber(input: number | bigint): string {
+  const n = ensureU64(input);
+  if (n >= 1_000_000) return `${(Number(n / 1_000_000n)).toFixed(1)}M`;
+  if (n >= 1_000) return `${(Number(n / 1_000n)).toFixed(1)}K`;
   return n.toString();
 }
 

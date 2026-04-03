@@ -20,6 +20,8 @@ import type {
   Flatten,
 } from "../types";
 
+export type RpcClient = NonNullable<ReturnType<typeof getRpcClient>>;
+
 type HttpTransportConfig = Flatten<Parameters<typeof createHttpTransport>[0]>;
 
 type RpcClientArgs = {
@@ -44,7 +46,7 @@ export function getRpcClient(args?: RpcClientArgs) {
  * Fetches the dropset market accounts owned by the dropset program.
  */
 export async function fetchDropsetMarketAccounts(
-  rpcClient: ReturnType<typeof getRpcClient>,
+  rpcClient: RpcClient,
 ): Promise<DropsetMarketAccount[]> {
   const markets = await rpcClient
     .getProgramAccounts(DROPSET_PROGRAM_ADDRESS, { encoding: "base64" })
@@ -62,11 +64,34 @@ export async function fetchDropsetMarketAccounts(
 }
 
 /**
+ * Fetches a single dropset market account.
+ */
+export async function fetchDropsetMarketAccount(
+  rpcClient: RpcClient,
+  marketAddress: Address,
+): Promise<DropsetMarketAccount | undefined> {
+  const market = await rpcClient
+    .getAccountInfo(marketAddress, { encoding: "base64" })
+    .send();
+
+  const decoder = getMarketAccountDecoder();
+
+  if (!market.value) {
+    return undefined;
+  }
+
+  return {
+    address: marketAddress,
+    ...decoder.decode(Buffer.from(market.value.data[0], "base64")),
+  };
+}
+
+/**
  * Fetches the dropset market accounts owned by the dropset program and converts them into
  * more ergonomic {@link DropsetMarketView} types.
  */
 export async function fetchDropsetMarketViews(
-  rpcClient: ReturnType<typeof getRpcClient>,
+  rpcClient: RpcClient,
 ): Promise<DropsetMarketView[]> {
   return (await fetchDropsetMarketAccounts(rpcClient)).map(
     ({ address, ...market }) => ({
@@ -74,6 +99,23 @@ export async function fetchDropsetMarketViews(
       ...toMarketViewAll(market),
     }),
   );
+}
+
+/**
+ * Fetches a single dropset market account and converts it into a more ergonomic
+ * {@link DropsetMarketView} type.
+ */
+export async function fetchDropsetMarketView(
+  rpcClient: RpcClient,
+  marketAddress: Address,
+): Promise<DropsetMarketView | undefined> {
+  const account = await fetchDropsetMarketAccount(rpcClient, marketAddress);
+  if (!account) return undefined;
+
+  return {
+    address: marketAddress,
+    ...toMarketViewAll(account),
+  };
 }
 
 /**

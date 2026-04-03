@@ -1,8 +1,9 @@
 "use client";
 
+import type { Address } from "@solana/addresses";
 import { useMarket } from "@/lib/hooks/use-market";
 
-export function MarketView({ address }: { address: string }) {
+export function MarketView({ address }: { address: Address }) {
   const { data: market, isLoading } = useMarket(address);
 
   return (
@@ -30,12 +31,6 @@ export function MarketView({ address }: { address: string }) {
             <span className="market-detail-label">24h Volume</span>
             <span className="market-detail-value">
               ${market.volume24h.toLocaleString()}
-            </span>
-          </div>
-          <div className="market-detail-card">
-            <span className="market-detail-label">Open Interest</span>
-            <span className="market-detail-value">
-              ${market.openInterest.toLocaleString()}
             </span>
           </div>
         </div>

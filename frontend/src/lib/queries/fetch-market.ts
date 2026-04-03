@@ -1,24 +1,37 @@
+import type { Address } from "@solana/addresses";
+import {
+  fetchDropsetMarketView,
+  getRpcClient,
+  marketLiquidity,
+  type RpcClient,
+} from "@/ts-sdk";
+import { fetchDailyVolume } from "./fetch-daily-volume";
+
 export type MarketDetail = {
   address: string;
   traders: number;
-  liquidity: number;
-  volume24h: number;
-  openInterest: number;
-  createdAt: string;
+  liquidity: bigint;
+  volume24h: bigint;
 };
 
 /**
  * Fetch a single market by its full address.
  * TODO: implement actual RPC / indexer call.
  */
-export async function fetchMarket(address: string): Promise<MarketDetail> {
-  // Stub — replace with real fetch
+export async function fetchMarket(
+  address: Address,
+  rpc?: RpcClient,
+): Promise<MarketDetail | undefined> {
+  const rpcClient = rpc ?? getRpcClient();
+  const market = await fetchDropsetMarketView(rpcClient, address);
+  if (!market) return undefined;
+
+  const volume24h = (await fetchDailyVolume(address)) ?? 0n;
+
   return {
     address,
-    traders: 142,
-    liquidity: 500_000,
-    volume24h: 83_200,
-    openInterest: 320_000,
-    createdAt: new Date().toISOString(),
+    traders: market.users.size,
+    liquidity: marketLiquidity(market).total,
+    volume24h,
   };
 }

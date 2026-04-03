@@ -1,51 +1,35 @@
-import { fetchDropsetMarketViews, getRpcClient } from "@/ts-sdk";
+import {
+  fetchDropsetMarketViews,
+  getRpcClient,
+  marketLiquidity,
+  type RpcClient,
+} from "@/ts-sdk";
+import { fetchDailyVolume } from "./fetch-daily-volume";
 
 export type MarketSummary = {
   address: string;
   traders: number;
-  liquidity: number;
-  volume24h: number;
+  liquidity: bigint;
+  volume24h: bigint;
 };
 
 /**
  * Fetch all markets from the Dropset program.
- * TODO: implement actual RPC / indexer call.
  */
-export async function fetchAllMarkets(): Promise<MarketSummary[]> {
-  const rpc = getRpcClient();
-  const _markets = await fetchDropsetMarketViews(rpc);
+export async function fetchAllMarkets(
+  rpc?: RpcClient,
+): Promise<MarketSummary[]> {
+  const client = rpc ?? getRpcClient();
+  const markets = await fetchDropsetMarketViews(client);
 
-  // Stub data — replace with real fetch
-  return [
-    {
-      address: "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr",
-      traders: 142,
-      liquidity: 500_000,
-      volume24h: 83_200,
-    },
-    {
-      address: "3Mc6vR7BFnsKgPe1j3KQCZLV9xLqqpJrKFm8W8zTMSno",
-      traders: 87,
-      liquidity: 210_000,
-      volume24h: 41_600,
-    },
-    {
-      address: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
-      traders: 310,
-      liquidity: 1_200_000,
-      volume24h: 290_000,
-    },
-    {
-      address: "AFbX8oGjGpmVFywbVouvhQSRmiW2aR1mohfahi4Y2AdB",
-      traders: 24,
-      liquidity: 45_000,
-      volume24h: 9_800,
-    },
-    {
-      address: "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-      traders: 56,
-      liquidity: 78_000,
-      volume24h: 15_400,
-    },
-  ];
+  const marketData = await Promise.all(
+    markets.map(async (m) => ({
+      address: m.address,
+      traders: m.users.size,
+      liquidity: marketLiquidity(m).total,
+      volume24h: (await fetchDailyVolume(m.address)) ?? 0n,
+    })),
+  );
+
+  return marketData;
 }
