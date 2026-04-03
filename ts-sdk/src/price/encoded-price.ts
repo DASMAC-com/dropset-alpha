@@ -1,6 +1,6 @@
 import { ensureU8, type U32, U32_MAX } from "../rust-types";
 import { PriceError } from "./error";
-import { PRICE_MANTISSA_BITS } from "./lib";
+import { PRICE_EXPONENT_MAX, PRICE_MANTISSA_BITS } from "./lib";
 import type { ValidatedPriceMantissa } from "./validated-mantissa";
 
 /**
@@ -21,13 +21,10 @@ export function encodePrice(
   biasedExponent: number | bigint,
 ): EncodedPrice {
   const exp = ensureU8(biasedExponent);
-  const checkedBiasedExp = exp << PRICE_MANTISSA_BITS;
-  // This check will fail if the exponent is too large and truncates.
-  if (exp !== checkedBiasedExp) {
+  if (exp > PRICE_EXPONENT_MAX) {
     throw new Error(PriceError.InvalidBiasedExponent);
   }
-
-  return ((checkedBiasedExp | mantissa.value) >>> 0) as EncodedPrice;
+  return (((exp << PRICE_MANTISSA_BITS) | mantissa.value) >>> 0) as EncodedPrice;
 }
 
 export function isEncodedPriceInfinity(encoded: EncodedPrice): boolean {

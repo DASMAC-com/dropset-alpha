@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import { ensureU8, type U8, type U32 } from "../rust-types";
+import { ensureU8, ensureU64, type U8, type U32, type U64 } from "../rust-types";
 import { decodedPriceToDecimal, decodePrice } from "./decoded-price";
 import { PriceError } from "./error";
 import {
@@ -77,13 +77,14 @@ export function toOrderInfoArgs(
   orderSizeBaseAtoms: bigint,
 ): {
   priceMantissa: U32;
-  baseScalar: bigint;
+  baseScalar: U64;
   baseExponentBiased: U8;
   quoteExponentBiased: U8;
 } {
   const { mantissa, scale: priceExponent } = normalizePriceMantissa(price);
 
   if (orderSizeBaseAtoms === 0n) throw new Error(PriceError.AmountCannotBeZero);
+  ensureU64(orderSizeBaseAtoms);
 
   const { scalar: baseScalar, pow: baseExponentUnbiased } =
     getSigFigs(orderSizeBaseAtoms);
@@ -91,7 +92,7 @@ export function toOrderInfoArgs(
 
   return {
     priceMantissa: mantissa.value,
-    baseScalar,
+    baseScalar: ensureU64(baseScalar),
     baseExponentBiased: toBiasedExponent(baseExponentUnbiased),
     quoteExponentBiased: toBiasedExponent(quoteExponentUnbiased),
   };

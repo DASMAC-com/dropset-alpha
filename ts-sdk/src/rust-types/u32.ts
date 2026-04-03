@@ -9,7 +9,7 @@ export type U32 = number & { readonly __brand: "U32" };
 
 /** Validates that a value is a u32 and returns it branded. */
 export function ensureU32(n: number | bigint): U32 {
-  if (typeof n === "number" && !Number.isInteger(n))
+  if (typeof n === "number" && !Number.isSafeInteger(n))
     throw new Error(RustTypeError.InvalidU32);
   const v = BigInt(n);
   if (v < 0n || v > BigInt(U32_MAX)) throw new Error(RustTypeError.InvalidU32);

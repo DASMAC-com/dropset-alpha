@@ -9,7 +9,7 @@ export type U64 = bigint & { readonly __brand: "U64" };
 
 /** Validates that a value is a u64 and returns it branded. */
 export function ensureU64(n: number | bigint): U64 {
-  if (typeof n === "number" && !Number.isInteger(n))
+  if (typeof n === "number" && !Number.isSafeInteger(n))
     throw new Error(RustTypeError.InvalidU64);
   const v = BigInt(n);
   if (v < 0n || v > U64_MAX) throw new Error(RustTypeError.InvalidU64);
