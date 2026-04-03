@@ -93,6 +93,7 @@ pub struct OrderInfo {
 }
 
 #[derive(Debug, Clone, Pack, Unpack, PartialEq, Eq)]
+#[cfg_attr(feature = "codama", derive(instruction_macros::CodamaType))]
 pub struct OrderInfoArgs {
     /// The price mantissa.
     pub price_mantissa: u32,

@@ -21,3 +21,8 @@ pub fn expand_events() {
 pub fn expand_pack_and_unpack() {
     macrotest::expand_args("src/pack_and_unpack.rs", ["--features", "no_extra_derives"]);
 }
+
+#[test]
+pub fn expand_codama() {
+    macrotest::expand_args("src/codama.rs", ["--features", "codama"]);
+}

@@ -1,0 +1,62 @@
+{
+  "name": "@dasmac-com/dropset-alpha-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for DASMAC's `dropset` alpha protocol",
+  "homepage": "https://github.com/dasmac-com/dropset-alpha#readme",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "require": {
+        "types": "./dist/common/index.d.ts",
+        "default": "./dist/common/index.js"
+      },
+      "import": {
+        "types": "./dist/esm/index.d.mts",
+        "default": "./dist/esm/index.mjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "dist/common/index.js",
+  "module": "dist/esm/index.mjs",
+  "repository": "github:dasmac-com/dropset-alpha",
+  "scripts": {
+    "_format": "biome format",
+    "build": "tsc",
+    "build:publish": "tsup",
+    "check": "tsc --noEmit",
+    "check:test": "tsc -p tsconfig.test.json --noEmit",
+    "clean": "rm -rf dist",
+    "format": "pnpm _format --write",
+    "lint": "biome check",
+    "lint:fix": "pnpm lint --write",
+    "test": "pnpm test:unit",
+    "test:e2e": "pnpm jest tests/e2e",
+    "test:unit": "pnpm jest tests/unit"
+  },
+  "typings": "dist/common/index.d.ts",
+  "dependencies": {
+    "@solana/program-client-core": "^6.5.0",
+    "@solana/kit": "catalog:",
+    "@solana/rpc-transport-http": "^6.5.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "catalog:",
+    "@types/node": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@solana/kit": "catalog:"
+  }
+}

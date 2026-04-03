@@ -8,9 +8,10 @@
     "build:sbf:dropset": "cd program && cargo build-sbf --arch v2",
     "build:sbf:pack-orders": "cd cu-bench/programs/pack-orders && cargo build-sbf --arch v2",
     "build:sbf:to-order-info": "cd cu-bench/programs/to-order-info && cargo build-sbf --arch v2",
-    "check": "pnpm run check:rust && pnpm run check:ts",
+    "check": "pnpm run check:rust && pnpm run check:ts && pnpm run check:ts:test",
     "check:all": "pnpm run check && pnpm run check:bench",
     "check:ts": "turbo run check",
+    "check:ts:test": "turbo run check:test",
     "check:rust": "cargo check --workspace --all-targets",
     "check:bench": "pnpm run check:bench:manifest && pnpm run check:bench:phoenix",
     "check:bench:manifest": "cd cu-bench/manifest && cargo check --tests",
@@ -21,6 +22,7 @@
     "lint:biome:fix": "biome check --write",
     "lint:rust": "cargo +nightly clippy --workspace --all-targets -- -D warnings",
     "lint:rust:fix": "cargo +nightly clippy --fix --workspace --all-targets --allow-dirty --allow-staged -- -D warnings",
+    "lint:generated": "biome check --write codama-idl-gen ts-sdk/src/generated",
     "format": "pnpm run format:biome && pnpm run format:rust",
     "format:biome": "biome format --write",
     "format:rust": "cargo +nightly fmt --all",
@@ -43,7 +45,10 @@
     "service:taker": "cargo run -p dropset-taker-bot",
     "service:taker:docker": "docker compose -f services/taker-bot/compose.yaml up --build -d",
     "tool:install:cargo-expand": "cargo +nightly install cargo-expand",
-    "deploy:localnet": "solana program deploy -u localhost target/deploy/dropset.so --program-id test-keypair.json"
+    "deploy:localnet": "solana program deploy -u localhost target/deploy/dropset.so --program-id test-keypair.json",
+    "codama:gen": "pnpm run codama:gen-idl && pnpm run codama:gen-ts && pnpm run lint:generated",
+    "codama:gen-idl": "cargo run -p codama-idl-gen",
+    "codama:gen-ts": "codama run --all --config codama-idl-gen/codama.json --idl codama-idl-gen/idl.json"
   },
   "packageManager": "pnpm@10.30.3",
   "engines": {
@@ -51,6 +56,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@codama/cli": "^1.5.0",
+    "@codama/renderers-js": "^2.1.0",
     "turbo": "^2.9.1"
   }
 }

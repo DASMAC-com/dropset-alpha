@@ -1,5 +1,8 @@
 //! Renders the parsed instruction model into generated modules, helpers, and macros.
 
+mod codama_helpers;
+pub mod codama_program_impl;
+mod codama_type_impl;
 mod feature;
 mod feature_namespace;
 mod instruction_accounts;
@@ -9,6 +12,7 @@ pub mod pack_struct_fields;
 mod try_from_u8;
 mod unpack_impl;
 
+pub use codama_type_impl::render as render_codama_type_impl;
 pub use feature::*;
 pub use feature_namespace::*;
 pub use instruction_accounts::render as render_instruction_accounts;

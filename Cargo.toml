@@ -20,6 +20,7 @@ members = [
   "price",
   "program",
   "transaction-parser",
+  "codama-idl-gen",
 ]
 
 [workspace.package]
@@ -113,4 +114,5 @@ check-cfg = [
     'cfg(feature, values("debug"))',
     'cfg(feature, values("bench-program-A"))',
     'cfg(feature, values("bench-program-B"))',
+    'cfg(feature, values("codama"))',
 ]

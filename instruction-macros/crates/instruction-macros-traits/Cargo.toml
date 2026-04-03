@@ -9,3 +9,18 @@ workspace = true
 [dependencies]
 solana-address = { workspace = true, features = ["copy"] }
 solana-program-error.workspace = true
+
+# serde's version is pinned explicitly here because the workspace
+# enables default features (std) and this crate is `#![no_std]`.
+# Cargo ignores `default-features = false` on workspace inherited
+# deps, so { workspace = true, default-features = false } would
+# result in the same issue.
+#
+# The alternative is removing default features from the top level
+# Cargo.toml serde entry, but that would then require explicitly
+# adding default features to 10+ crates all just to avoid pinning this one.
+serde = { version = "1.0.0", default-features = false, features = ["derive", "alloc"], optional = true }
+
+[features]
+default = []
+codama = ["dep:serde"]

@@ -15,6 +15,7 @@ use price::OrderInfoArgs;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, ProgramInstruction)]
+#[cfg_attr(feature = "codama", derive(instruction_macros::CodamaProgram))]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
 #[cfg_attr(feature = "client", derive(strum_macros::Display))]
 #[program_id(crate::program::ID)]
