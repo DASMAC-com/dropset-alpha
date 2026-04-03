@@ -44,9 +44,10 @@
   },
   "typings": "dist/common/index.d.ts",
   "dependencies": {
-    "@solana/program-client-core": "^6.5.0",
     "@solana/kit": "catalog:",
-    "@solana/rpc-transport-http": "^6.5.0"
+    "@solana/program-client-core": "^6.5.0",
+    "@solana/rpc-transport-http": "^6.5.0",
+    "decimal.js": "catalog:"
   },
   "devDependencies": {
     "@jest/globals": "catalog:",

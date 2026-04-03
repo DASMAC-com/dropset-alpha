@@ -8,9 +8,17 @@ import {
 } from "@solana/kit";
 import type { createHttpTransport } from "@solana/rpc-transport-http";
 
-import { LOCALNET_URL, MARKET_SEED_STR } from "@/const";
-import { DROPSET_PROGRAM_ADDRESS, getMarketAccountDecoder } from "@/generated";
-import type { Flatten } from "../types";
+import { LOCALNET_URL, MARKET_SEED_STR } from "@/ts-sdk/const";
+import {
+  DROPSET_PROGRAM_ADDRESS,
+  getMarketAccountDecoder,
+} from "@/ts-sdk/generated";
+import { toMarketViewAll } from "../dropset-interface";
+import type {
+  DropsetMarketAccount,
+  DropsetMarketView,
+  Flatten,
+} from "../types";
 
 type HttpTransportConfig = Flatten<Parameters<typeof createHttpTransport>[0]>;
 
@@ -33,11 +41,11 @@ export function getRpcClient(args?: RpcClientArgs) {
 }
 
 /**
- * Gets the dropset market accounts owned by the dropset program.
+ * Fetches the dropset market accounts owned by the dropset program.
  */
-export async function getDropsetMarkets(
+export async function fetchDropsetMarketAccounts(
   rpcClient: ReturnType<typeof getRpcClient>,
-) {
+): Promise<DropsetMarketAccount[]> {
   const markets = await rpcClient
     .getProgramAccounts(DROPSET_PROGRAM_ADDRESS, { encoding: "base64" })
     .send();
@@ -46,10 +54,25 @@ export async function getDropsetMarkets(
 
   return markets.map(
     (market) =>
-      [
-        market.pubkey,
-        decoder.decode(Buffer.from(market.account.data[0], "base64")),
-      ] as const,
+      ({
+        address: market.pubkey,
+        ...decoder.decode(Buffer.from(market.account.data[0], "base64")),
+      }) as const,
+  );
+}
+
+/**
+ * Fetches the dropset market accounts owned by the dropset program and converts them into
+ * more ergonomic {@link DropsetMarketView} types.
+ */
+export async function fetchDropsetMarketViews(
+  rpcClient: ReturnType<typeof getRpcClient>,
+): Promise<DropsetMarketView[]> {
+  return (await fetchDropsetMarketAccounts(rpcClient)).map(
+    ({ address, ...market }) => ({
+      address,
+      ...toMarketViewAll(market),
+    }),
   );
 }
 
@@ -72,3 +95,5 @@ export async function deriveMarketAddress(
     ],
   });
 }
+
+export * from "./liquidity";

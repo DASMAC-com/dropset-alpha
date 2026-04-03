@@ -2,7 +2,7 @@ import {
   getMarketHeaderDecoder,
   getMarketSeatDecoder,
   getSectorDecoder,
-} from "@/generated";
+} from "@/ts-sdk/generated";
 
 export const LOCALNET_URL = "http://localhost:8899";
 export const NIL = 0xffffffff;
