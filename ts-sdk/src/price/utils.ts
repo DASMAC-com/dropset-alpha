@@ -1,6 +1,17 @@
 import { Decimal } from "decimal.js";
 
 /**
+ * Returns a Decimal constructor with enough precision to exactly represent
+ * the result of an operation on `a` and `b` (no silent rounding).
+ */
+function preciseDecimal(a: bigint, b: Decimal): typeof Decimal {
+  const need = a.toString().length + b.precision(true) + 1;
+  return need <= Decimal.precision
+    ? Decimal
+    : Decimal.clone({ precision: need });
+}
+
+/**
  * Convert a base amount to its equivalent quote amount at the given price.
  *
  * `quote = base * price`
@@ -16,8 +27,9 @@ export function quoteFromBase(
   price: Decimal,
 ): bigint | Decimal {
   if (typeof baseAmount === "bigint") {
+    const D = preciseDecimal(baseAmount, price);
     return BigInt(
-      new Decimal(baseAmount.toString())
+      new D(baseAmount.toString())
         .times(price)
         .toDP(0, Decimal.ROUND_DOWN)
         .toFixed(),
@@ -42,8 +54,9 @@ export function baseFromQuote(
   price: Decimal,
 ): bigint | Decimal {
   if (typeof quoteAmount === "bigint") {
+    const D = preciseDecimal(quoteAmount, price);
     return BigInt(
-      new Decimal(quoteAmount.toString())
+      new D(quoteAmount.toString())
         .div(price)
         .toDP(0, Decimal.ROUND_DOWN)
         .toFixed(),
