@@ -1,4 +1,4 @@
-import { ensureU8, type U8, type U32 } from "../rust-types";
+import { ensureU8, ensureU64, type U8, type U32, type U64 } from "../rust-types";
 import { type EncodedPrice, encodePrice } from "./encoded-price";
 import { PriceError } from "./error";
 import {
@@ -50,17 +50,16 @@ export function toOrderInfo(args: {
   quoteExponentBiased: number | bigint;
 }): {
   encodedPrice: EncodedPrice;
-  baseAtoms: bigint;
-  quoteAtoms: bigint;
+  baseAtoms: U64;
+  quoteAtoms: U64;
 } {
   const mantissa = validatePriceMantissa(args.priceMantissa);
   const baseExp = ensureU8(args.baseExponentBiased);
   const quoteExp = ensureU8(args.quoteExponentBiased);
 
-  const baseAtoms = pow10Bigint(args.baseScalar, baseExp);
-  const quoteAtoms = pow10Bigint(
-    BigInt(mantissa.value) * args.baseScalar,
-    quoteExp,
+  const baseAtoms = ensureU64(pow10Bigint(args.baseScalar, baseExp));
+  const quoteAtoms = ensureU64(
+    pow10Bigint(BigInt(mantissa.value) * args.baseScalar, quoteExp),
   );
 
   // Re-bias: price_exponent = quote_exponent_biased + BIAS - base_exponent_biased
