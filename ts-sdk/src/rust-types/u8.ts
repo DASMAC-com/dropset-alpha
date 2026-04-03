@@ -9,9 +9,9 @@ export type U8 = number & { readonly __brand: "U8" };
 
 /** Validates that a value is a u8 and returns it branded. */
 export function ensureU8(n: number | bigint): U8 {
-  const v = Number(n);
-  if (!Number.isInteger(v) || v < 0 || v > U8_MAX) {
+  if (typeof n === "number" && !Number.isInteger(n))
     throw new Error(RustTypeError.InvalidU8);
-  }
-  return v as U8;
+  const v = BigInt(n);
+  if (v < 0n || v > BigInt(U8_MAX)) throw new Error(RustTypeError.InvalidU8);
+  return Number(v) as U8;
 }

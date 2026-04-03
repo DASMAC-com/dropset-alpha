@@ -9,9 +9,9 @@ export type U16 = number & { readonly __brand: "U16" };
 
 /** Validates that a value is a u16 and returns it branded. */
 export function ensureU16(n: number | bigint): U16 {
-  const v = Number(n);
-  if (!Number.isInteger(v) || v < 0 || v > U16_MAX) {
+  if (typeof n === "number" && !Number.isInteger(n))
     throw new Error(RustTypeError.InvalidU16);
-  }
-  return v as U16;
+  const v = BigInt(n);
+  if (v < 0n || v > BigInt(U16_MAX)) throw new Error(RustTypeError.InvalidU16);
+  return Number(v) as U16;
 }
