@@ -52,16 +52,16 @@ if ! solana cluster-version --url localhost &>/dev/null 2>&1; then
     done
 fi
 
-pnpm run build
-pnpm run deploy
+pnpm run build:rust && pnpm run build:sbf:dropset
+pnpm run deploy:localnet
 
 # Creates a market, writes to the faucet, taker, and maker keypair files, and
 # patches the base and quote mints into their respective toml config files.
 cargo run -p dropset-services-shared --example initialization_helper -- $FORCE_FLAG
 
-pnpm run services:faucet:docker
-pnpm run services:maker:docker
-pnpm run services:taker:docker
+pnpm run service:faucet:docker
+pnpm run service:maker:docker
+pnpm run service:taker:docker
 
 echo "Waiting to see if services are healthy..."
 sleep 3
