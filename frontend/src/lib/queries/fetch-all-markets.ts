@@ -1,8 +1,4 @@
-import {
-  fetchDropsetMarketAccounts,
-  fetchDropsetMarketViews,
-  getRpcClient,
-} from "@/ts-sdk";
+import { fetchDropsetMarketViews, getRpcClient } from "@/ts-sdk";
 
 export type MarketSummary = {
   address: string;
@@ -17,7 +13,7 @@ export type MarketSummary = {
  */
 export async function fetchAllMarkets(): Promise<MarketSummary[]> {
   const rpc = getRpcClient();
-  const markets = await fetchDropsetMarketViews(rpc);
+  const _markets = await fetchDropsetMarketViews(rpc);
 
   // Stub data — replace with real fetch
   return [
