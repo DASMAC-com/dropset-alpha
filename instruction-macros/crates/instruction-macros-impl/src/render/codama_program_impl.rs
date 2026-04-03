@@ -30,7 +30,7 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
     let enum_ident = &parsed_enum.enum_ident;
     let codama = codama_traits_path();
     let string = quote! { ::instruction_macros::codama::_alloc::string::String };
-    let vec_macro = quote! { ::instruction_macros::codama::_alloc::vec };
+    let vec = quote! { ::instruction_macros::codama::_alloc::vec };
 
     let instruction_nodes: Vec<TokenStream> = variants
         .iter()
@@ -48,9 +48,9 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                     let is_signer = acc.is_signer;
                     let desc = &acc.description;
                     let docs = if desc.is_empty() {
-                        quote! { #vec_macro::Vec::new() }
+                        quote! { #vec::Vec::new() }
                     } else {
-                        quote! { #vec_macro![#string::from(#desc)] }
+                        quote! { #vec::Vec::from([#string::from(#desc)]) }
                     };
                     quote! {
                         #codama::InstructionAccountNode {
@@ -69,7 +69,7 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 #codama::InstructionArgumentNode {
                     kind: "instructionArgumentNode",
                     name: #string::from("discriminator"),
-                    docs: #vec_macro::Vec::new(),
+                    docs: #vec::Vec::new(),
                     ty: #codama::NumberFormat::U8.le(),
                     default_value: Some(#codama::NumberValueNode {
                         kind: "numberValueNode",
@@ -83,9 +83,9 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 let arg_name = to_camel_case(&arg.name.to_string());
                 let desc = &arg.description;
                 let docs = if desc.is_empty() {
-                    quote! { #vec_macro::Vec::new() }
+                    quote! { #vec::Vec::new() }
                 } else {
-                    quote! { #vec_macro![#string::from(#desc)] }
+                    quote! { #vec::Vec::from([#string::from(#desc)]) }
                 };
                 let type_node_expr = argument_type_to_inline_expr(&arg.ty, &codama);
                 arg_nodes.push(quote! {
@@ -104,11 +104,11 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
                 #codama::InstructionNode {
                     kind: "instructionNode",
                     name: #string::from(#name),
-                    docs: #vec_macro::Vec::new(),
+                    docs: #vec::Vec::new(),
                     optional_account_strategy: "programId",
-                    accounts: #vec_macro![#(#account_nodes),*],
-                    arguments: #vec_macro![#(#arg_nodes),*],
-                    discriminators: #vec_macro![#codama::discriminator(#codama::NumberFormat::U8, #disc as u64)],
+                    accounts: #vec::Vec::from([#(#account_nodes),*]),
+                    arguments: #vec::Vec::from([#(#arg_nodes),*]),
+                    discriminators: #vec::Vec::from([#codama::discriminator(#codama::NumberFormat::U8, #disc as u64)]),
                 }
             }
         })
@@ -135,8 +135,8 @@ pub fn render(parsed_enum: &ParsedEnum, variants: &[InstructionVariant]) -> Toke
     quote! {
         impl #codama::CodamaProgram for #enum_ident {
             fn codama_root(program_name: &str, program_id: &str) -> #codama::RootNode {
-                let instructions = #vec_macro![#(#instruction_nodes),*];
-                let defined_types = #vec_macro![#(#defined_type_exprs),*];
+                let instructions = #vec::Vec::from([#(#instruction_nodes),*]);
+                let defined_types = #vec::Vec::from([#(#defined_type_exprs),*]);
                 let program = #codama::ProgramNode::new(
                     #string::from(program_name),
                     #string::from(program_id),

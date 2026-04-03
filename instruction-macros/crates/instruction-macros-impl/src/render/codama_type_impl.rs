@@ -43,9 +43,9 @@ pub fn render(parsed_struct: ParsedStruct) -> TokenStream {
             fn name() -> &'static str { #struct_name_str }
             fn type_node() -> #codama::TypeNode {
                 #codama::TypeNode::Struct(#codama::StructTypeNode {
-                    fields: ::instruction_macros::codama::_alloc::vec![
+                    fields: ::instruction_macros::codama::_alloc::vec::Vec::from([
                         #(#field_nodes),*
-                    ],
+                    ]),
                 })
             }
         }
