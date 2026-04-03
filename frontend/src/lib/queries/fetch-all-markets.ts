@@ -1,3 +1,5 @@
+import { fetchDropsetMarkets } from "@/ts-sdk";
+
 export type MarketSummary = {
   address: string;
   traders: number;
@@ -10,6 +12,7 @@ export type MarketSummary = {
  * TODO: implement actual RPC / indexer call.
  */
 export async function fetchAllMarkets(): Promise<MarketSummary[]> {
+  await fetchDropsetMarkets();
   // Stub data — replace with real fetch
   return [
     {
