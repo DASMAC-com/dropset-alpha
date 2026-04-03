@@ -1,24 +1,27 @@
+import { ensureU8, type U32, U32_MAX } from "../rust-types";
 import { PRICE_MANTISSA_BITS } from "./lib";
 import type { ValidatedPriceMantissa } from "./validated-mantissa";
-
-const ENCODED_PRICE_INFINITY = 0xffff_ffff;
-const ENCODED_PRICE_ZERO = 0;
-
-export { ENCODED_PRICE_INFINITY, ENCODED_PRICE_ZERO };
 
 /**
  * An encoded price packed into a u32: `[exponent_bits | mantissa_bits]`.
  *
  * Port of `EncodedPrice` in `price/src/encoded_price.rs`.
  */
-export type EncodedPrice = number;
+export type EncodedPrice = U32;
+
+const ENCODED_PRICE_INFINITY = U32_MAX as EncodedPrice;
+const ENCODED_PRICE_ZERO = 0 as EncodedPrice;
+
+export { ENCODED_PRICE_INFINITY, ENCODED_PRICE_ZERO };
 
 /** Port of `EncodedPrice::new` in `price/src/encoded_price.rs`. */
 export function encodePrice(
   mantissa: ValidatedPriceMantissa,
-  biasedExponent: number,
+  biasedExponent: number | bigint,
 ): EncodedPrice {
-  return ((biasedExponent << PRICE_MANTISSA_BITS) | mantissa.value) >>> 0;
+  const exp = ensureU8(biasedExponent);
+  return (((exp << PRICE_MANTISSA_BITS) | mantissa.value) >>>
+    0) as EncodedPrice;
 }
 
 export function isEncodedPriceInfinity(encoded: EncodedPrice): boolean {

@@ -1,3 +1,4 @@
+import { ensureU8, type U8, type U32 } from "../rust-types";
 import { type EncodedPrice, encodePrice } from "./encoded-price";
 import { PriceError } from "./error";
 import {
@@ -18,14 +19,18 @@ export const UNBIASED_MIN = -BIAS;
 export const UNBIASED_MAX = (1 << (32 - PRICE_MANTISSA_BITS)) - 1 - BIAS;
 
 /** Port of the `pow10_u64!` macro in `price/src/macros.rs`. */
-export function pow10Bigint(value: bigint, biasedExponent: number): bigint {
-  if (biasedExponent === BIAS) return value;
+export function pow10Bigint(
+  value: bigint,
+  biasedExponent: number | bigint,
+): bigint {
+  const exp = ensureU8(biasedExponent);
+  if (exp === BIAS) return value;
 
-  if (biasedExponent < 0 || biasedExponent > 31) {
+  if (exp > 31) {
     throw new Error(PriceError.InvalidBiasedExponent);
   }
 
-  const unbiased = biasedExponent - BIAS;
+  const unbiased = exp - BIAS;
   if (unbiased < 0) {
     return value / 10n ** BigInt(-unbiased);
   }
@@ -38,25 +43,27 @@ export function pow10Bigint(value: bigint, biasedExponent: number): bigint {
  * Port of `to_order_info` in `price/src/lib.rs`.
  */
 export function toOrderInfo(args: {
-  priceMantissa: number;
+  priceMantissa: number | bigint;
   baseScalar: bigint;
-  baseExponentBiased: number;
-  quoteExponentBiased: number;
+  baseExponentBiased: number | bigint;
+  quoteExponentBiased: number | bigint;
 }): {
   encodedPrice: EncodedPrice;
   baseAtoms: bigint;
   quoteAtoms: bigint;
 } {
   const mantissa = validatePriceMantissa(args.priceMantissa);
+  const baseExp = ensureU8(args.baseExponentBiased);
+  const quoteExp = ensureU8(args.quoteExponentBiased);
 
-  const baseAtoms = pow10Bigint(args.baseScalar, args.baseExponentBiased);
+  const baseAtoms = pow10Bigint(args.baseScalar, baseExp);
   const quoteAtoms = pow10Bigint(
     BigInt(mantissa.value) * args.baseScalar,
-    args.quoteExponentBiased,
+    quoteExp,
   );
 
   // Re-bias: price_exponent = quote_exponent_biased + BIAS - base_exponent_biased
-  const rebiased = args.quoteExponentBiased + BIAS - args.baseExponentBiased;
+  const rebiased = quoteExp + BIAS - baseExp;
   if (rebiased < 0) throw new Error(PriceError.ExponentUnderflow);
 
   return {
@@ -72,17 +79,17 @@ export function toOrderInfo(args: {
  *
  * Port of `OrderInfoArgs::order_at_price` in `price/src/lib.rs`.
  */
-export function orderAtPrice(priceMantissa: number): {
-  priceMantissa: number;
+export function orderAtPrice(priceMantissa: number | bigint): {
+  priceMantissa: U32;
   baseScalar: bigint;
-  baseExponentBiased: number;
-  quoteExponentBiased: number;
+  baseExponentBiased: U8;
+  quoteExponentBiased: U8;
 } {
   return {
-    priceMantissa,
+    priceMantissa: validatePriceMantissa(priceMantissa).value,
     baseScalar: 1n,
-    baseExponentBiased: UNBIASED_MAX + BIAS,
-    quoteExponentBiased: BIAS - 1,
+    baseExponentBiased: ensureU8(UNBIASED_MAX + BIAS),
+    quoteExponentBiased: ensureU8(BIAS - 1),
   };
 }
 

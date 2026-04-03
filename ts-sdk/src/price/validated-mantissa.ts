@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { ensureU32, type U32 } from "../rust-types";
 import { PriceError } from "./error";
 import {
   MANTISSA_DIGITS_LOWER_BOUND,
@@ -12,22 +13,20 @@ import {
  */
 export type ValidatedPriceMantissa = {
   readonly __brand: "ValidatedPriceMantissa";
-  readonly value: number;
+  readonly value: U32;
 };
 
 /** Port of `ValidatedPriceMantissa::try_from` in `price/src/validated_mantissa.rs`. */
 export function validatePriceMantissa(
-  mantissa: number,
+  mantissa: number | bigint,
 ): ValidatedPriceMantissa {
-  if (
-    mantissa < MANTISSA_DIGITS_LOWER_BOUND ||
-    mantissa > MANTISSA_DIGITS_UPPER_BOUND
-  ) {
+  const v = ensureU32(mantissa);
+  if (v < MANTISSA_DIGITS_LOWER_BOUND || v > MANTISSA_DIGITS_UPPER_BOUND) {
     throw new Error(PriceError.InvalidPriceMantissa);
   }
   return {
     __brand: "ValidatedPriceMantissa",
-    value: mantissa,
+    value: v,
   } as ValidatedPriceMantissa;
 }
 

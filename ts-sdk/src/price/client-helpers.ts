@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { ensureU8, type U8, type U32 } from "../rust-types";
 import { decodedPriceToDecimal, decodePrice } from "./decoded-price";
 import { PriceError } from "./error";
 import {
@@ -15,19 +16,20 @@ export function decimalPow10(value: Decimal, pow: number): Decimal {
 }
 
 /** Port of `try_to_biased_exponent` in `price/src/client_helpers.rs`. */
-export function toBiasedExponent(unbiased: number): number {
+export function toBiasedExponent(unbiased: number): U8 {
   if (unbiased < UNBIASED_MIN || unbiased > UNBIASED_MAX) {
     throw new Error(PriceError.InvalidBiasedExponent);
   }
-  return unbiased + BIAS;
+  return ensureU8(unbiased + BIAS);
 }
 
 /** Port of `atoms_to_ui_amount` in `price/src/client_helpers.rs`. */
 export function atomsToUiAmount(
   atomsAmount: bigint,
-  mintDecimals: number,
+  mintDecimals: number | bigint,
 ): Decimal {
-  return decimalPow10(new Decimal(atomsAmount.toString()), -mintDecimals);
+  const dec = ensureU8(mintDecimals);
+  return decimalPow10(new Decimal(atomsAmount.toString()), -dec);
 }
 
 /**
@@ -40,14 +42,16 @@ export function atomsToUiAmount(
  */
 export function uiPriceToAtomsPrice(
   uiPrice: Decimal,
-  baseDecimals: number,
-  quoteDecimals: number,
+  baseDecimals: number | bigint,
+  quoteDecimals: number | bigint,
 ): Decimal {
-  return decimalPow10(uiPrice, quoteDecimals - baseDecimals);
+  const base = ensureU8(baseDecimals);
+  const quote = ensureU8(quoteDecimals);
+  return decimalPow10(uiPrice, quote - base);
 }
 
 /** Port of `try_encoded_u32_to_decoded_decimal` in `price/src/client_helpers.rs`. */
-export function encodedU32ToDecimal(encodedU32: number): Decimal {
+export function encodedU32ToDecimal(encodedU32: number | bigint): Decimal {
   return decodedPriceToDecimal(decodePrice(encodedU32));
 }
 
@@ -72,10 +76,10 @@ export function toOrderInfoArgs(
   price: Decimal,
   orderSizeBaseAtoms: bigint,
 ): {
-  priceMantissa: number;
+  priceMantissa: U32;
   baseScalar: bigint;
-  baseExponentBiased: number;
-  quoteExponentBiased: number;
+  baseExponentBiased: U8;
+  quoteExponentBiased: U8;
 } {
   const { mantissa, scale: priceExponent } = normalizePriceMantissa(price);
 
