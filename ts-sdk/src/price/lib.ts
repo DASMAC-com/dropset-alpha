@@ -33,7 +33,7 @@ export function pow10Bigint(
   const exp = ensureU8(biasedExponent);
   if (exp === BIAS) return value;
 
-  if (exp > 31) {
+  if (exp > PRICE_EXPONENT_MAX) {
     throw new Error(PriceError.InvalidBiasedExponent);
   }
 
