@@ -1,4 +1,4 @@
-import { type Address, isAddress } from "@solana/addresses";
+import type { Address } from "@solana/addresses";
 
 /**
  * Compute the shortest unique prefix for each address in the set.
@@ -31,15 +31,7 @@ export function resolveSlug(
   slug: string,
   addresses: Address[],
 ): Address | null {
-  if (!isAddress(slug)) {
-    return null;
-  }
-  // Exact match first
-  if (addresses.includes(slug)) return slug;
-
-  // Prefix match
   const matches = addresses.filter((a) => a.startsWith(slug));
   if (matches.length === 1) return matches[0];
-
   return null;
 }
