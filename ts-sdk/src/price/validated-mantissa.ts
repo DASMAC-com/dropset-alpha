@@ -40,7 +40,7 @@ export function normalizePriceMantissa(price: Decimal): {
   mantissa: ValidatedPriceMantissa;
   scale: number;
 } {
-  if (price.lte(0)) {
+  if (price.lte(0) || !price.isFinite()) {
     throw new Error(PriceError.InvalidPriceMantissa);
   }
 
