@@ -1,7 +1,7 @@
 import type { Address } from "@solana/addresses";
+import { getRpcFromEnv } from "@/lib/env";
 import {
   fetchDropsetMarketView,
-  getRpcClient,
   marketLiquidity,
   type RpcClient,
 } from "@/ts-sdk";
@@ -22,7 +22,7 @@ export async function fetchMarket(
   address: Address,
   rpc?: RpcClient,
 ): Promise<MarketDetail | undefined> {
-  const rpcClient = rpc ?? getRpcClient();
+  const rpcClient = getRpcFromEnv(rpc);
   const market = await fetchDropsetMarketView(rpcClient, address);
   if (!market) return undefined;
 

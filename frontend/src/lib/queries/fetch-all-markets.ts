@@ -1,13 +1,14 @@
+import type { Address } from "@solana/addresses";
+import { getRpcFromEnv } from "@/lib/env";
 import {
   fetchDropsetMarketViews,
-  getRpcClient,
   marketLiquidity,
   type RpcClient,
 } from "@/ts-sdk";
 import { fetchDailyVolume } from "./fetch-daily-volume";
 
 export type MarketSummary = {
-  address: string;
+  address: Address;
   traders: number;
   liquidity: bigint;
   volume24h: bigint;
@@ -19,7 +20,7 @@ export type MarketSummary = {
 export async function fetchAllMarkets(
   rpc?: RpcClient,
 ): Promise<MarketSummary[]> {
-  const client = rpc ?? getRpcClient();
+  const client = getRpcFromEnv(rpc);
   const markets = await fetchDropsetMarketViews(client);
 
   const marketData = await Promise.all(

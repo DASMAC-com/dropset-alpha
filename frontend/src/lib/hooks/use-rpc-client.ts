@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getRpcClient, type RpcClient } from "@/ts-sdk";
+import { getRpcFromEnv } from "@/lib/env";
+import type { RpcClient } from "@/ts-sdk";
 
 export function useRpcClient(): RpcClient | undefined {
   const [rpc, setRpc] = useState<RpcClient | undefined>(undefined);
 
   useEffect(() => {
-    setRpc(getRpcClient());
+    setRpc(getRpcFromEnv());
   }, []);
 
   return rpc;

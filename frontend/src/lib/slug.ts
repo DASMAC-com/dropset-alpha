@@ -1,3 +1,5 @@
+import { type Address, isAddress } from "@solana/addresses";
+
 /**
  * Compute the shortest unique prefix for each address in the set.
  * Returns a map from full address → shortest unambiguous prefix.
@@ -25,7 +27,13 @@ export function buildPrefixMap(addresses: string[]): Map<string, string> {
  * Resolve a (possibly truncated) slug to a full market address.
  * Returns the full address if exactly one match, or null if ambiguous / none.
  */
-export function resolveSlug(slug: string, addresses: string[]): string | null {
+export function resolveSlug(
+  slug: string,
+  addresses: Address[],
+): Address | null {
+  if (!isAddress(slug)) {
+    return null;
+  }
   // Exact match first
   if (addresses.includes(slug)) return slug;
 
