@@ -7,14 +7,21 @@ import type { Address } from "@solana/addresses";
  */
 export function buildPrefixMap(addresses: string[]): Map<string, string> {
   const MIN_LEN = 6;
+  const sorted = [...addresses].sort();
   const map = new Map<string, string>();
 
-  for (const addr of addresses) {
+  for (let i = 0; i < sorted.length; i++) {
+    const addr = sorted[i];
+    const prev = sorted[i - 1] ?? "";
+    const next = sorted[i + 1] ?? "";
+
+    // Find the length needed to distinguish from both neighbors.
     let len = MIN_LEN;
-    while (len < addr.length) {
-      const prefix = addr.slice(0, len);
-      const collisions = addresses.filter((a) => a.startsWith(prefix));
-      if (collisions.length === 1) break;
+    while (
+      len < addr.length &&
+      (addr.slice(0, len) === prev.slice(0, len) ||
+        addr.slice(0, len) === next.slice(0, len))
+    ) {
       len++;
     }
     map.set(addr, addr.slice(0, len));
