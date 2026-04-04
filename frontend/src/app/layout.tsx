@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dropset",
-  description: "Dropset alpha prototype",
+  title: "dropset",
+  description: "dropset alpha prototype",
   icons: {
-    icon: "/dropset.ico",
+    icon: "/icon.svg",
   },
 };
 
