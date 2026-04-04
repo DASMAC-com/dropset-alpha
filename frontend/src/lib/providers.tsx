@@ -5,6 +5,10 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { type ReactNode, useState } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
+  const isDevelopment =
+    process.env.NODE_ENV === "development" ||
+    process.env.VERCEL_ENV === "development";
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -20,7 +24,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {isDevelopment ? <ReactQueryDevtools initialIsOpen={false} /> : null}
     </QueryClientProvider>
   );
 }
