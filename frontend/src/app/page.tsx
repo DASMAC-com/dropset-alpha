@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useAllMarkets } from "@/lib/hooks/use-all-markets";
 import { buildPrefixMap } from "@/lib/slug";
 import { ensureU64 } from "@/ts-sdk/rust-types";
@@ -15,9 +16,12 @@ function formatNumber(input: number | bigint): string {
 export default function Home() {
   const { data: markets, isLoading, error } = useAllMarkets();
 
-  const prefixMap = markets
-    ? buildPrefixMap(markets.map((m) => m.address))
-    : new Map();
+  const addresses = useMemo(
+    () => markets?.map((m) => m.address) ?? [],
+    [markets],
+  );
+
+  const prefixMap = useMemo(() => buildPrefixMap(addresses), [addresses]);
 
   return (
     <div className="page-container">
