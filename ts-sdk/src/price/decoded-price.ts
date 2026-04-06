@@ -1,6 +1,5 @@
 import { Decimal } from "decimal.js";
 import { ensureU8, ensureU32, type U8 } from "../rust-types";
-import { decimalPow10 } from "./client-helpers";
 import { ENCODED_PRICE_INFINITY, ENCODED_PRICE_ZERO } from "./encoded-price";
 import { PriceError } from "./error";
 import { BIAS, PRICE_MANTISSA_BITS, PRICE_MANTISSA_MASK } from "./lib";
@@ -8,6 +7,7 @@ import {
   type ValidatedPriceMantissa,
   validatePriceMantissa,
 } from "./validated-mantissa";
+import { decimalPow10 } from "./client-helpers-decimal-pow10";
 
 /**
  * An enum representing a decoded `EncodedPrice`.

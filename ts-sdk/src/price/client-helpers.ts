@@ -14,12 +14,7 @@ import {
   UNBIASED_MAX,
   UNBIASED_MIN,
 } from "./lib";
-
-/** Multiply `value` by `10^pow`. Port of `decimal_pow10` in `price/src/client_helpers.rs`. */
-export function decimalPow10(value: Decimal, pow: number): Decimal {
-  if (pow === 0) return value;
-  return value.times(new Decimal(10).pow(pow));
-}
+import { decimalPow10 } from "./client-helpers-decimal-pow10";
 
 /** Port of `try_to_biased_exponent` in `price/src/client_helpers.rs`. */
 export function toBiasedExponent(unbiased: number): U8 {
