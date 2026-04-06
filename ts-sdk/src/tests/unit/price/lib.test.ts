@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
+import assert from "assert";
 import { Decimal } from "decimal.js";
 import {
   BIAS,
@@ -61,10 +62,8 @@ describe("toOrderInfo", () => {
     expect(order.baseAtoms).toBe(100_000_000n);
 
     const decoded = decodePrice(order.encodedPrice);
-    expect(decoded.kind).toBe("value");
-    if (decoded.kind === "value") {
-      expect(decoded.mantissa.value).toBe(mantissa);
-    }
+    assert(decoded.kind === "value");
+    expect(decoded.mantissa.value).toBe(mantissa);
     const decimalPrice = decodedPriceToDecimal(decoded);
     expect(decimalPrice.eq(new Decimal("0.12345678"))).toBe(true);
   });

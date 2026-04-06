@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
+import assert from "assert";
 import {
   decodePrice,
   type EncodedPrice,
@@ -23,11 +24,9 @@ describe("EncodedPrice", () => {
     const encoded = encodePrice(mantissa, biased);
 
     const decoded = decodePrice(encoded);
-    expect(decoded.kind).toBe("value");
-    if (decoded.kind === "value") {
-      expect(decoded.mantissa.value).toBe(12_345_678);
-      expect(decoded.biasedExponent).toBe(biased);
-    }
+    assert(decoded.kind === "value");
+    expect(decoded.mantissa.value).toBe(12_345_678);
+    expect(decoded.biasedExponent).toBe(biased);
   });
 
   // Port of `price_priority` in `price/src/encoded_price.rs`.

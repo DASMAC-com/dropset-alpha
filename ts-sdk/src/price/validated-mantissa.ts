@@ -1,10 +1,10 @@
 import { Decimal } from "decimal.js";
 import { ensureU32, type U32 } from "../rust-types";
-import { PriceError } from "./error";
 import {
   MANTISSA_DIGITS_LOWER_BOUND,
   MANTISSA_DIGITS_UPPER_BOUND,
-} from "./lib";
+} from "./const";
+import { PriceError } from "./error";
 
 /**
  * A price mantissa validated to be within `[MANTISSA_DIGITS_LOWER_BOUND, MANTISSA_DIGITS_UPPER_BOUND]`.

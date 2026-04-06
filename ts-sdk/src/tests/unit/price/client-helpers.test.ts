@@ -3,7 +3,6 @@ import { Decimal } from "decimal.js";
 import {
   atomsToUiAmount,
   BIAS,
-  decimalPow10,
   PriceError,
   toBiasedExponent,
   toOrderInfoArgs,
@@ -11,6 +10,7 @@ import {
   UNBIASED_MIN,
   uiPriceToAtomsPrice,
 } from "@/ts-sdk/price";
+import { decimalPow10 } from "@/ts-sdk/price/client-helpers-decimal-pow10";
 
 const biasedExponent = (unbiased: number) => toBiasedExponent(unbiased);
 

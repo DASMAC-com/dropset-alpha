@@ -6,15 +6,11 @@ import {
   type U32,
   type U64,
 } from "../rust-types";
+import { decimalPow10 } from "./client-helpers-decimal-pow10";
+import { BIAS, UNBIASED_MAX, UNBIASED_MIN } from "./const";
 import { decodedPriceToDecimal, decodePrice } from "./decoded-price";
 import { PriceError } from "./error";
-import {
-  BIAS,
-  normalizePriceMantissa,
-  UNBIASED_MAX,
-  UNBIASED_MIN,
-} from "./lib";
-import { decimalPow10 } from "./client-helpers-decimal-pow10";
+import { normalizePriceMantissa } from "./lib";
 
 /** Port of `try_to_biased_exponent` in `price/src/client_helpers.rs`. */
 export function toBiasedExponent(unbiased: number): U8 {

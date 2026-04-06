@@ -1,6 +1,6 @@
 import { ensureU8, type U32, U32_MAX } from "../rust-types";
+import { PRICE_EXPONENT_MAX, PRICE_MANTISSA_BITS } from "./const";
 import { PriceError } from "./error";
-import { PRICE_EXPONENT_MAX, PRICE_MANTISSA_BITS } from "./lib";
 import type { ValidatedPriceMantissa } from "./validated-mantissa";
 
 /**

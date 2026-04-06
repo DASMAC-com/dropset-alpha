@@ -1,4 +1,5 @@
 export * from "./client-helpers";
+export * from "./const";
 export * from "./decoded-price";
 export * from "./encoded-price";
 export * from "./error";
