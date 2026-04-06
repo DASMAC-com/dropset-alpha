@@ -9,11 +9,11 @@
     "ignoreUnknown": true,
     "includes": [
       "**",
-      "!!**/node_modules",
-      "!!**/.next",
-      "!!**/.turbo",
-      "!!**/dist",
-      "!!**/build"
+      "!**/node_modules",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/dist",
+      "!**/build"
     ]
   },
   "css": {

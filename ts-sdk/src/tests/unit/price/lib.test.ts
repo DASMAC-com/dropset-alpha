@@ -1,5 +1,5 @@
+import assert from "node:assert";
 import { describe, expect, it } from "@jest/globals";
-import assert from "assert";
 import { Decimal } from "decimal.js";
 import {
   BIAS,
