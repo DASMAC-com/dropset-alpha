@@ -5,10 +5,10 @@ import type { Address } from "@solana/addresses";
  * Returns a map from full address → shortest unambiguous prefix.
  * Minimum prefix length is 6 characters.
  */
-export function buildPrefixMap(addresses: string[]): Map<string, string> {
+export function buildPrefixMap(addresses: Address[]): Map<Address, string> {
   const MIN_LEN = 6;
   const sorted = [...addresses].sort();
-  const map = new Map<string, string>();
+  const map = new Map<Address, string>();
 
   for (let i = 0; i < sorted.length; i++) {
     const addr = sorted[i];
