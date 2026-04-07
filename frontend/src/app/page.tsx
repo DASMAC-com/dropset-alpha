@@ -8,8 +8,15 @@ import { ensureU64 } from "@/ts-sdk/rust-types";
 
 function formatNumber(input: number | bigint): string {
   const n = ensureU64(input);
-  if (n >= 1_000_000) return `${(Number(n / 1_000_000n)).toFixed(1)}M`;
-  if (n >= 1_000) return `${(Number(n / 1_000n)).toFixed(1)}K`;
+  if (Number.isSafeInteger(n)) {
+    const val = Number(n);
+    if (val >= 1_000_000) return `${(Number(val / 1_000_000)).toFixed(1)}M`;
+    if (val >= 1_000) return `${(Number(val / 1_000)).toFixed(1)}K`;
+  } else {
+    if (n >= 1_000_000n) return `${(Number(n / 1_000_000n)).toFixed(1)}M`;
+    if (n >= 1_000n) return `${(Number(n / 1_000n)).toFixed(1)}K`;
+  }
+
   return n.toString();
 }
 
