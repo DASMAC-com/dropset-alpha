@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     resolveSlug(
       slug,
       markets.map((m) => m.address),
-    ) ?? slug;
+    ) ?? notFound();
 
   return {
     title: `dropset – market ${address}`,
