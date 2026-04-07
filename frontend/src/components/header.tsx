@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import WalletConnector from "./WalletConnector";
 
 const NAV_ITEMS = [
   { label: "Info", href: "/info" },
@@ -45,6 +46,8 @@ export function Header() {
             </Link>
           ))}
         </nav>
+
+        <WalletConnector />
       </div>
     </header>
   );
