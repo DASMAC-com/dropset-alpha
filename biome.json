@@ -39,7 +39,8 @@
         "noDuplicateArgumentNames": "error",
         "noDuplicatedSpreadProps": "error",
         "noFloatingPromises": "error",
-        "noShadow": "error"
+        "noShadow": "error",
+        "useSortedClasses": "error"
       }
     },
     "domains": {

@@ -1,9 +1,9 @@
 export default function RepoPage() {
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Repo</h1>
-        <p className="page-subtitle">Coming soon.</p>
+    <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mb-8">
+        <h1 className="font-semibold text-2xl tracking-tight">Repo</h1>
+        <p className="mt-1 text-muted-fg">Coming soon.</p>
       </div>
     </div>
   );

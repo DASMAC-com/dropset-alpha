@@ -14,25 +14,31 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="header">
-      <div className="header-inner">
-        <Link href="/" className="header-logo">
+    <header className="sticky top-0 z-50 border-border border-b bg-background">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-6">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 font-semibold text-base text-foreground no-underline"
+        >
           <Image
             src="/dropset.svg"
             alt="Dropset"
             width={36}
             height={36}
-            className="header-logo-icon"
+            className="h-12 w-auto rounded-md"
           />
-          <span className="header-logo-text">Dropset</span>
         </Link>
 
-        <nav className="header-nav">
+        <nav className="flex items-center gap-2">
           {NAV_ITEMS.map(({ label, href }) => (
             <Link
               key={href}
               href={href}
-              className={`header-nav-link ${pathname === href ? "active" : ""}`}
+              className={`rounded-md px-3 py-1.5 text-sm no-underline transition-colors ${
+                pathname === href
+                  ? "bg-muted text-foreground"
+                  : "text-muted-fg hover:bg-muted hover:text-foreground"
+              }`}
             >
               {label}
             </Link>
