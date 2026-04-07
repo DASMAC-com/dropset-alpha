@@ -16,6 +16,7 @@ export function MarketView({ address }: { address: Address }) {
       </div>
 
       {isLoading && <p className="text-zinc-500">Loading…</p>}
+      {!isLoading && !market && <p className="text-red-500">Couldn't load market</p>}
 
       {market && (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
