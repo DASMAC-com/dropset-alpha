@@ -3,20 +3,20 @@ import type {
   FixedSizeDecoder,
   ReadonlyUint8Array,
 } from "@solana/kit";
-import { NIL, SECTOR_SIZE } from "@/const";
+import { NIL, SECTOR_SIZE } from "@/ts-sdk/const";
 import type {
   MarketAccount,
   MarketHeader,
   MarketSeat,
   Order,
   Sector,
-} from "@/generated";
+} from "@/ts-sdk/generated";
 import {
   getMarketSeatDecoder,
   getOrderDecoder,
   getSectorDecoder,
-} from "@/generated";
-import type { Flatten, SectorIndex } from "@/types";
+} from "@/ts-sdk/generated";
+import type { Flatten, SectorIndex } from "@/ts-sdk/types";
 
 export type MarketViewAll = {
   header: MarketHeader;

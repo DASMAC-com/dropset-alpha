@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,7 +7,19 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"]
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/.next",
+      "!!**/.turbo",
+      "!!**/dist",
+      "!!**/build"
+    ]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   },
   "formatter": {
     "enabled": true,
@@ -19,7 +31,15 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noUnknownAtRules": "off"
+        "noUnknownAtRules": "off",
+        "noImportCycles": "error"
+      },
+      "nursery": {
+        "noConditionalExpect": "error",
+        "noDuplicateArgumentNames": "error",
+        "noDuplicatedSpreadProps": "error",
+        "noFloatingPromises": "error",
+        "noShadow": "error"
       }
     },
     "domains": {
@@ -32,6 +52,9 @@
       "includes": ["**/generated/**"],
       "linter": {
         "rules": {
+          "suspicious": {
+            "noImportCycles": "off"
+          },
           "style": {
             "noNonNullAssertion": "off"
           },

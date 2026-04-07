@@ -1,21 +1,35 @@
 import { describe, expect, it } from "@jest/globals";
-import { toMarketViewAll } from "@/dropset-interface";
-import { deriveMarketAddress, getDropsetMarkets, getRpcClient } from "@/utils";
+import {
+  deriveMarketAddress,
+  fetchDropsetMarketAccounts,
+  fetchDropsetMarketViews,
+  getRpcClient,
+} from "@/ts-sdk/utils";
 
 describe("Dropset market accounts", () => {
   it("should decode all dropset market accounts", async () => {
     const rpcClient = getRpcClient();
-    const markets = await getDropsetMarkets(rpcClient);
-    const res = markets.map(
-      ([address, market]) => [address, toMarketViewAll(market)] as const,
-    );
+    const markets = await fetchDropsetMarketAccounts(rpcClient);
 
-    for (const [address, view] of res) {
+    for (const market of markets) {
       const [derivedMarketAddress, _] = await deriveMarketAddress(
-        view.header.baseMint,
-        view.header.quoteMint,
+        market.header.baseMint,
+        market.header.quoteMint,
       );
-      expect(derivedMarketAddress).toBe(address);
+      expect(derivedMarketAddress).toBe(market.address);
+    }
+  });
+
+  it("should decode all dropset market accounts into market views", async () => {
+    const rpcClient = getRpcClient();
+    const markets = await fetchDropsetMarketViews(rpcClient);
+
+    for (const market of markets) {
+      const [derivedMarketAddress, _] = await deriveMarketAddress(
+        market.header.baseMint,
+        market.header.quoteMint,
+      );
+      expect(derivedMarketAddress).toBe(market.address);
     }
   });
 });

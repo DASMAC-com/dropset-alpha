@@ -22,7 +22,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/ts-sdk": ["../ts-sdk/src/index.ts"],
+      "@/ts-sdk/*": ["../ts-sdk/src/*"]
     }
   },
   "include": [

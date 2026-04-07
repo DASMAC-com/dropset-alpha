@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import type { Address } from "@solana/kit";
-import { DROPSET_PROGRAM_ADDRESS } from "@/generated";
-import { deriveMarketAddress } from "@/utils";
+import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk/generated";
+import { deriveMarketAddress } from "@/ts-sdk/utils";
 
 describe("Dropset market account derivation", () => {
   it("should derive a dropset market address correctly", async () => {

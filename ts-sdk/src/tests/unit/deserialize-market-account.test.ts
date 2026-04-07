@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
-import { NIL } from "@/const";
-import { toMarketViewAll } from "@/dropset-interface/market-view-all";
-import { getMarketAccountDecoder } from "@/generated/accounts";
+import { NIL } from "@/ts-sdk/const";
+import { toMarketViewAll } from "@/ts-sdk/dropset-interface/market-view-all";
+import { getMarketAccountDecoder } from "@/ts-sdk/generated/accounts";
 import fixtureBytes from "../fixtures/market-account.json";
 
 describe("Dropset market account deserialization", () => {

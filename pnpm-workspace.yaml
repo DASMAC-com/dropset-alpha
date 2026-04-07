@@ -7,11 +7,12 @@ ignoredBuiltDependencies:
   - unrs-resolver
 
 catalog:
-  "@biomejs/biome": 2.2.0
+  "@biomejs/biome": 2.4.10
   "@jest/globals": ^29.7.0
   "@solana/kit": ^6.1.0
   "@types/node": ^24
+  "decimal.js": ^10.6.0
   "jest": ^29.7.0
   "ts-jest": ^29.4.6
-  "typescript": ^5
+  "typescript": ^5.9
 
