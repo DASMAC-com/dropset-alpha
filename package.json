@@ -20,6 +20,7 @@
     "lint:fix": "pnpm run lint:ts:fix && pnpm run lint:rust:fix",
     "lint:ts": "biome check",
     "lint:ts:fix": "biome check --write",
+    "lint:ts:fix:unsafe": "biome check --write --unsafe",
     "lint:rust": "cargo +nightly clippy --workspace --all-targets -- -D warnings",
     "lint:rust:fix": "cargo +nightly clippy --fix --workspace --all-targets --allow-dirty --allow-staged -- -D warnings",
     "lint:generated": "biome check --write codama-idl-gen ts-sdk/src/generated",
