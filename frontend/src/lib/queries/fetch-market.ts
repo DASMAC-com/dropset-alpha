@@ -16,7 +16,6 @@ export type MarketDetail = {
 
 /**
  * Fetch a single market by its full address.
- * TODO: implement actual RPC / indexer call.
  */
 export async function fetchMarket(
   address: Address,
