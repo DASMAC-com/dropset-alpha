@@ -50,7 +50,7 @@ export const RPC_URL: ClusterUrl =
  * Creates an RPC client using the private RPC URL if available, public otherwise.
  *
  * Since `SERVER_*` env vars are only available server-side (no `NEXT_PUBLIC_` prefix),
- * this naturally splits behavior: server components get the paid/private RPC if it exist s,
+ * this naturally splits behavior: server components get the paid/private RPC if it exists,
  * client components fall back to the public endpoint.
  */
 export function getRpcFromEnv(rpc?: RpcClient): RpcClient {
