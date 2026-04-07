@@ -8,7 +8,7 @@ import {
 import { fetchDailyVolume } from "./fetch-daily-volume";
 
 export type MarketDetail = {
-  address: string;
+  address: Address;
   traders: number;
   liquidity: bigint;
   volume24h: bigint;
