@@ -15,8 +15,7 @@ import { type ReactNode, useState } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
   const isDevelopment =
-    process.env.NODE_ENV === "development" ||
-    process.env.VERCEL_ENV === "development";
+    process.env.NODE_ENV === "development";
 
   const [queryClient] = useState(
     () =>
