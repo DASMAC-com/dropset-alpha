@@ -13,13 +13,13 @@ catalogs:
       specifier: ^29.7.0
       version: 29.7.0
     '@solana/addresses':
-      specifier: ^6.1.0
+      specifier: ^6.7.0
       version: 6.7.0
     '@solana/kit':
-      specifier: ^6.1.0
+      specifier: ^6.7.0
       version: 6.7.0
     '@solana/rpc-types':
-      specifier: ^6.1.0
+      specifier: ^6.7.0
       version: 6.7.0
     '@types/node':
       specifier: ^24
@@ -65,6 +65,9 @@ importers:
       '@radix-ui/react-popover':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@solana-program/token':
+        specifier: ^0.13.0
+        version: 0.13.0(@solana/kit@6.7.0(typescript@5.9.3))
       '@solana-program/token-2022':
         specifier: ^0.9.0
         version: 0.9.0(@solana/kit@6.7.0(typescript@5.9.3))(@solana/sysvars@6.7.0(typescript@5.9.3))
@@ -74,6 +77,9 @@ importers:
       '@solana/client':
         specifier: ^1.7.0
         version: 1.7.0(@solana/sysvars@6.7.0(typescript@5.9.3))(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))
+      '@solana/kit':
+        specifier: 'catalog:'
+        version: 6.7.0(typescript@5.9.3)
       '@solana/react-hooks':
         specifier: ^1.4.1
         version: 1.4.1(@solana/sysvars@6.7.0(typescript@5.9.3))(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -1502,6 +1508,11 @@ packages:
     peerDependencies:
       '@solana/kit': ^5.0
 
+  '@solana-program/system@0.12.0':
+    resolution: {integrity: sha512-ZnAAWeGVMWNtJhw3GdifI2HnhZ0A0H0qs8tBkcFvxp/8wIavvO+GOM4Jd0N22u2+Lni2zcwvcrxrsxj6Mjphng==}
+    peerDependencies:
+      '@solana/kit': ^6.1.0
+
   '@solana-program/token-2022@0.7.0':
     resolution: {integrity: sha512-ByQdTdbgyhjGf9JklqGRf3u0nbQF5Hbn8Wb2Ir0LZHCgo8lG+2PmBN8UvNY6ONVYb7CjLbApgghvBAEQK1aagg==}
     deprecated: This package has been deprecated
@@ -1514,6 +1525,11 @@ packages:
     peerDependencies:
       '@solana/kit': ^6.0.0
       '@solana/sysvars': ^5.0
+
+  '@solana-program/token@0.13.0':
+    resolution: {integrity: sha512-/Apjrd5lwOJGrPB0J5Rv7EBeclvyEBQPAGA85Scm7wBH+GpkbdLDM9uK3TNg8jjFKyWQYai/JtPHbrx7VgFLSg==}
+    peerDependencies:
+      '@solana/kit': ^6.5.0
 
   '@solana-program/token@0.9.0':
     resolution: {integrity: sha512-vnZxndd4ED4Fc56sw93cWZ2djEeeOFxtaPS8SPf5+a+JZjKA/EnKqzbE1y04FuMhIVrLERQ8uR8H2h72eZzlsA==}
@@ -5979,6 +5995,10 @@ snapshots:
     dependencies:
       '@solana/kit': 5.5.1(typescript@5.9.3)
 
+  '@solana-program/system@0.12.0(@solana/kit@6.7.0(typescript@5.9.3))':
+    dependencies:
+      '@solana/kit': 6.7.0(typescript@5.9.3)
+
   '@solana-program/token-2022@0.7.0(@solana/kit@5.5.1(typescript@5.9.3))(@solana/sysvars@6.7.0(typescript@5.9.3))':
     dependencies:
       '@solana/kit': 5.5.1(typescript@5.9.3)
@@ -5988,6 +6008,11 @@ snapshots:
     dependencies:
       '@solana/kit': 6.7.0(typescript@5.9.3)
       '@solana/sysvars': 6.7.0(typescript@5.9.3)
+
+  '@solana-program/token@0.13.0(@solana/kit@6.7.0(typescript@5.9.3))':
+    dependencies:
+      '@solana-program/system': 0.12.0(@solana/kit@6.7.0(typescript@5.9.3))
+      '@solana/kit': 6.7.0(typescript@5.9.3)
 
   '@solana-program/token@0.9.0(@solana/kit@5.5.1(typescript@5.9.3))':
     dependencies:
