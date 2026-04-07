@@ -7,6 +7,6 @@ import { rpcClient } from "../rpc";
 export function useAllMarkets() {
   return useQuery({
     queryKey: ["markets"],
-    queryFn: () => (rpcClient ? fetchAllMarkets(rpcClient) : []),
+    queryFn: () => fetchAllMarkets(rpcClient),
   });
 }
