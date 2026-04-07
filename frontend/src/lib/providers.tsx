@@ -10,6 +10,7 @@ const ReactQueryDevtools = dynamic(
     ),
   { ssr: false },
 );
+
 import { type ReactNode, useState } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {

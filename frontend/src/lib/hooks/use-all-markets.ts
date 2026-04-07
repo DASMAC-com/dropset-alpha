@@ -2,14 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllMarkets } from "@/lib/queries/fetch-all-markets";
-import { useRpcClient } from "./use-rpc-client";
+import { rpcClient } from "../rpc";
 
 export function useAllMarkets() {
-  const rpc = useRpcClient();
-
   return useQuery({
     queryKey: ["markets"],
-    queryFn: () => (rpc ? fetchAllMarkets(rpc) : []),
-    enabled: !!rpc,
+    queryFn: () => (rpcClient ? fetchAllMarkets(rpcClient) : []),
   });
 }
