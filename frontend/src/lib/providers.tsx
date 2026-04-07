@@ -1,8 +1,11 @@
 "use client";
 
+import { autoDiscover, createClient } from "@solana/client";
+import { SolanaProvider } from "@solana/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { type ReactNode, useState } from "react";
+import { PUBLIC_RPC_URL, PUBLIC_WS_URL } from "./env";
 
 const ReactQueryDevtools = dynamic(
   () =>
@@ -11,6 +14,12 @@ const ReactQueryDevtools = dynamic(
     ),
   { ssr: false },
 );
+
+const client = createClient({
+  endpoint: PUBLIC_RPC_URL,
+  websocketEndpoint: PUBLIC_WS_URL,
+  walletConnectors: autoDiscover(),
+});
 
 export function Providers({ children }: { children: ReactNode }) {
   const isDevelopment = process.env.NODE_ENV === "development";
@@ -28,9 +37,11 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      {isDevelopment ? <ReactQueryDevtools initialIsOpen={false} /> : null}
-    </QueryClientProvider>
+    <SolanaProvider client={client}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        {isDevelopment ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+      </QueryClientProvider>
+    </SolanaProvider>
   );
 }
