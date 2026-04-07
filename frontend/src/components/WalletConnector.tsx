@@ -86,7 +86,7 @@ export default function WalletConnector() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-background shadow-xl">
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-background shadow-xl">
           <div className="flex items-center justify-between border-border border-b px-5 py-4">
             <Dialog.Title className="font-semibold text-foreground">
               Connect a wallet
@@ -101,6 +101,7 @@ export default function WalletConnector() {
                 strokeWidth="2"
                 strokeLinecap="round"
               >
+                <title>Close</title>
                 <path d="M1 1l12 12M13 1L1 13" />
               </svg>
             </Dialog.Close>
