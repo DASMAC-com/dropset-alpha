@@ -1,4 +1,5 @@
 import type { Address } from "@solana/addresses";
+import { unstable_cache } from "next/cache";
 import { getRpcFromEnv } from "@/lib/env";
 import {
   fetchDropsetMarketViews,
@@ -7,19 +8,19 @@ import {
 } from "@/ts-sdk";
 import { fetchDailyVolume } from "./fetch-daily-volume";
 
-export type MarketSummary = {
+export type MarketSummary<T extends bigint | string> = {
   address: Address;
   traders: number;
-  liquidity: bigint;
-  volume24h: bigint;
+  liquidity: T;
+  volume24h: T;
 };
 
 /**
- * Fetch all markets from the Dropset program.
+ * The JSON-serializable version of {@link fetchAllMarkets}.
  */
-export async function fetchAllMarkets(
+export async function fetchAllMarketsJson(
   rpc?: RpcClient,
-): Promise<MarketSummary[]> {
+): Promise<MarketSummary<string>[]> {
   const client = getRpcFromEnv(rpc);
   const markets = await fetchDropsetMarketViews(client);
 
@@ -27,10 +28,39 @@ export async function fetchAllMarkets(
     markets.map(async (m) => ({
       address: m.address,
       traders: m.users.size,
-      liquidity: marketLiquidity(m).total,
-      volume24h: (await fetchDailyVolume(m.address)) ?? 0n,
+      liquidity: marketLiquidity(m).total.toString(),
+      volume24h: ((await fetchDailyVolume(m.address)) ?? 0n).toString(),
     })),
   );
 
   return marketData;
 }
+
+function convertStringToBigInt(
+  m: MarketSummary<string>,
+): MarketSummary<bigint> {
+  return {
+    ...m,
+    liquidity: BigInt(m.liquidity),
+    volume24h: BigInt(m.volume24h),
+  };
+}
+
+/**
+ * Fetch all markets from the Dropset program.
+ */
+export async function fetchAllMarkets(
+  rpc?: RpcClient,
+): Promise<MarketSummary<bigint>[]> {
+  return (await fetchAllMarketsJson(rpc)).map(convertStringToBigInt);
+}
+
+const cachedFunction = unstable_cache(fetchAllMarketsJson, [], {
+  revalidate: 10,
+});
+
+/**
+ * Cached {@link fetchAllMarkets}.
+ */
+export const fetchAllMarketsCached = (rpc?: RpcClient) =>
+  cachedFunction(rpc).then((r) => r.map(convertStringToBigInt));

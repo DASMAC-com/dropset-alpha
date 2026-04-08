@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchAllMarkets } from "@/lib/queries/fetch-all-markets";
+import { fetchAllMarketsCached } from "@/lib/queries/fetch-all-markets";
 import { resolveSlug } from "@/lib/slug";
 import { MarketView } from "./market-view";
 
@@ -10,7 +10,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const markets = await fetchAllMarkets();
+  const markets = await fetchAllMarketsCached();
   const address =
     resolveSlug(
       slug,
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MarketPage({ params }: Props) {
   const { slug } = await params;
-  const markets = await fetchAllMarkets();
+  const markets = await fetchAllMarketsCached();
   const address = resolveSlug(
     slug,
     markets.map((m) => m.address),
