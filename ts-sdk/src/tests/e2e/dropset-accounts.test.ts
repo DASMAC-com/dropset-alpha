@@ -1,4 +1,7 @@
+import assert from "node:assert";
 import { describe, expect, it } from "@jest/globals";
+import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk/generated/programs/dropset";
+import type { DropsetMarketAccount, DropsetMarketView } from "@/ts-sdk/types";
 import {
   deriveMarketAddress,
   fetchDropsetMarketAccount,
@@ -7,9 +10,6 @@ import {
   fetchDropsetMarketViews,
   getRpcClient,
 } from "@/ts-sdk/utils";
-import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk/generated/programs/dropset";
-import assert from "node:assert";
-import type { DropsetMarketAccount, DropsetMarketView } from "@/ts-sdk/types";
 
 const deriveCheck = async (
   market: DropsetMarketAccount | DropsetMarketView,
