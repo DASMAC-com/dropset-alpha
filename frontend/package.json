@@ -23,6 +23,7 @@
     "@solana/addresses": "catalog:",
     "@solana/client": "^1.7.0",
     "@solana/kit": "catalog:",
+    "@solana/react": "catalog:",
     "@solana/react-hooks": "^1.4.1",
     "@solana/rpc-types": "catalog:",
     "@solana/sysvars": "^6.7.0",

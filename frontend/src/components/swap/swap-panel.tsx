@@ -13,42 +13,18 @@ import {
   useState,
 } from "react";
 import { solscanTokenUrl } from "@/lib/solana/explorer";
-import { useMarketStore } from "@/lib/stores/market-store";
+import {
+  formatBalance,
+  sanitizeDecimalInput,
+  truncateAddress,
+  uiToAtoms,
+} from "@/lib/solana/format";
+import { type MarketInfo, useMarketStore } from "@/lib/stores/market-store";
 
 // Stub price until we implement the tx events parser.
 const STUB_PRICE = new Decimal("123.456789");
 
 type Side = "buy" | "sell";
-
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
-}
-
-function formatBalance(uiAmount: string): string {
-  const d = new Decimal(uiAmount);
-  if (d.isZero()) return "0";
-  return d.toSignificantDigits(3).toString();
-}
-
-function sanitizeDecimalInput(value: string): string {
-  let result = "";
-  let hasDot = false;
-  for (const ch of value) {
-    if (ch >= "0" && ch <= "9") {
-      result += ch;
-    } else if (ch === "." && !hasDot) {
-      hasDot = true;
-      result += ch;
-    }
-  }
-  return result;
-}
-
-function uiToAtoms(uiAmount: string, decimals: number): bigint {
-  if (!uiAmount || uiAmount === ".") return 0n;
-  const d = new Decimal(uiAmount).mul(Decimal.pow(10, decimals));
-  return BigInt(d.toFixed(0));
-}
 
 function InsufficientBalanceWarning() {
   return (
@@ -166,6 +142,11 @@ function TokenRow({
 
 export function SwapPanel() {
   const market = useMarketStore((s) => s.market);
+  if (!market) return null;
+  return <SwapPanelInner market={market} />;
+}
+
+function SwapPanelInner({ market }: { market: MarketInfo }) {
   const { connected, connect, connectors, status } = useWalletConnection();
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("");
@@ -184,13 +165,11 @@ export function SwapPanel() {
   }, [connectors, connect]);
 
   const atoms = useMemo(() => {
-    if (!market || !amount) return 0n;
+    if (!amount) return 0n;
     const decimals =
       side === "buy" ? market.quote.decimals : market.base.decimals;
     return uiToAtoms(amount, decimals);
   }, [amount, market, side]);
-
-  if (!market) return null;
 
   const isBuy = side === "buy";
   const topLabel = isBuy ? "You pay" : "You sell";
@@ -198,7 +177,6 @@ export function SwapPanel() {
   const bottomMint = isBuy ? market.base.mintAddress : market.quote.mintAddress;
   const topDecimals = isBuy ? market.quote.decimals : market.base.decimals;
   const bottomDecimals = isBuy ? market.base.decimals : market.quote.decimals;
-
   // Price is quote-per-base (how much quote for 1 base).
   // Buy: user pays quote, receives base → output = input / price
   // Sell: user pays base, receives quote → output = input * price
