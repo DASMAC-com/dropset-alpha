@@ -7,7 +7,17 @@ experimentation and local testing, not production use.
 
 ## Running
 
-1. Copy the config template:
+1. If you're using Docker Desktop, make sure `Enable host networking` is checked
+   ***on***. The `compose.yaml` files specify `network_mode: host`, so the
+   containers can only access ports on the host machine if you have that setting
+   enabled.
+
+   You must have Docker [version 4.34 or later]. As of Docker Desktop version
+   v4.68.0, the setting is at:
+
+   `Settings -> Resources -> Network -> Enable host networking`
+
+2. Copy the config template:
 
    ```shell
    cp services/taker-bot/config.toml.example \
@@ -22,9 +32,9 @@ experimentation and local testing, not production use.
 
    By default, the service is configured to run on a local test validator.
 
-2. Ensure there is a keypair file at `services/taker-bot/keypair.json`.
+3. Ensure there is a keypair file at `services/taker-bot/keypair.json`.
 
-3. Either run the binary or start the `Docker` container.
+4. Either run the binary or start the `Docker` container.
 
    ```shell
    cargo run -p dropset-taker-bot
@@ -43,3 +53,5 @@ script.
 It creates the base and token mints, creates a `dropset` market from them,
 starts a local solana test validator if one isn't already running, then deploys
 all services with properly updated `config.toml` files.
+
+[version 4.34 or later]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
