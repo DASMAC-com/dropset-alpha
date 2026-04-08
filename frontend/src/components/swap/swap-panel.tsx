@@ -1,7 +1,11 @@
 "use client";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { useSplToken, useWalletConnection } from "@solana/react-hooks";
+import {
+  useSendTransaction,
+  useSplToken,
+  useWalletConnection,
+} from "@solana/react-hooks";
 import { Decimal } from "decimal.js";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowUpDown, Wallet } from "lucide-react";
@@ -12,6 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMarketOrderBuilder } from "@/lib/hooks/use-market-order-builder";
 import { solscanTokenUrl } from "@/lib/solana/explorer";
 import {
   formatBalance,
@@ -147,7 +152,17 @@ export function SwapPanel() {
 }
 
 function SwapPanelInner({ market }: { market: MarketInfo }) {
-  const { connected, connect, connectors, status } = useWalletConnection();
+  const {
+    connected,
+    connect,
+    connectors,
+    status,
+    wallet: session,
+  } = useWalletConnection();
+  const { send, isSending } = useSendTransaction();
+  const buildOrder = useMarketOrderBuilder();
+  const baseAtaExists = useMarketStore((s) => s.baseAtaExists);
+  const quoteAtaExists = useMarketStore((s) => s.quoteAtaExists);
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("");
   const [hovering, setHovering] = useState(false);
@@ -289,10 +304,24 @@ function SwapPanelInner({ market }: { market: MarketInfo }) {
 
       <button
         type="button"
-        disabled={!connected || !amount || atoms === 0n}
+        disabled={
+          !connected || !buildOrder || !amount || atoms === 0n || isSending
+        }
+        onClick={async () => {
+          if (!buildOrder || atoms === 0n) return;
+          const outputAtaExists = isBuy ? baseAtaExists : quoteAtaExists;
+          const instructions = buildOrder(atoms, isBuy, outputAtaExists);
+          await send({ instructions, authority: session });
+        }}
         className="mt-3 w-full rounded-lg bg-accent py-2.5 font-medium text-sm text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {!amount ? "Enter amount" : isBuy ? "Buy" : "Sell"}
+        {isSending
+          ? "Submitting…"
+          : !amount
+            ? "Enter amount"
+            : isBuy
+              ? "Buy"
+              : "Sell"}
       </button>
     </fieldset>
   );
