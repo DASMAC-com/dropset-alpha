@@ -1,10 +1,17 @@
 "use client";
 
 import type { Address } from "@solana/addresses";
-import { useMarket } from "@/lib/hooks/use-market";
+import { SwapPanel } from "@/components/swap/swap-panel";
+import { useMarketView } from "@/lib/hooks/use-market-view";
+import { useUserAtas } from "@/lib/hooks/use-user-atas";
+import { marketLiquidity } from "@/ts-sdk";
 
 export function MarketView({ address }: { address: Address }) {
-  const { data: market, isLoading } = useMarket(address);
+  const { data, isLoading } = useMarketView(address);
+  useUserAtas();
+
+  const view = data?.view;
+  const liquidity = view ? marketLiquidity(view).total : undefined;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -16,18 +23,18 @@ export function MarketView({ address }: { address: Address }) {
       </div>
 
       {isLoading && <p className="text-zinc-500">Loading…</p>}
-      {!isLoading && !market && (
+      {!isLoading && !view && (
         <p className="text-red-500">Couldn't load market</p>
       )}
 
-      {market && (
+      {view && (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
           <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
             <span className="text-muted-fg text-xs uppercase tracking-[0.05em]">
               Traders
             </span>
             <span className="font-semibold text-xl tabular-nums">
-              {market.traders}
+              {view.users.size}
             </span>
           </div>
           <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
@@ -35,19 +42,15 @@ export function MarketView({ address }: { address: Address }) {
               Liquidity
             </span>
             <span className="font-semibold text-xl tabular-nums">
-              ${market.liquidity.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
-            <span className="text-muted-fg text-xs uppercase tracking-[0.05em]">
-              24h Volume
-            </span>
-            <span className="font-semibold text-xl tabular-nums">
-              ${market.volume24h.toLocaleString()}
+              ${liquidity?.toLocaleString()}
             </span>
           </div>
         </div>
       )}
+
+      <div className="mx-auto mt-8 max-w-sm">
+        <SwapPanel />
+      </div>
     </div>
   );
 }
