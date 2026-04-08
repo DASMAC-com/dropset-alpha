@@ -4,10 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useAllMarkets } from "@/lib/hooks/use-all-markets";
 import { buildPrefixMap } from "@/lib/slug";
-import { ensureU64 } from "@/ts-sdk/rust-types";
 
-function formatNumber(input: number | bigint): string {
-  const n = ensureU64(input);
+function formatNumber(n: bigint): string {
   if (n <= BigInt(Number.MAX_SAFE_INTEGER)) {
     const val = Number(n);
     if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
