@@ -34,6 +34,7 @@ export function Header() {
             <Link
               key={href}
               href={href}
+              aria-current={pathname === href ? "page" : undefined}
               className={`rounded-md px-3 py-1.5 text-sm no-underline transition-colors ${
                 pathname === href
                   ? "bg-muted text-foreground"
