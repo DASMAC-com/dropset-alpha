@@ -28,6 +28,7 @@ use client::transactions::{
 use dropset_services_shared::faucet_client::{
     FaucetEndpoint,
     HealthResponse,
+    InfoResponse,
     MintRequest,
     MintResponse,
     DEFAULT_FAUCET_AMOUNT,
@@ -89,6 +90,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route(FaucetEndpoint::Health.route(), get(health_handler))
+        .route(FaucetEndpoint::Info.route(), get(info_handler))
         .route(FaucetEndpoint::Faucet.route(), post(faucet_handler))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
@@ -104,6 +106,16 @@ async fn health_handler(State(state): State<Arc<FaucetState>>) -> impl IntoRespo
     Json(HealthResponse {
         status: "ok".to_string(),
         cluster: state.cluster,
+    })
+}
+
+async fn info_handler(State(state): State<Arc<FaucetState>>) -> impl IntoResponse {
+    Json(InfoResponse {
+        cluster: state.cluster,
+        base_mint: state.base.mint_address.to_string(),
+        quote_mint: state.quote.mint_address.to_string(),
+        base_decimals: state.base.mint_decimals,
+        quote_decimals: state.quote.mint_decimals,
     })
 }
 

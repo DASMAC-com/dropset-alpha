@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  typedRoutes: true,
   logging:
     process.env.NODE_ENV === "development" ||
     process.env.NODE_ENV === "test" ||
