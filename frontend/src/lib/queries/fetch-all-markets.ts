@@ -2,14 +2,15 @@ import type { Address } from "@solana/addresses";
 import { unstable_cache } from "next/cache";
 import { getRpcFromEnv } from "@/lib/env";
 import { fetchDropsetMarketViews, marketLiquidity } from "@/ts-sdk";
+import type { Flatten, Monomorphized } from "@/ts-sdk/types/utility-types";
 import { fetchDailyVolume } from "./fetch-daily-volume";
 
-export type MarketSummary<T extends bigint | string> = {
-  address: Address;
-  traders: number;
-  liquidity: T;
-  volume24h: T;
-};
+type MarketSummary<T extends bigint | string> = Flatten<
+  {
+    address: Address;
+    traders: number;
+  } & Monomorphized<"liquidity" | "volume24h", T>
+>;
 
 /**
  * The JSON-serializable version of {@link fetchAllMarkets}.
