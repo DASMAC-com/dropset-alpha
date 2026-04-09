@@ -1,8 +1,8 @@
 import type { Address } from "@solana/addresses";
 import { unstable_cache } from "next/cache";
-import { getRpcFromEnv } from "@/lib/env";
 import { fetchDropsetMarketViews, marketLiquidity } from "@/ts-sdk";
 import type { Flatten, Monomorphized } from "@/ts-sdk/types/utility-types";
+import { rpcClient } from "../rpc";
 import { fetchDailyVolume } from "./fetch-daily-volume";
 
 type MarketSummary<T extends bigint | string> = Flatten<
@@ -16,8 +16,7 @@ type MarketSummary<T extends bigint | string> = Flatten<
  * The JSON-serializable version of {@link fetchAllMarkets}.
  */
 export async function fetchAllMarketsJson(): Promise<MarketSummary<string>[]> {
-  const client = getRpcFromEnv();
-  const markets = await fetchDropsetMarketViews(client);
+  const markets = await fetchDropsetMarketViews(rpcClient);
 
   const marketData = await Promise.all(
     markets.map(async (m) => ({
