@@ -112,10 +112,13 @@ async fn health_handler(State(state): State<Arc<FaucetState>>) -> impl IntoRespo
 async fn info_handler(State(state): State<Arc<FaucetState>>) -> impl IntoResponse {
     Json(InfoResponse {
         cluster: state.cluster,
+        market: state.market.to_string(),
         base_mint: state.base.mint_address.to_string(),
         quote_mint: state.quote.mint_address.to_string(),
         base_decimals: state.base.mint_decimals,
         quote_decimals: state.quote.mint_decimals,
+        base_token_program: state.base.token_program.to_string(),
+        quote_token_program: state.quote.token_program.to_string(),
     })
 }
 

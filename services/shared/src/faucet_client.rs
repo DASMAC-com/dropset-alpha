@@ -140,9 +140,15 @@ pub struct HealthResponse {
 pub struct InfoResponse {
     pub cluster: ClusterType,
     /// Base58-encoded [Address] string.
+    pub market: String,
+    /// Base58-encoded [Address] string.
     pub base_mint: String,
     /// Base58-encoded [Address] string.
     pub quote_mint: String,
+    /// Base58-encoded [Address] string.
+    pub base_token_program: String,
+    /// Base58-encoded [Address] string.
+    pub quote_token_program: String,
     pub base_decimals: u8,
     pub quote_decimals: u8,
 }
