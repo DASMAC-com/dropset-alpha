@@ -5,6 +5,7 @@ import { SolanaProvider } from "@solana/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { type ReactNode, useState } from "react";
+import Toaster from "@/components/Toaster";
 import { PUBLIC_RPC_URL, PUBLIC_WS_URL } from "./env";
 
 const ReactQueryDevtools = dynamic(
@@ -41,6 +42,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         {children}
         {isDevelopment ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+        <Toaster />
       </QueryClientProvider>
     </SolanaProvider>
   );
