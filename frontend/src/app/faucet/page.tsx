@@ -126,11 +126,10 @@ export default function FaucetPage() {
               type="number"
               min="1"
               value={amount}
-              onChange={(e) =>
-                setAmount(
-                  String(Math.trunc(Number.parseFloat(e.target.value)) || ""),
-                )
-              }
+              onChange={(e) => {
+                const n = Math.trunc(Number.parseFloat(e.target.value));
+                setAmount(Number.isFinite(n) && n >= 1 ? String(n) : "");
+              }}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-foreground outline-none"
             />
           </div>
