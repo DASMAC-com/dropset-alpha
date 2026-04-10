@@ -8,15 +8,19 @@ import { FAUCET_URL } from "@/lib/env";
  * {@link [faucet/src/main.rs](../../../../services/faucet/src/main.rs)}.
  */
 export async function POST(request: Request) {
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  const res = await fetch(`${FAUCET_URL}/faucet`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+    const res = await fetch(`${FAUCET_URL}/faucet`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(data, { status: res.status });
+  } catch {
+    return NextResponse.json({ error: "Faucet unreachable" }, { status: 502 });
+  }
 }
