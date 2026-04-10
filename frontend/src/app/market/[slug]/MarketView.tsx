@@ -2,6 +2,7 @@
 
 import type { Address } from "@solana/addresses";
 import { SwapPanel } from "@/components/swap/SwapPanel";
+import { TransactionLog } from "@/components/TransactionLog";
 import { useMarketView } from "@/lib/hooks/use-market-view";
 import { useUserAtas } from "@/lib/hooks/use-user-atas";
 import { MarketProvider } from "@/lib/providers/market-provider";
@@ -54,6 +55,10 @@ export function MarketView({ address }: { address: Address }) {
           <SwapPanel />
         </div>
       </MarketProvider>
+
+      <div className="mx-auto mt-6 max-w-2xl">
+        <TransactionLog />
+      </div>
     </div>
   );
 }
