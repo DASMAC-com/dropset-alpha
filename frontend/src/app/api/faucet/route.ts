@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { FAUCET_URL } from "@/lib/env";
 
 /**
@@ -17,5 +18,5 @@ export async function POST(request: Request) {
 
   const data = await res.json();
 
-  return Response.json(data, { status: res.status });
+  return NextResponse.json(data, { status: res.status });
 }
