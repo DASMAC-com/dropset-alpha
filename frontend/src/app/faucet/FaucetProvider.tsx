@@ -24,13 +24,14 @@ export function FaucetProvider({
 }) {
   const setMarket = useMarketStore((s) => s.setMarket);
   const market = useMarketStore((s) => s.market);
-  const [ready, setReady] = useState(!!market);
+  const [ready, setReady] = useState(market?.address === info.market);
 
   useEffect(() => {
-    if (market) {
+    if (market?.address === info.market) {
       setReady(true);
       return;
     }
+    setReady(false);
 
     const baseMint = info.base_mint as Address;
     const quoteMint = info.quote_mint as Address;
