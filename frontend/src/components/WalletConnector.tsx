@@ -2,9 +2,38 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
+import type { Address } from "@solana/addresses";
 import { useWalletModalState } from "@solana/react-hooks";
+import { Check, Copy } from "lucide-react";
 import Image from "next/image";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { copyAddressHelper } from "@/lib/utils";
+
+function CopyAddress({ address }: { address: Address }) {
+  const [recentlyCopied, setRecentlyCopied] = useState(false);
+  const short = `${address.slice(0, 8)}...${address.slice(-8)}`;
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        const successful = await copyAddressHelper(address);
+        if (successful) {
+          setRecentlyCopied(true);
+          setTimeout(() => setRecentlyCopied(false), 1500);
+        }
+      }}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted"
+    >
+      <span className="flex-1 font-mono text-muted-fg text-xs">{short}</span>
+      {recentlyCopied ? (
+        <Check className="h-3.5 w-3.5 text-green-500" />
+      ) : (
+        <Copy className="h-3.5 w-3.5 text-muted-fg" />
+      )}
+    </button>
+  );
+}
 
 export default function WalletConnector() {
   const modal = useWalletModalState({ closeOnConnect: true });
@@ -54,9 +83,7 @@ export default function WalletConnector() {
             sideOffset={8}
             className="z-50 w-56 rounded-xl border border-border bg-background p-2 shadow-lg"
           >
-            <div className="px-3 py-2 font-mono text-muted-fg text-xs">
-              {addr.slice(0, 8)}...{addr.slice(-8)}
-            </div>
+            <CopyAddress address={addr} />
             <button
               type="button"
               onClick={() => modal.disconnect()}

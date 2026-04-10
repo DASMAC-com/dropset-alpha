@@ -1,11 +1,7 @@
 "use client";
 
 import * as Tooltip from "@radix-ui/react-tooltip";
-import {
-  useSendTransaction,
-  useSplToken,
-  useWalletConnection,
-} from "@solana/react-hooks";
+import { useSendTransaction, useWalletConnection } from "@solana/react-hooks";
 import { Decimal } from "decimal.js";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowUpDown, Wallet } from "lucide-react";
@@ -16,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMarket } from "@/lib/hooks/use-market";
 import { useMarketOrderBuilder } from "@/lib/hooks/use-market-order-builder";
 import { solscanTokenUrl } from "@/lib/solana/explorer";
 import {
@@ -24,7 +21,6 @@ import {
   truncateAddress,
   uiToAtoms,
 } from "@/lib/solana/format";
-import { type MarketInfo, useMarketStore } from "@/lib/stores/market-store";
 
 // Stub price until we implement the tx events parser.
 const STUB_PRICE = new Decimal("123.456789");
@@ -64,6 +60,7 @@ function TokenRow({
   decimals,
   readOnly,
   connected,
+  uiBalance,
 }: {
   label: string;
   mintAddress: string;
@@ -73,10 +70,8 @@ function TokenRow({
   decimals: number;
   readOnly?: boolean;
   connected: boolean;
+  uiBalance?: string;
 }) {
-  const { balance } = useSplToken(mintAddress);
-  const uiBalance = balance?.uiAmount;
-
   const insufficientBalance =
     connected &&
     !readOnly &&
@@ -146,23 +141,16 @@ function TokenRow({
 }
 
 export function SwapPanel() {
-  const market = useMarketStore((s) => s.market);
-  if (!market) return null;
-  return <SwapPanelInner market={market} />;
-}
+  const { market, baseBalance, quoteBalance, baseAtaExists, quoteAtaExists } =
+    useMarket();
 
-function SwapPanelInner({ market }: { market: MarketInfo }) {
-  const {
-    connected,
-    connect,
-    connectors,
-    status,
-    wallet: session,
-  } = useWalletConnection();
+  const baseUiBalance = baseBalance?.uiAmount;
+  const quoteUiBalance = quoteBalance?.uiAmount;
+
+  const { connected, connect, connectors, status, wallet } =
+    useWalletConnection();
   const { send, isSending } = useSendTransaction();
   const buildOrder = useMarketOrderBuilder();
-  const baseAtaExists = useMarketStore((s) => s.baseAtaExists);
-  const quoteAtaExists = useMarketStore((s) => s.quoteAtaExists);
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("");
   const [hovering, setHovering] = useState(false);
@@ -192,6 +180,8 @@ function SwapPanelInner({ market }: { market: MarketInfo }) {
   const bottomMint = isBuy ? market.base.mintAddress : market.quote.mintAddress;
   const topDecimals = isBuy ? market.quote.decimals : market.base.decimals;
   const bottomDecimals = isBuy ? market.base.decimals : market.quote.decimals;
+  const topUiBalance = isBuy ? quoteUiBalance : baseUiBalance;
+  const bottomUiBalance = isBuy ? baseUiBalance : quoteUiBalance;
   // Price is quote-per-base (how much quote for 1 base).
   // Buy: user pays quote, receives base → output = input / price
   // Sell: user pays base, receives quote → output = input * price
@@ -234,6 +224,7 @@ function SwapPanelInner({ market }: { market: MarketInfo }) {
           highlighted
           decimals={topDecimals}
           connected={connected}
+          uiBalance={topUiBalance}
         />
 
         <TokenRow
@@ -244,6 +235,7 @@ function SwapPanelInner({ market }: { market: MarketInfo }) {
           decimals={bottomDecimals}
           readOnly
           connected={connected}
+          uiBalance={bottomUiBalance}
         />
 
         {/* Superimposed swap button centered between the two rows */}
@@ -311,7 +303,7 @@ function SwapPanelInner({ market }: { market: MarketInfo }) {
           if (!buildOrder || atoms === 0n) return;
           const outputAtaExists = isBuy ? baseAtaExists : quoteAtaExists;
           const instructions = buildOrder(atoms, isBuy, outputAtaExists);
-          await send({ instructions, authority: session });
+          await send({ instructions, authority: wallet });
         }}
         className="mt-3 w-full rounded-lg bg-accent py-2.5 font-medium text-sm text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >

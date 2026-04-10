@@ -1,14 +1,16 @@
 "use client";
 
+import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import WalletConnector from "./WalletConnector";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { label: string; href: Route }[] = [
   { label: "Info", href: "/info" },
   { label: "Repo", href: "/repo" },
   { label: "Team", href: "/team" },
+  { label: "Faucet", href: "/faucet" },
 ];
 
 export function Header() {

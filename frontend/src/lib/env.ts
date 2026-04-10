@@ -75,3 +75,6 @@ export const WS_URL: ClusterUrl = PRIVATE_WS_URLS[CLUSTER] ?? RPC_URL;
 export function getRpcFromEnv(rpc?: RpcClient): RpcClient {
   return rpc ?? getRpcClient({ clusterUrl: RPC_URL });
 }
+
+/** Server-side faucet URL. Not exposed to the browser. */
+export const FAUCET_URL = process.env.FAUCET_URL ?? "http://localhost:9090";

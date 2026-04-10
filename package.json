@@ -47,6 +47,7 @@
     "service:taker:docker": "docker compose -f services/taker-bot/compose.yaml up --build -d",
     "tool:install:cargo-expand": "cargo +nightly install cargo-expand",
     "deploy:localnet": "solana program deploy -u localhost target/deploy/dropset.so --program-id test-keypair.json",
+    "initialization-helper": "cargo run --example initialization_helper",
     "codama:gen": "pnpm run codama:gen-idl && pnpm run codama:gen-ts && pnpm run lint:generated",
     "codama:gen-idl": "cargo run -p codama-idl-gen",
     "codama:gen-ts": "codama run --all --config codama-idl-gen/codama.json --idl codama-idl-gen/idl.json"

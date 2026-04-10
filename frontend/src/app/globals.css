@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: `!important` is used with discretion. */
 @import "tailwindcss";
 
 :root {
@@ -38,4 +39,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.Toastify__toast {
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif !important;
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
 }
