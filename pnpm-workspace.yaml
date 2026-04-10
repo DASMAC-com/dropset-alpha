@@ -1,6 +1,7 @@
 packages:
   - frontend
   - ts-sdk
+  - transaction-parser-ts
 
 catalog:
   '@biomejs/biome': 2.4.10

@@ -1,14 +1,17 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import type { Decimal } from "decimal.js";
 import { Activity } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { solscanTxUrl } from "@/lib/solana/explorer";
 import { truncateAddress } from "@/lib/solana/format";
+import { useMarketStore } from "@/lib/stores/market-store";
 import {
   type TransactionEntry,
   useTransactionLogStore,
 } from "@/lib/stores/transaction-log-store";
+import type { ResolvedAccount } from "@/transaction-parser";
+import { encodedU32ToDecimal, marketLiquidity } from "@/ts-sdk";
 
 function relativeTime(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000 - unixSeconds);
@@ -30,30 +33,72 @@ function LiveIndicator() {
   );
 }
 
-function fullTimestamp(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleString();
-}
+type FillData = {
+  relativeTime: string;
+  signature: string;
+  accounts: ResolvedAccount[];
+  lastFillPrice: Decimal;
+  discriminator: number;
+  isBuy: boolean;
+  isBase: boolean;
+  baseFilled: bigint;
+  quoteFilled: bigint;
+  encodedPrice: number;
+};
 
-function TransactionRow({ tx }: { tx: TransactionEntry }) {
+function FillEntry({
+  fill,
+  barPercent,
+}: {
+  fill: FillData;
+  barPercent: number;
+}) {
+  const color = fill.isBuy ? "text-green-500" : "text-red-500";
+  const barColor = fill.isBuy
+    ? "rgba(34, 197, 94, 0.12)"
+    : "rgba(239, 68, 68, 0.12)";
+  const flashColor = fill.isBuy
+    ? "rgba(34, 197, 94, 0.25)"
+    : "rgba(239, 68, 68, 0.25)";
+
   return (
-    <div className="flex items-center gap-3 border-border/50 border-b px-3 py-2 transition-colors last:border-b-0 hover:bg-muted/50">
-      <span
-        title={tx.blockTime ? fullTimestamp(tx.blockTime) : undefined}
-        className="w-16 shrink-0 cursor-default font-mono text-muted-fg text-xs tabular-nums"
-      >
-        {tx.blockTime ? relativeTime(tx.blockTime) : "—"}
+    <div
+      className="relative flex items-center gap-3 border-border/50 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+      style={
+        {
+          "--flash-color": flashColor,
+          animation: "fill-flash 1.5s ease-out forwards",
+        } as React.CSSProperties
+      }
+    >
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0"
+        style={{ width: `${barPercent}%`, backgroundColor: barColor }}
+      />
+      <span className="w-16 shrink-0 font-mono text-muted-fg text-xs tabular-nums">
+        {fill.relativeTime}
       </span>
+
+      <span className={`w-20 shrink-0 font-mono text-xs tabular-nums ${color}`}>
+        {fill.lastFillPrice.toFixed(4)}
+      </span>
+
+      <span className="w-24 shrink-0 text-right font-mono text-foreground text-xs tabular-nums">
+        {fill.baseFilled.toLocaleString()}
+      </span>
+
+      <span className="w-24 shrink-0 text-right font-mono text-muted-fg text-xs tabular-nums">
+        {fill.quoteFilled.toLocaleString()}
+      </span>
+
       <a
-        href={solscanTxUrl(tx.signature)}
+        href={solscanTxUrl(fill.signature)}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-mono text-accent text-xs no-underline hover:underline"
+        className="ml-auto font-mono text-accent text-xs no-underline hover:underline"
       >
-        {truncateAddress(tx.signature)}
+        {truncateAddress(fill.signature)}
       </a>
-      <span className="ml-auto shrink-0 font-mono text-muted-fg text-xs tabular-nums">
-        {tx.instructionCount} ix
-      </span>
     </div>
   );
 }
@@ -79,8 +124,40 @@ export function TransactionLog() {
     return cleanup;
   }, [connect]);
 
+  const view = useMarketStore((s) => s.view);
+  const totalLiquidity = useMemo(
+    () => (view ? marketLiquidity(view).total : 0n),
+    [view],
+  );
+
+  const fills: (FillData & { key: string })[] = useMemo(
+    () =>
+      transactions
+        .filter((tx) => !tx.err)
+        .flatMap((tx) =>
+          tx.parsed.dropsetEvents
+            .filter((e) => e.kind === "fill")
+            .map((fill, i) => ({
+              ...fill.data,
+              key: `${tx.signature}-${i}`,
+              relativeTime: tx.blockTime ? relativeTime(tx.blockTime) : "—",
+              signature: tx.signature,
+              accounts: tx.parsed.accounts,
+              lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
+            })),
+        ),
+    [transactions],
+  );
+
   return (
     <div className="rounded-lg border border-border bg-background">
+      <style>{`
+        @keyframes fill-flash {
+          from { background-color: var(--flash-color); }
+          to { background-color: transparent; }
+        }
+      `}</style>
+
       <div className="flex items-center justify-between border-border border-b px-4 py-3">
         <h3 className="font-semibold text-foreground text-sm">
           Transaction Log
@@ -103,27 +180,24 @@ export function TransactionLog() {
         }}
         onMouseLeave={() => setHovered(false)}
       >
-        {transactions.length === 0 && status === "connected" && (
+        {fills.length === 0 && status === "connected" && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-fg">
             <Activity size={24} className="mb-2 opacity-50" />
             <p className="text-sm">Listening for transactions...</p>
           </div>
         )}
 
-        <AnimatePresence initial={false}>
-          {transactions
-            .filter((tx) => !tx.err)
-            .map((tx) => (
-              <motion.div
-                key={tx.signature}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              >
-                <TransactionRow tx={tx} />
-              </motion.div>
-            ))}
-        </AnimatePresence>
+        {fills.map((fill) => (
+          <FillEntry
+            key={fill.key}
+            fill={fill}
+            barPercent={
+              totalLiquidity > 0n
+                ? Number((fill.quoteFilled * 100n) / totalLiquidity)
+                : 0
+            }
+          />
+        ))}
       </div>
     </div>
   );

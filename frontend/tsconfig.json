@@ -24,7 +24,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/ts-sdk": ["../ts-sdk/src/index.ts"],
-      "@/ts-sdk/*": ["../ts-sdk/src/*"]
+      "@/ts-sdk/*": ["../ts-sdk/src/*"],
+      "@/transaction-parser": ["../transaction-parser-ts/src/index.ts"],
+      "@/transaction-parser/*": ["../transaction-parser-ts/src/*"]
     }
   },
   "include": [

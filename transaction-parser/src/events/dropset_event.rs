@@ -7,8 +7,8 @@ use dropset_interface::events::{
     DepositEventInstructionData,
     DropsetEventTag,
     ExpandMarketEventInstructionData,
+    FillEventInstructionData,
     HeaderEventInstructionData,
-    MarketOrderEventInstructionData,
     PostOrderEventInstructionData,
     RegisterMarketEventInstructionData,
     WithdrawEventInstructionData,
@@ -26,7 +26,7 @@ pub enum DropsetEvent {
     CloseSeat(CloseSeatEventInstructionData),
     PostOrder(PostOrderEventInstructionData),
     CancelOrder(CancelOrderEventInstructionData),
-    MarketOrder(MarketOrderEventInstructionData),
+    Fill(FillEventInstructionData),
     ExpandMarket(ExpandMarketEventInstructionData),
 }
 
@@ -40,7 +40,7 @@ impl DropsetEvent {
             Self::CloseSeat(_) => CloseSeatEventInstructionData::LEN_WITH_TAG,
             Self::PostOrder(_) => PostOrderEventInstructionData::LEN_WITH_TAG,
             Self::CancelOrder(_) => CancelOrderEventInstructionData::LEN_WITH_TAG,
-            Self::MarketOrder(_) => MarketOrderEventInstructionData::LEN_WITH_TAG,
+            Self::Fill(_) => FillEventInstructionData::LEN_WITH_TAG,
             Self::ExpandMarket(_) => ExpandMarketEventInstructionData::LEN_WITH_TAG,
         }
     }
@@ -122,8 +122,8 @@ impl DropsetEvent {
             DropsetEventTag::CancelOrderEvent => Ok(DropsetEvent::CancelOrder(
                 CancelOrderEventInstructionData::unpack_untagged(data).map_err(|_| err())?,
             )),
-            DropsetEventTag::MarketOrderEvent => Ok(DropsetEvent::MarketOrder(
-                MarketOrderEventInstructionData::unpack_untagged(data).map_err(|_| err())?,
+            DropsetEventTag::FillEvent => Ok(DropsetEvent::Fill(
+                FillEventInstructionData::unpack_untagged(data).map_err(|_| err())?,
             )),
             DropsetEventTag::ExpandMarketEvent => Ok(DropsetEvent::ExpandMarket(
                 ExpandMarketEventInstructionData::unpack_untagged(data).map_err(|_| err())?,

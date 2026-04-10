@@ -13,6 +13,7 @@ use instruction_macros::ProgramInstructionEvent;
 #[derive(Clone, Copy, Debug, PartialEq, ProgramInstructionEvent)]
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
 #[cfg_attr(feature = "client", derive(strum_macros::Display))]
+#[cfg_attr(feature = "codama", derive(instruction_macros::CodamaEvents))]
 #[program_id(crate::program::ID)]
 #[rustfmt::skip]
 pub enum DropsetEventTag {
@@ -45,12 +46,12 @@ pub enum DropsetEventTag {
     #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
     CancelOrderEvent,
 
-    #[args(order_size: u64, "The order size in atoms.")]
     #[args(is_buy: bool, "Whether or not the order is a market buy. If not, it's a market sell.")]
     #[args(is_base: bool, "Whether or not the order size is denominated in base. If not, it's in quote.")]
     #[args(base_filled: u64, "The amount of base atoms filled.")]
     #[args(quote_filled: u64, "The amount of quote atoms filled.")]
-    MarketOrderEvent,
+    #[args(encoded_price: u32, "The encoded price of the last order filled.")]
+    FillEvent,
 
     #[args(user_seat_sector_index: u32, "The user's market seat sector index.")]
     CloseSeatEvent,
@@ -75,7 +76,7 @@ mod private {
     impl DropsetEventMarker for RegisterMarketEventInstructionData {}
     impl DropsetEventMarker for PostOrderEventInstructionData {}
     impl DropsetEventMarker for CancelOrderEventInstructionData {}
-    impl DropsetEventMarker for MarketOrderEventInstructionData {}
+    impl DropsetEventMarker for FillEventInstructionData {}
     impl DropsetEventMarker for CloseSeatEventInstructionData {}
     impl DropsetEventMarker for ExpandMarketEventInstructionData {}
 }

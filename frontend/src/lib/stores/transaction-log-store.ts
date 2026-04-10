@@ -6,6 +6,7 @@ import {
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { PUBLIC_RPC_URL, PUBLIC_WS_URL } from "@/lib/env";
+import { type ParsedTransaction, parseTransaction } from "@/transaction-parser";
 import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk";
 
 const MAX_TRANSACTIONS = 50;
@@ -19,6 +20,7 @@ export type TransactionEntry = {
   blockTime: number | null;
   err: boolean;
   instructionCount: number;
+  parsed: ParsedTransaction;
 };
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -71,16 +73,19 @@ export const useTransactionLogStore = create<
             .send();
 
           if (result) {
+            const parsed = parseTransaction(result);
+
             const entry: TransactionEntry = {
               signature: sig,
               slot: Number(result.slot),
               blockTime: result.blockTime ? Number(result.blockTime) : null,
               err: result.meta?.err !== null && result.meta?.err !== undefined,
               instructionCount: result.transaction.message.instructions.length,
+              parsed,
             };
 
             set((s) => {
-              s.transactions.unshift(entry);
+              s.transactions.unshift(entry as (typeof s.transactions)[number]);
               if (s.transactions.length > MAX_TRANSACTIONS) {
                 s.transactions.length = MAX_TRANSACTIONS;
               }

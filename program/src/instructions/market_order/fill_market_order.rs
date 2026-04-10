@@ -5,6 +5,7 @@ use dropset_interface::{
         DropsetError,
         DropsetResult,
     },
+    events::FillEventInstructionData,
     state::{
         asks_dll::AskOrders,
         bids_dll::BidOrders,
@@ -17,12 +18,17 @@ use dropset_interface::{
         },
     },
 };
-use pinocchio::hint;
+use pinocchio::{
+    error::ProgramError,
+    hint,
+    ProgramResult,
+};
 #[cfg(debug_assertions)]
 use price::EncodedPrice;
 
 use crate::{
     context::market_order_context::MarketOrderContext,
+    events::EventBuffer,
     instructions::market_order::mul_div_checked,
     shared::order_operations::{
         load_mut_order_from_sector_index,
@@ -79,8 +85,9 @@ pub struct AmountsFilled {
 #[inline(always)]
 pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
+    event_buffer: &mut EventBuffer,
     order_size: u64,
-) -> Result<AmountsFilled, DropsetError> {
+) -> Result<AmountsFilled, ProgramError> {
     // All amounts in this function are in atoms.
     let mut constraint_asset_remaining = order_size;
     let mut counter_asset_filled: u64 = 0;
@@ -111,6 +118,7 @@ pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
                     // remaining.
                     full_fill::<IS_BUY, BASE_DENOM>(
                         ctx,
+                        event_buffer,
                         &mut constraint_asset_remaining,
                         &mut counter_asset_filled,
                         &top_order,
@@ -125,6 +133,7 @@ pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
                     // completely filled and must be mutated to reflect the new amounts remaining.
                     partial_fill::<IS_BUY, BASE_DENOM>(
                         ctx,
+                        event_buffer,
                         &mut constraint_asset_remaining,
                         &mut counter_asset_filled,
                         &top_order,
@@ -195,10 +204,11 @@ fn top_of_book_snapshot<const IS_BUY: bool>(ctx: &'_ MarketOrderContext) -> Opti
 #[inline(always)]
 unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
+    event_buffer: &mut EventBuffer,
     constraint_asset_remaining: &mut u64,
     counter_asset_filled: &mut u64,
     top_order: &OrderSnapshot,
-) -> DropsetResult {
+) -> ProgramResult {
     // 1. Close/remove the order from the orders collection.
     if IS_BUY {
         ctx.market_account
@@ -237,16 +247,29 @@ unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
         .checked_add(top_order.get_counter_asset_remaining::<BASE_DENOM>())
         .ok_or(DropsetError::ArithmeticOverflow)?;
 
+    event_buffer.add_to_buffer(
+        FillEventInstructionData::new(
+            IS_BUY,
+            BASE_DENOM,
+            top_order.base_remaining,
+            top_order.quote_remaining,
+            top_order.encoded_price,
+        ),
+        ctx.event_authority,
+        ctx.market_account.clone(),
+    )?;
+
     Ok(())
 }
 
 #[inline(always)]
 fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
+    event_buffer: &mut EventBuffer,
     constraint_asset_remaining: &mut u64,
     counter_asset_filled: &mut u64,
     top_order: &OrderSnapshot,
-) -> DropsetResult {
+) -> ProgramResult {
     let remaining_constrained_asset_in_top_order =
         dropset_non_zero_u64(top_order.get_constrained_remaining::<BASE_DENOM>())?;
     let remaining_counter_asset_in_top_order =
@@ -306,6 +329,18 @@ fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
             top_order.encoded_price,
         )
     }?;
+
+    event_buffer.add_to_buffer(
+        FillEventInstructionData::new(
+            IS_BUY,
+            BASE_DENOM,
+            base_filled,
+            quote_filled,
+            top_order.encoded_price,
+        ),
+        ctx.event_authority,
+        ctx.market_account.clone(),
+    )?;
 
     Ok(())
 }

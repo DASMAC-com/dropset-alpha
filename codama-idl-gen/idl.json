@@ -1446,6 +1446,648 @@
             }
           }
         ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "headerEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 0
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "instructionTag",
+            "docs": [
+              "The tag of the instruction that emitted the following events."
+            ],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "emittedCount",
+            "docs": ["The number of events in the following event buffer."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u16",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "numEvents",
+            "docs": ["The market's final, total number of events."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "market",
+            "docs": ["The market's address."],
+            "type": {
+              "kind": "publicKeyTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "depositEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 1
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "amount",
+            "docs": ["The amount deposited."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBase",
+            "docs": [
+              "Which token, i.e., `true` => base token, `false` => quote token."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "seatSectorIndex",
+            "docs": [
+              "The user's (possibly newly registered) market seat sector index."
+            ],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "withdrawEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 2
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "amount",
+            "docs": ["The amount withdrawn."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBase",
+            "docs": [
+              "Which token, i.e., `true` => base token, `false` => quote token."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "registerMarketEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 3
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "market",
+            "docs": ["The newly registered market."],
+            "type": {
+              "kind": "publicKeyTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 3
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "postOrderEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 4
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBid",
+            "docs": [
+              "Whether or not the order is a bid. If false, the order is an ask."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "userSeatSectorIndex",
+            "docs": ["The user's market seat sector index."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "orderSectorIndex",
+            "docs": ["The posted order's sector index."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "baseAtoms",
+            "docs": ["The size of the order's base atoms to fill."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "quoteAtoms",
+            "docs": ["The size of the order's quote atoms to fill."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 4
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "cancelOrderEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 5
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBid",
+            "docs": [
+              "Whether or not the order is a bid. If false, the order is an ask."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "userSeatSectorIndex",
+            "docs": ["The user's market seat sector index."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 5
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "fillEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 6
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBuy",
+            "docs": [
+              "Whether or not the order is a market buy. If not, it's a market sell."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "isBase",
+            "docs": [
+              "Whether or not the order size is denominated in base. If not, it's in quote."
+            ],
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "baseFilled",
+            "docs": ["The amount of base atoms filled."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "quoteFilled",
+            "docs": ["The amount of quote atoms filled."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "encodedPrice",
+            "docs": ["The encoded price of the last order filled."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 6
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "closeSeatEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 7
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "userSeatSectorIndex",
+            "docs": ["The user's market seat sector index."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u32",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 7
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "expandMarketEvent",
+        "docs": [],
+        "optionalAccountStrategy": "programId",
+        "accounts": [],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "docs": [],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 8
+            },
+            "defaultValueStrategy": "omitted"
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "numSectors",
+            "docs": ["The number of free sectors added to the market account."],
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u16",
+              "endian": "le"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              },
+              "value": {
+                "kind": "numberValueNode",
+                "number": 8
+              }
+            }
+          }
+        ]
       }
     ],
     "definedTypes": [
