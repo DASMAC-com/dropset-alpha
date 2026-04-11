@@ -1,6 +1,6 @@
 "use client";
 
-import type { Decimal } from "decimal.js";
+import { Decimal } from "decimal.js";
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { solscanTxUrl } from "@/lib/solana/explorer";
@@ -150,18 +150,14 @@ export function TransactionLog() {
               signature: tx.signature,
               accounts: tx.parsed.accounts,
               lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
-              baseFilledUi: (
-                Number(fill.data.baseFilled) /
-                10 ** baseDecimals
-              ).toLocaleString(undefined, {
-                maximumFractionDigits: baseDecimals,
-              }),
-              quoteFilledUi: (
-                Number(fill.data.quoteFilled) /
-                10 ** quoteDecimals
-              ).toLocaleString(undefined, {
-                maximumFractionDigits: quoteDecimals,
-              }),
+              baseFilledUi: new Decimal(fill.data.baseFilled.toString())
+                .div(new Decimal(10).pow(baseDecimals))
+                .toDecimalPlaces(baseDecimals)
+                .toString(),
+              quoteFilledUi: new Decimal(fill.data.quoteFilled.toString())
+                .div(new Decimal(10).pow(quoteDecimals))
+                .toDecimalPlaces(quoteDecimals)
+                .toString(),
             })),
         ),
     [transactions, baseDecimals, quoteDecimals],
