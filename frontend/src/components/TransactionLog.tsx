@@ -43,6 +43,8 @@ type FillData = {
   isBase: boolean;
   baseFilled: bigint;
   quoteFilled: bigint;
+  baseFilledUi: string;
+  quoteFilledUi: string;
   encodedPrice: number;
 };
 
@@ -80,15 +82,15 @@ function FillEntry({
       </span>
 
       <span className={`w-20 shrink-0 font-mono text-xs tabular-nums ${color}`}>
-        {fill.lastFillPrice.toFixed(4)}
+        {fill.lastFillPrice.toDecimalPlaces(6).toString()}
       </span>
 
-      <span className="w-24 shrink-0 text-right font-mono text-foreground text-xs tabular-nums">
-        {fill.baseFilled.toLocaleString()}
+      <span className="z-10 w-24 shrink-0 text-right font-mono text-foreground text-xs tabular-nums">
+        {fill.baseFilledUi}
       </span>
 
-      <span className="w-24 shrink-0 text-right font-mono text-muted-fg text-xs tabular-nums">
-        {fill.quoteFilled.toLocaleString()}
+      <span className="z-10 w-24 shrink-0 text-right font-mono text-muted-fg text-xs tabular-nums">
+        {fill.quoteFilledUi}
       </span>
 
       <a
@@ -125,10 +127,14 @@ export function TransactionLog() {
   }, [connect]);
 
   const view = useMarketStore((s) => s.view);
+  const market = useMarketStore((s) => s.market);
   const totalLiquidity = useMemo(
     () => (view ? marketLiquidity(view).total : 0n),
     [view],
   );
+
+  const baseDecimals = market?.base.decimals ?? 0;
+  const quoteDecimals = market?.quote.decimals ?? 0;
 
   const fills: (FillData & { key: string })[] = useMemo(
     () =>
@@ -144,9 +150,11 @@ export function TransactionLog() {
               signature: tx.signature,
               accounts: tx.parsed.accounts,
               lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
+              baseFilledUi: (Number(fill.data.baseFilled) / 10 ** baseDecimals).toLocaleString(undefined, { maximumFractionDigits: baseDecimals }),
+              quoteFilledUi: (Number(fill.data.quoteFilled) / 10 ** quoteDecimals).toLocaleString(undefined, { maximumFractionDigits: quoteDecimals }),
             })),
         ),
-    [transactions],
+    [transactions, baseDecimals, quoteDecimals],
   );
 
   return (
@@ -180,6 +188,16 @@ export function TransactionLog() {
         }}
         onMouseLeave={() => setHovered(false)}
       >
+        {fills.length > 0 && (
+          <div className="flex items-center gap-3 border-border/50 border-b px-3 py-1.5">
+            <span className="w-16 shrink-0 text-muted-fg/60 text-xs">Time</span>
+            <span className="w-20 shrink-0 text-muted-fg/60 text-xs">Price</span>
+            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">Base</span>
+            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">Quote</span>
+            <span className="ml-auto text-muted-fg/60 text-xs">Tx</span>
+          </div>
+        )}
+
         {fills.length === 0 && status === "connected" && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-fg">
             <Activity size={24} className="mb-2 opacity-50" />

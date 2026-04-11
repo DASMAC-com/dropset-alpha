@@ -1,4 +1,4 @@
-import type { ClusterUrl } from "@solana/rpc-types";
+import { type ClusterUrl, devnet, mainnet, testnet } from "@solana/rpc-types";
 import { getRpcClient, type RpcClient } from "@/ts-sdk";
 
 export type Cluster = "localnet" | "devnet" | "testnet" | "mainnet";
@@ -25,12 +25,12 @@ function loadCluster(): Cluster {
 
 export const CLUSTER: Cluster = loadCluster();
 
-const PUBLIC_RPC_URLS: Record<Cluster, ClusterUrl> = {
-  localnet: "http://localhost:8899" as ClusterUrl,
-  devnet: "https://api.devnet.solana.com" as ClusterUrl,
-  testnet: "https://api.testnet.solana.com" as ClusterUrl,
-  mainnet: "https://api.mainnet-beta.solana.com" as ClusterUrl,
-};
+const PUBLIC_RPC_URLS = {
+  localnet: devnet("http://localhost:8899"),
+  devnet: devnet("https://api.devnet.solana.com"),
+  testnet: testnet("https://api.testnet.solana.com"),
+  mainnet: mainnet("https://api.mainnet-beta.solana.com"),
+} satisfies Record<Cluster, ClusterUrl>;
 
 const PUBLIC_WS_URLS: Record<Cluster, string> = {
   localnet: "ws://localhost:8900",
@@ -39,12 +39,17 @@ const PUBLIC_WS_URLS: Record<Cluster, string> = {
   mainnet: "wss://api.mainnet-beta.solana.com",
 };
 
-const PRIVATE_RPC_URLS: Record<Cluster, ClusterUrl | undefined> = {
-  localnet: process.env.SERVER_LOCALNET_RPC_URL as ClusterUrl | undefined,
-  devnet: process.env.SERVER_DEVNET_RPC_URL as ClusterUrl | undefined,
-  testnet: process.env.SERVER_TESTNET_RPC_URL as ClusterUrl | undefined,
-  mainnet: process.env.SERVER_MAINNET_RPC_URL as ClusterUrl | undefined,
-};
+const maybePutative = (
+  fn: typeof devnet | typeof testnet | typeof mainnet,
+  url?: string,
+) => (url ? fn(url) : undefined);
+
+const PRIVATE_RPC_URLS = {
+  localnet: maybePutative(devnet, process.env.SERVER_LOCALNET_RPC_URL),
+  devnet: maybePutative(devnet, process.env.SERVER_DEVNET_RPC_URL),
+  testnet: maybePutative(testnet, process.env.SERVER_TESTNET_RPC_URL),
+  mainnet: maybePutative(mainnet, process.env.SERVER_MAINNET_RPC_URL),
+} satisfies Record<Cluster, ClusterUrl | undefined>;
 
 const PRIVATE_WS_URLS: Record<Cluster, string | undefined> = {
   localnet: process.env.SERVER_LOCALNET_WS_URL,

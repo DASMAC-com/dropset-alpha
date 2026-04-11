@@ -2,7 +2,7 @@
 
 import type { Address } from "@solana/addresses";
 import { useEffect, useState } from "react";
-import { MarketProvider } from "@/lib/providers/market-provider";
+import { MarketProvider } from "@/lib/providers/MarketProvider";
 import { useMarketStore } from "@/lib/stores/market-store";
 
 type FaucetInfo = {

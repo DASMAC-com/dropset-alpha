@@ -15,6 +15,7 @@ export type MarketContextValue = {
   quoteDecimals: number;
   baseBalance: SplTokenBalance | null;
   quoteBalance: SplTokenBalance | null;
+  lamports: bigint | null;
   refreshBaseBalance: () => Promise<void>;
   refreshQuoteBalance: () => Promise<void>;
   baseAtaExists: boolean;

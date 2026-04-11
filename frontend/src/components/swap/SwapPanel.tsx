@@ -14,6 +14,7 @@ import {
 } from "react";
 import { useMarket } from "@/lib/hooks/use-market";
 import { useMarketOrderBuilder } from "@/lib/hooks/use-market-order-builder";
+import { useMarketStore } from "@/lib/stores/market-store";
 import { solscanTokenUrl } from "@/lib/solana/explorer";
 import {
   formatBalance,
@@ -21,9 +22,7 @@ import {
   truncateAddress,
   uiToAtoms,
 } from "@/lib/solana/format";
-
-// Stub price until we implement the tx events parser.
-const STUB_PRICE = new Decimal("123.456789");
+import { encodedU32ToDecimal } from "@/ts-sdk";
 
 type Side = "buy" | "sell";
 
@@ -114,9 +113,9 @@ function TokenRow({
         </a>
       </div>
       <div className="flex flex-col items-end gap-0.5">
-        <div className="flex items-center gap-1 text-muted-fg text-xs">
+        <div className={`flex items-center gap-1 text-xs ${insufficientBalance ? "text-red-400" : "text-muted-fg"}`}>
           {insufficientBalance && <InsufficientBalanceWarning />}
-          <Wallet size={11} />
+          <Wallet size={11} className="opacity-75" />
           <span className="font-mono tabular-nums">
             {connected && uiBalance ? formatBalance(uiBalance) : "—"}
           </span>
@@ -141,7 +140,7 @@ function TokenRow({
 }
 
 export function SwapPanel() {
-  const { market, baseBalance, quoteBalance, baseAtaExists, quoteAtaExists } =
+  const { market, baseBalance, quoteBalance, baseAtaExists, quoteAtaExists, refreshBaseBalance, refreshQuoteBalance } =
     useMarket();
 
   const baseUiBalance = baseBalance?.uiAmount;
@@ -155,6 +154,11 @@ export function SwapPanel() {
   const [amount, setAmount] = useState("");
   const [hovering, setHovering] = useState(false);
   const [priceInverted, setPriceInverted] = useState(false);
+  const lastEncodedPrice = useMarketStore((s) => s.lastEncodedPrice);
+  const price = useMemo(
+    () => (lastEncodedPrice ? encodedU32ToDecimal(lastEncodedPrice) : null),
+    [lastEncodedPrice],
+  );
   const outputRef = useRef("");
 
   const handleSwapSide = useCallback(() => {
@@ -185,10 +189,10 @@ export function SwapPanel() {
   // Price is quote-per-base (how much quote for 1 base).
   // Buy: user pays quote, receives base → output = input / price
   // Sell: user pays base, receives quote → output = input * price
-  const outputAmount = amount
+  const outputAmount = amount && price
     ? (isBuy
-        ? new Decimal(amount).div(STUB_PRICE)
-        : new Decimal(amount).mul(STUB_PRICE)
+        ? new Decimal(amount).div(price)
+        : new Decimal(amount).mul(price)
       )
         .toDecimalPlaces(bottomDecimals)
         .toString()
@@ -256,43 +260,45 @@ export function SwapPanel() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setPriceInverted((v) => !v)}
-        className="mt-3 w-full cursor-pointer text-center font-mono text-xs transition-colors hover:text-foreground"
-      >
-        {priceInverted ? (
-          <>
-            <span className="font-medium text-foreground">1</span>{" "}
-            <span className="text-muted-fg/70">
-              {truncateAddress(market.quote.mintAddress)}
-            </span>{" "}
-            <span className="font-medium text-foreground">
-              ≈{" "}
-              {new Decimal(1)
-                .div(STUB_PRICE)
-                .toDecimalPlaces(market.base.decimals)
-                .toString()}
-            </span>{" "}
-            <span className="text-muted-fg/70">
-              {truncateAddress(market.base.mintAddress)}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="font-medium text-foreground">1</span>{" "}
-            <span className="text-muted-fg/70">
-              {truncateAddress(market.base.mintAddress)}
-            </span>{" "}
-            <span className="font-medium text-foreground">
-              ≈ {STUB_PRICE.toString()}
-            </span>{" "}
-            <span className="text-muted-fg/70">
-              {truncateAddress(market.quote.mintAddress)}
-            </span>
-          </>
-        )}
-      </button>
+      {price && (
+        <button
+          type="button"
+          onClick={() => setPriceInverted((v) => !v)}
+          className="mt-3 w-full cursor-pointer text-center font-mono text-xs transition-colors hover:text-foreground"
+        >
+          {priceInverted ? (
+            <>
+              <span className="font-medium text-foreground">1</span>{" "}
+              <span className="text-muted-fg/70">
+                {truncateAddress(market.quote.mintAddress)}
+              </span>{" "}
+              <span className="font-medium text-foreground">
+                ≈{" "}
+                {new Decimal(1)
+                  .div(price)
+                  .toDecimalPlaces(market.base.decimals)
+                  .toString()}
+              </span>{" "}
+              <span className="text-muted-fg/70">
+                {truncateAddress(market.base.mintAddress)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">1</span>{" "}
+              <span className="text-muted-fg/70">
+                {truncateAddress(market.base.mintAddress)}
+              </span>{" "}
+              <span className="font-medium text-foreground">
+                ≈ {price.toString()}
+              </span>{" "}
+              <span className="text-muted-fg/70">
+                {truncateAddress(market.quote.mintAddress)}
+              </span>
+            </>
+          )}
+        </button>
+      )}
 
       <button
         type="button"
@@ -304,6 +310,10 @@ export function SwapPanel() {
           const outputAtaExists = isBuy ? baseAtaExists : quoteAtaExists;
           const instructions = buildOrder(atoms, isBuy, outputAtaExists);
           await send({ instructions, authority: wallet });
+          setTimeout(() => {
+            void refreshBaseBalance();
+            void refreshQuoteBalance();
+          }, 2000);
         }}
         className="mt-3 w-full rounded-lg bg-accent py-2.5 font-medium text-sm text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -315,6 +325,7 @@ export function SwapPanel() {
               ? "Buy"
               : "Sell"}
       </button>
+
     </fieldset>
   );
 }

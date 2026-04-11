@@ -87,7 +87,7 @@ export function useMarketOrderBuilder() {
         dropsetProgram: DROPSET_PROGRAM_ADDRESS,
         orderSize,
         isBuy,
-        isBase: true,
+        isBase: !isBuy,
       });
       instructions.push(marketOrder);
 

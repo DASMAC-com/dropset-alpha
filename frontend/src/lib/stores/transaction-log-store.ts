@@ -1,4 +1,5 @@
 import {
+  type Address,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
   signature,
@@ -6,6 +7,7 @@ import {
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { PUBLIC_RPC_URL, PUBLIC_WS_URL } from "@/lib/env";
+import { useMarketStore } from "@/lib/stores/market-store";
 import { type ParsedTransaction, parseTransaction } from "@/transaction-parser";
 import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk";
 
@@ -51,6 +53,15 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function updateLastFillPrice(parsed: ParsedTransaction) {
+  const lastFill = parsed.dropsetEvents.findLast((e) => e.kind === "fill");
+  if (lastFill) {
+    useMarketStore
+      .getState()
+      .setLastEncodedPrice(lastFill.data.encodedPrice);
+  }
+}
+
 export const useTransactionLogStore = create<
   TransactionLogState & TransactionLogActions
 >()(
@@ -74,6 +85,7 @@ export const useTransactionLogStore = create<
 
           if (result) {
             const parsed = parseTransaction(result);
+            updateLastFillPrice(parsed);
 
             const entry: TransactionEntry = {
               signature: sig,
@@ -101,6 +113,26 @@ export const useTransactionLogStore = create<
       }
 
       processing = false;
+    }
+
+    async function backfillRecent() {
+      try {
+        const sigs = await rpc
+          .getSignaturesForAddress(DROPSET_PROGRAM_ADDRESS as Address, {
+            limit: 10,
+          })
+          .send();
+
+        for (const info of sigs) {
+          const sig = info.signature;
+          if (seenSignatures.has(sig)) continue;
+          seenSignatures.add(sig);
+          fetchQueue.push(sig);
+        }
+        await processQueue();
+      } catch (e) {
+        console.error("Failed to backfill recent transactions:", e);
+      }
     }
 
     async function startSubscription() {
@@ -168,7 +200,7 @@ export const useTransactionLogStore = create<
       error: null,
 
       connect: () => {
-        void startSubscription();
+        void backfillRecent().then(() => startSubscription());
         return () => {
           if (abortController) {
             abortController.abort();

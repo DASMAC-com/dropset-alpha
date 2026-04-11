@@ -9,9 +9,6 @@ catalogs:
     '@biomejs/biome':
       specifier: 2.4.10
       version: 2.4.10
-    '@jest/globals':
-      specifier: ^29.7.0
-      version: 29.7.0
     '@solana/addresses':
       specifier: ^6.7.0
       version: 6.7.0
@@ -30,12 +27,6 @@ catalogs:
     decimal.js:
       specifier: ^10.6.0
       version: 10.6.0
-    jest:
-      specifier: ^29.7.0
-      version: 29.7.0
-    ts-jest:
-      specifier: ^29.4.6
-      version: 29.4.9
     typescript:
       specifier: ^5.9
       version: 5.9.3

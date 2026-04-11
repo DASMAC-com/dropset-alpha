@@ -1,6 +1,10 @@
 "use client";
 
-import { useSplToken } from "@solana/react-hooks";
+import {
+  useBalance,
+  useSplToken,
+  useWalletConnection,
+} from "@solana/react-hooks";
 import { MarketContext } from "@/lib/hooks/use-market";
 import type { MarketInfo } from "@/lib/stores/market-store";
 import { useMarketStore } from "@/lib/stores/market-store";
@@ -30,6 +34,9 @@ function MarketProviderInner({
     market.quote.mintAddress,
   );
 
+  const { wallet } = useWalletConnection();
+  const { lamports } = useBalance(wallet?.account.address);
+
   return (
     <MarketContext.Provider
       value={{
@@ -40,6 +47,7 @@ function MarketProviderInner({
         quoteDecimals: market.quote.decimals,
         baseBalance,
         quoteBalance,
+        lamports: lamports ?? null,
         refreshBaseBalance: async () => {
           await refreshBase();
         },
