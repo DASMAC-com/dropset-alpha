@@ -58,17 +58,10 @@ const PRIVATE_WS_URLS: Record<Cluster, string | undefined> = {
   mainnet: process.env.SERVER_MAINNET_WS_URL,
 };
 
-/** Public RPC URL for the current cluster. Safe to expose to the browser. */
 export const PUBLIC_RPC_URL: ClusterUrl = PUBLIC_RPC_URLS[CLUSTER];
-
-/** Public RPC URL for the current cluster. Safe to expose to the browser. */
-export const PUBLIC_WS_URL: string = PUBLIC_WS_URLS[CLUSTER];
-
-/** Private RPC URL if set, otherwise falls back to public. */
+export const PUBLIC_WS_URL = PUBLIC_WS_URLS[CLUSTER];
 export const RPC_URL: ClusterUrl = PRIVATE_RPC_URLS[CLUSTER] ?? PUBLIC_RPC_URL;
-
-/** Private WS URL if set, otherwise falls back to public. */
-export const WS_URL: ClusterUrl = PRIVATE_WS_URLS[CLUSTER] ?? RPC_URL;
+export const WS_URL = PRIVATE_WS_URLS[CLUSTER] ?? RPC_URL;
 
 /**
  * Creates an RPC client using the private RPC URL if available, public otherwise.
