@@ -3,6 +3,7 @@
 import type { Address } from "@solana/addresses";
 import { useEffect, useState } from "react";
 import { MarketProvider } from "@/lib/providers/MarketProvider";
+import { deriveAta } from "@/lib/solana/derive";
 import { useMarketStore } from "@/lib/stores/market-store";
 
 type FaucetInfo = {
@@ -36,22 +37,27 @@ export function FaucetProvider({
     const baseMint = info.base_mint as Address;
     const quoteMint = info.quote_mint as Address;
 
-    setMarket({
-      address: info.market,
-      base: {
-        mintAddress: baseMint,
-        tokenProgram: info.base_token_program,
-        decimals: info.base_decimals,
-      },
-      quote: {
-        mintAddress: quoteMint,
-        tokenProgram: info.quote_token_program,
-        decimals: info.quote_decimals,
-      },
-      baseMarketAta: baseMint,
-      quoteMarketAta: quoteMint,
+    void Promise.all([
+      deriveAta(info.market, baseMint, info.base_token_program),
+      deriveAta(info.market, quoteMint, info.quote_token_program),
+    ]).then(([baseMarketAta, quoteMarketAta]) => {
+      setMarket({
+        address: info.market,
+        base: {
+          mintAddress: baseMint,
+          tokenProgram: info.base_token_program,
+          decimals: info.base_decimals,
+        },
+        quote: {
+          mintAddress: quoteMint,
+          tokenProgram: info.quote_token_program,
+          decimals: info.quote_decimals,
+        },
+        baseMarketAta,
+        quoteMarketAta,
+      });
+      setReady(true);
     });
-    setReady(true);
   }, [info, market, setMarket]);
 
   if (!ready) return null;
