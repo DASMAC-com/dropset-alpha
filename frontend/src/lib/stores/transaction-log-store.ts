@@ -56,9 +56,7 @@ function delay(ms: number): Promise<void> {
 function updateLastFillPrice(parsed: ParsedTransaction) {
   const lastFill = parsed.dropsetEvents.findLast((e) => e.kind === "fill");
   if (lastFill) {
-    useMarketStore
-      .getState()
-      .setLastEncodedPrice(lastFill.data.encodedPrice);
+    useMarketStore.getState().setLastEncodedPrice(lastFill.data.encodedPrice);
   }
 }
 

@@ -14,7 +14,6 @@ import {
 } from "react";
 import { useMarket } from "@/lib/hooks/use-market";
 import { useMarketOrderBuilder } from "@/lib/hooks/use-market-order-builder";
-import { useMarketStore } from "@/lib/stores/market-store";
 import { solscanTokenUrl } from "@/lib/solana/explorer";
 import {
   formatBalance,
@@ -22,6 +21,7 @@ import {
   truncateAddress,
   uiToAtoms,
 } from "@/lib/solana/format";
+import { useMarketStore } from "@/lib/stores/market-store";
 import { encodedU32ToDecimal } from "@/ts-sdk";
 
 type Side = "buy" | "sell";
@@ -113,7 +113,9 @@ function TokenRow({
         </a>
       </div>
       <div className="flex flex-col items-end gap-0.5">
-        <div className={`flex items-center gap-1 text-xs ${insufficientBalance ? "text-red-400" : "text-muted-fg"}`}>
+        <div
+          className={`flex items-center gap-1 text-xs ${insufficientBalance ? "text-red-400" : "text-muted-fg"}`}
+        >
           {insufficientBalance && <InsufficientBalanceWarning />}
           <Wallet size={11} className="opacity-75" />
           <span className="font-mono tabular-nums">
@@ -140,8 +142,15 @@ function TokenRow({
 }
 
 export function SwapPanel() {
-  const { market, baseBalance, quoteBalance, baseAtaExists, quoteAtaExists, refreshBaseBalance, refreshQuoteBalance } =
-    useMarket();
+  const {
+    market,
+    baseBalance,
+    quoteBalance,
+    baseAtaExists,
+    quoteAtaExists,
+    refreshBaseBalance,
+    refreshQuoteBalance,
+  } = useMarket();
 
   const baseUiBalance = baseBalance?.uiAmount;
   const quoteUiBalance = quoteBalance?.uiAmount;
@@ -189,14 +198,15 @@ export function SwapPanel() {
   // Price is quote-per-base (how much quote for 1 base).
   // Buy: user pays quote, receives base → output = input / price
   // Sell: user pays base, receives quote → output = input * price
-  const outputAmount = amount && price
-    ? (isBuy
-        ? new Decimal(amount).div(price)
-        : new Decimal(amount).mul(price)
-      )
-        .toDecimalPlaces(bottomDecimals)
-        .toString()
-    : "";
+  const outputAmount =
+    amount && price
+      ? (isBuy
+          ? new Decimal(amount).div(price)
+          : new Decimal(amount).mul(price)
+        )
+          .toDecimalPlaces(bottomDecimals)
+          .toString()
+      : "";
   outputRef.current = outputAmount;
 
   return (
@@ -325,7 +335,6 @@ export function SwapPanel() {
               ? "Buy"
               : "Sell"}
       </button>
-
     </fieldset>
   );
 }

@@ -150,8 +150,18 @@ export function TransactionLog() {
               signature: tx.signature,
               accounts: tx.parsed.accounts,
               lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
-              baseFilledUi: (Number(fill.data.baseFilled) / 10 ** baseDecimals).toLocaleString(undefined, { maximumFractionDigits: baseDecimals }),
-              quoteFilledUi: (Number(fill.data.quoteFilled) / 10 ** quoteDecimals).toLocaleString(undefined, { maximumFractionDigits: quoteDecimals }),
+              baseFilledUi: (
+                Number(fill.data.baseFilled) /
+                10 ** baseDecimals
+              ).toLocaleString(undefined, {
+                maximumFractionDigits: baseDecimals,
+              }),
+              quoteFilledUi: (
+                Number(fill.data.quoteFilled) /
+                10 ** quoteDecimals
+              ).toLocaleString(undefined, {
+                maximumFractionDigits: quoteDecimals,
+              }),
             })),
         ),
     [transactions, baseDecimals, quoteDecimals],
@@ -191,9 +201,15 @@ export function TransactionLog() {
         {fills.length > 0 && (
           <div className="flex items-center gap-3 border-border/50 border-b px-3 py-1.5">
             <span className="w-16 shrink-0 text-muted-fg/60 text-xs">Time</span>
-            <span className="w-20 shrink-0 text-muted-fg/60 text-xs">Price</span>
-            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">Base</span>
-            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">Quote</span>
+            <span className="w-20 shrink-0 text-muted-fg/60 text-xs">
+              Price
+            </span>
+            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">
+              Base
+            </span>
+            <span className="w-24 shrink-0 text-right text-muted-fg/60 text-xs">
+              Quote
+            </span>
             <span className="ml-auto text-muted-fg/60 text-xs">Tx</span>
           </div>
         )}
