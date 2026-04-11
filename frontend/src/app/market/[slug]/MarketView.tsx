@@ -1,10 +1,12 @@
 "use client";
 
 import type { Address } from "@solana/addresses";
+import { SolBalance } from "@/components/swap/SolBalance";
 import { SwapPanel } from "@/components/swap/SwapPanel";
+import { TransactionLog } from "@/components/TransactionLog";
 import { useMarketView } from "@/lib/hooks/use-market-view";
 import { useUserAtas } from "@/lib/hooks/use-user-atas";
-import { MarketProvider } from "@/lib/providers/market-provider";
+import { MarketProvider } from "@/lib/providers/MarketProvider";
 import { marketLiquidity } from "@/ts-sdk";
 
 export function MarketView({ address }: { address: Address }) {
@@ -52,8 +54,13 @@ export function MarketView({ address }: { address: Address }) {
       <MarketProvider>
         <div className="mx-auto mt-8 max-w-sm">
           <SwapPanel />
+          <SolBalance />
         </div>
       </MarketProvider>
+
+      <div className="mx-auto mt-6 max-w-2xl">
+        <TransactionLog />
+      </div>
     </div>
   );
 }

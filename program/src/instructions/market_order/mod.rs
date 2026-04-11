@@ -3,10 +3,8 @@
 mod fill_market_order;
 mod mul_div_checked;
 
-// #[cfg(feature = "debug")]
 use dropset_interface::{
     error::DropsetError,
-    events::MarketOrderEventInstructionData,
     instructions::MarketOrderInstructionData,
 };
 use mul_div_checked::mul_div_checked;
@@ -41,7 +39,7 @@ use crate::{
 pub unsafe fn process_market_order<'a>(
     accounts: &'a [AccountView],
     instruction_data: &[u8],
-    _event_buffer: &mut EventBuffer,
+    event_buffer: &mut EventBuffer,
 ) -> Result<EventBufferContext<'a>, ProgramError> {
     let MarketOrderInstructionData {
         order_size,
@@ -56,10 +54,10 @@ pub unsafe fn process_market_order<'a>(
         base: base_filled,
         quote: quote_filled,
     } = match (is_buy, is_base) {
-        (false, false) => fill_market_order::<false, false>(&mut ctx, order_size),
-        (true, false) => fill_market_order::<true, false>(&mut ctx, order_size),
-        (false, true) => fill_market_order::<false, true>(&mut ctx, order_size),
-        (true, true) => fill_market_order::<true, true>(&mut ctx, order_size),
+        (false, false) => fill_market_order::<false, false>(&mut ctx, event_buffer, order_size),
+        (true, false) => fill_market_order::<true, false>(&mut ctx, event_buffer, order_size),
+        (false, true) => fill_market_order::<false, true>(&mut ctx, event_buffer, order_size),
+        (true, true) => fill_market_order::<true, true>(&mut ctx, event_buffer, order_size),
     }?;
 
     // Try to transfer the taker side's tokens to the market account.
@@ -112,19 +110,6 @@ pub unsafe fn process_market_order<'a>(
     if taker_amount_filled != taker_amount_deposited {
         return Err(DropsetError::AmountFilledVsTransferredMismatch.into());
     }
-
-    // #[cfg(feature = "debug")]
-    _event_buffer.add_to_buffer(
-        MarketOrderEventInstructionData::new(
-            order_size,
-            is_buy,
-            is_base,
-            base_filled,
-            quote_filled,
-        ),
-        ctx.event_authority,
-        ctx.market_account.clone(),
-    )?;
 
     Ok(EventBufferContext {
         event_authority: ctx.event_authority,

@@ -226,7 +226,6 @@ pub struct ProgramNode {
     pub pdas: Vec<()>,
     // Not yet implemented. Serializes to `[]` in the IDL.
     pub errors: Vec<()>,
-    // Not yet implemented. Serializes to `[]` in the IDL.
     pub events: Vec<()>,
 }
 

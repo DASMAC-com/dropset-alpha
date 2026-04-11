@@ -1,14 +1,18 @@
 "use client";
 
+import { lamports as getLamports } from "@solana/kit";
 import { useWalletConnection } from "@solana/react-hooks";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useMarket } from "@/lib/hooks/use-market";
+import { getTestRpcClient } from "@/lib/rpc";
 import { requestFaucetTransaction } from "@/lib/solana/faucet";
 import { truncateAddress } from "@/lib/solana/format";
 
 type FaucetStatus = "idle" | "requesting" | "signing" | "success" | "error";
+
+const ONE_SOL = getLamports(1_000_000_000n);
 
 function BalanceLabel({ value }: { value?: string }) {
   const prev = useRef(value);
@@ -52,13 +56,42 @@ export default function FaucetPage() {
     quoteMint,
     baseBalance,
     quoteBalance,
+    lamports,
     refreshBaseBalance,
     refreshQuoteBalance,
   } = useMarket();
+
+  const solUiBalance =
+    lamports != null
+      ? (Number(lamports) / 1e9).toLocaleString(undefined, {
+          maximumFractionDigits: 4,
+        })
+      : undefined;
+
   const [amount, setAmount] = useState("1");
   const [status, setStatus] = useState<FaucetStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastTx, setLastTx] = useState<string | null>(null);
+
+  const [airdropStatus, setAirdropStatus] = useState<
+    "idle" | "requesting" | "success" | "error"
+  >("idle");
+
+  const handleAirdrop = async () => {
+    if (!wallet) return;
+    setAirdropStatus("requesting");
+    try {
+      await getTestRpcClient()
+        .requestAirdrop(wallet.account.address, ONE_SOL)
+        .send();
+      setAirdropStatus("success");
+      setTimeout(() => setAirdropStatus("idle"), 3000);
+    } catch (e) {
+      console.error("Airdrop failed:", e);
+      setAirdropStatus("error");
+      setTimeout(() => setAirdropStatus("idle"), 3000);
+    }
+  };
 
   const handleRequest = async (isBase: boolean) => {
     if (!wallet?.signTransaction || !wallet.sendTransaction) return;
@@ -161,6 +194,24 @@ export default function FaucetPage() {
               </button>
               <BalanceLabel value={quoteBalance?.uiAmount} />
             </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              disabled={airdropStatus === "requesting"}
+              onClick={handleAirdrop}
+              className="w-full rounded-lg border border-border bg-muted py-2.5 font-medium text-foreground text-sm transition-colors hover:bg-border disabled:opacity-50"
+            >
+              {airdropStatus === "requesting"
+                ? "Requesting…"
+                : airdropStatus === "success"
+                  ? "Airdropped 1 SOL!"
+                  : airdropStatus === "error"
+                    ? "Airdrop failed"
+                    : "Airdrop 1 SOL"}
+            </button>
+            <BalanceLabel value={solUiBalance} />
           </div>
 
           {status === "success" && lastTx && (

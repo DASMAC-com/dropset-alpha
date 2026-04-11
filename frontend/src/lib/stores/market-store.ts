@@ -25,6 +25,7 @@ export type MarketInfo = {
 type MarketState = {
   view: DropsetMarketView | null;
   market: MarketInfo | null;
+  lastEncodedPrice: number | null;
   userBaseAta: Address | null;
   userQuoteAta: Address | null;
   baseAtaExists: boolean;
@@ -34,6 +35,7 @@ type MarketState = {
 type MarketActions = {
   setView: (view: DropsetMarketView) => void;
   setMarket: (info: MarketInfo) => void;
+  setLastEncodedPrice: (encodedPrice: number) => void;
   setUserAtas: (baseAta: Address, quoteAta: Address) => void;
   setAtaExists: (base: boolean, quote: boolean) => void;
   clear: () => void;
@@ -43,6 +45,7 @@ export const useMarketStore = create<MarketState & MarketActions>()(
   immer((set) => ({
     view: null,
     market: null,
+    lastEncodedPrice: null,
     userBaseAta: null,
     userQuoteAta: null,
     baseAtaExists: false,
@@ -56,6 +59,11 @@ export const useMarketStore = create<MarketState & MarketActions>()(
     setMarket: (info) =>
       set((s) => {
         s.market = info;
+      }),
+
+    setLastEncodedPrice: (encodedPrice) =>
+      set((s) => {
+        s.lastEncodedPrice = encodedPrice;
       }),
 
     setUserAtas: (baseAta, quoteAta) =>
@@ -74,6 +82,7 @@ export const useMarketStore = create<MarketState & MarketActions>()(
       set((s) => {
         s.view = null;
         s.market = null;
+        s.lastEncodedPrice = null;
         s.userBaseAta = null;
         s.userQuoteAta = null;
         s.baseAtaExists = false;
