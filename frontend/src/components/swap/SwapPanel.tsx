@@ -71,12 +71,13 @@ function TokenRow({
   connected: boolean;
   uiBalance?: string;
 }) {
+  const parsedAmount = amount && amount !== "." ? new Decimal(amount) : null;
   const insufficientBalance =
     connected &&
     !readOnly &&
-    !!amount &&
+    !!parsedAmount &&
     !!uiBalance &&
-    new Decimal(amount).gt(new Decimal(uiBalance));
+    parsedAmount.gt(new Decimal(uiBalance));
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +200,7 @@ export function SwapPanel() {
   // Buy: user pays quote, receives base → output = input / price
   // Sell: user pays base, receives quote → output = input * price
   const outputAmount =
-    amount && price
+    amount && amount !== "." && price
       ? (isBuy
           ? new Decimal(amount).div(price)
           : new Decimal(amount).mul(price)
