@@ -46,7 +46,6 @@ pub trait CodamaProgram {
     fn codama_root(program_name: &str, program_id: &str) -> RootNode;
 }
 
-
 /// Represents the data type of a field or argument in the IDL.
 ///
 /// Each variant maps to a Codama type node:
