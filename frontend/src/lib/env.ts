@@ -61,7 +61,7 @@ const PRIVATE_WS_URLS: Record<Cluster, string | undefined> = {
 export const PUBLIC_RPC_URL: ClusterUrl = PUBLIC_RPC_URLS[CLUSTER];
 export const PUBLIC_WS_URL = PUBLIC_WS_URLS[CLUSTER];
 export const RPC_URL: ClusterUrl = PRIVATE_RPC_URLS[CLUSTER] ?? PUBLIC_RPC_URL;
-export const WS_URL = PRIVATE_WS_URLS[CLUSTER] ?? RPC_URL;
+export const WS_URL = PRIVATE_WS_URLS[CLUSTER] ?? PUBLIC_WS_URL;
 
 /**
  * Creates an RPC client using the private RPC URL if available, public otherwise.
