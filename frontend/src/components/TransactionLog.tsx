@@ -1,5 +1,6 @@
 "use client";
 
+import type { Address } from "@solana/addresses";
 import { Decimal } from "decimal.js";
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -10,6 +11,13 @@ import {
   type TransactionEntry,
   useTransactionLogStore,
 } from "@/lib/stores/transaction-log-store";
+
+const DEFAULT_MARKET = {
+  transactions: [] as TransactionEntry[],
+  status: "disconnected" as const,
+  error: null,
+};
+
 import type { ResolvedAccount } from "@/transaction-parser";
 import { encodedU32ToDecimal, marketLiquidity } from "@/ts-sdk";
 
@@ -105,9 +113,11 @@ function FillEntry({
   );
 }
 
-export function TransactionLog() {
-  const allTransactions = useTransactionLogStore((s) => s.transactions);
-  const status = useTransactionLogStore((s) => s.status);
+export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
+  const marketState = useTransactionLogStore(
+    (s) => s.markets[marketAddress as string] ?? DEFAULT_MARKET,
+  );
+  const { transactions: allTransactions, status } = marketState;
   const connect = useTransactionLogStore((s) => s.connect);
   const [hovered, setHovered] = useState(false);
   const [frozen, setFrozen] = useState<TransactionEntry[]>([]);
@@ -122,9 +132,9 @@ export function TransactionLog() {
   }, []);
 
   useEffect(() => {
-    const cleanup = connect();
+    const cleanup = connect(marketAddress);
     return cleanup;
-  }, [connect]);
+  }, [connect, marketAddress]);
 
   const view = useMarketStore((s) => s.view);
   const market = useMarketStore((s) => s.market);

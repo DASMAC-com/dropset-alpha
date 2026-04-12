@@ -9,7 +9,6 @@ import { immer } from "zustand/middleware/immer";
 import { PUBLIC_RPC_URL, PUBLIC_WS_URL } from "@/lib/env";
 import { useMarketStore } from "@/lib/stores/market-store";
 import { type ParsedTransaction, parseTransaction } from "@/transaction-parser";
-import { DROPSET_PROGRAM_ADDRESS } from "@/ts-sdk";
 
 const MAX_TRANSACTIONS = 50;
 const FETCH_DELAY_MS = 200;
@@ -27,32 +26,27 @@ export type TransactionEntry = {
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-type TransactionLogState = {
+type PerMarketState = {
   transactions: TransactionEntry[];
   status: ConnectionStatus;
   error: string | null;
 };
 
-type TransactionLogActions = {
-  connect: () => () => void;
-  disconnect: () => void;
-  clear: () => void;
+type TransactionLogState = {
+  markets: Record<string, PerMarketState>;
+  connect: (marketAddress: Address) => () => void;
 };
 
-// Module-level subscription state (outside React).
-let abortController: AbortController | null = null;
-let reconnectAttempts = 0;
-let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-const seenSignatures = new Set<string>();
-let fetchQueue: string[] = [];
-let processing = false;
+type SubscriptionState = {
+  abortController: AbortController;
+  reconnectTimeout: ReturnType<typeof setTimeout> | null;
+  reconnectAttempts: number;
+  seenSignatures: Set<string>;
+  fetchQueue: string[];
+  processing: boolean;
+};
 
-function resetModuleState() {
-  fetchQueue = [];
-  processing = false;
-  seenSignatures.clear();
-  reconnectAttempts = 0;
-}
+const subscriptions = new Map<string, SubscriptionState>();
 
 const rpc = createSolanaRpc(PUBLIC_RPC_URL);
 
@@ -67,18 +61,47 @@ function updateLastFillPrice(parsed: ParsedTransaction) {
   }
 }
 
-export const useTransactionLogStore = create<
-  TransactionLogState & TransactionLogActions
->()(
+const DEFAULT_MARKET_STATE = {
+  transactions: [],
+  status: "disconnected" as ConnectionStatus,
+  error: null as string | null,
+};
+
+export const useTransactionLogStore = create<TransactionLogState>()(
   immer((set) => {
-    async function processQueue() {
-      if (processing) return;
-      processing = true;
+    function getOrCreateSub(key: string): SubscriptionState {
+      let sub = subscriptions.get(key);
+      if (!sub) {
+        sub = {
+          abortController: new AbortController(),
+          reconnectTimeout: null,
+          reconnectAttempts: 0,
+          seenSignatures: new Set(),
+          fetchQueue: [],
+          processing: false,
+        };
+        subscriptions.set(key, sub);
+      }
+      return sub;
+    }
 
-      while (fetchQueue.length > 0) {
-        if (abortController?.signal.aborted) break;
+    function teardown(key: string) {
+      const sub = subscriptions.get(key);
+      if (!sub) return;
+      sub.abortController.abort();
+      if (sub.reconnectTimeout) clearTimeout(sub.reconnectTimeout);
+      subscriptions.delete(key);
+    }
 
-        const sig = fetchQueue.shift();
+    async function processQueue(key: string) {
+      const sub = subscriptions.get(key);
+      if (!sub || sub.processing) return;
+      sub.processing = true;
+
+      while (sub.fetchQueue.length > 0) {
+        if (sub.abortController.signal.aborted) break;
+
+        const sig = sub.fetchQueue.shift();
         if (!sig) break;
 
         try {
@@ -90,7 +113,7 @@ export const useTransactionLogStore = create<
             })
             .send();
 
-          if (abortController?.signal.aborted) break;
+          if (sub.abortController.signal.aborted) break;
 
           if (result) {
             const parsed = parseTransaction(result);
@@ -106,9 +129,13 @@ export const useTransactionLogStore = create<
             };
 
             set((s) => {
-              s.transactions.unshift(entry as (typeof s.transactions)[number]);
-              if (s.transactions.length > MAX_TRANSACTIONS) {
-                s.transactions.length = MAX_TRANSACTIONS;
+              const market = s.markets[key];
+              if (!market) return;
+              market.transactions.unshift(
+                entry as (typeof market.transactions)[number],
+              );
+              if (market.transactions.length > MAX_TRANSACTIONS) {
+                market.transactions.length = MAX_TRANSACTIONS;
               }
             });
           }
@@ -116,68 +143,71 @@ export const useTransactionLogStore = create<
           console.error(`Failed to fetch transaction ${sig}:`, e);
         }
 
-        if (fetchQueue.length > 0) {
+        if (sub.fetchQueue.length > 0) {
           await delay(FETCH_DELAY_MS);
         }
       }
 
-      processing = false;
+      sub.processing = false;
     }
 
-    async function backfillRecent() {
+    async function backfillRecent(marketAddress: Address) {
+      const key = marketAddress as string;
+      const sub = subscriptions.get(key);
+      if (!sub) return;
+
       try {
         const sigs = await rpc
-          .getSignaturesForAddress(DROPSET_PROGRAM_ADDRESS as Address, {
-            limit: 10,
-          })
+          .getSignaturesForAddress(marketAddress, { limit: 10 })
           .send();
 
         for (const info of sigs) {
           const sig = info.signature;
-          if (seenSignatures.has(sig)) continue;
-          seenSignatures.add(sig);
-          fetchQueue.push(sig);
+          if (sub.seenSignatures.has(sig)) continue;
+          sub.seenSignatures.add(sig);
+          sub.fetchQueue.push(sig);
         }
-        await processQueue();
+        await processQueue(key);
       } catch (e) {
         console.error("Failed to backfill recent transactions:", e);
       }
     }
 
-    async function startSubscription() {
-      if (abortController) {
-        abortController.abort();
-      }
+    async function startSubscription(marketAddress: Address) {
+      const key = marketAddress as string;
+      const sub = subscriptions.get(key);
+      if (!sub) return;
 
-      abortController = new AbortController();
-      const { signal } = abortController;
+      const { signal } = sub.abortController;
 
       set((s) => {
-        s.status = "connecting";
-        s.error = null;
+        s.markets[key] ??= { ...DEFAULT_MARKET_STATE };
+        s.markets[key].status = "connecting";
+        s.markets[key].error = null;
       });
 
       try {
         const rpcSubs = createSolanaRpcSubscriptions(PUBLIC_WS_URL);
         const notifications = await rpcSubs
           .logsNotifications(
-            { mentions: [DROPSET_PROGRAM_ADDRESS] },
+            { mentions: [marketAddress] },
             { commitment: "confirmed" },
           )
           .subscribe({ abortSignal: signal });
 
         set((s) => {
-          s.status = "connected";
+          const market = s.markets[key];
+          if (market) market.status = "connected";
         });
-        reconnectAttempts = 0;
+        sub.reconnectAttempts = 0;
 
         for await (const notification of notifications) {
           const sig = notification.value.signature;
-          if (seenSignatures.has(sig)) continue;
+          if (sub.seenSignatures.has(sig)) continue;
 
-          seenSignatures.add(sig);
-          fetchQueue.push(sig);
-          await processQueue();
+          sub.seenSignatures.add(sig);
+          sub.fetchQueue.push(sig);
+          await processQueue(key);
         }
       } catch (e) {
         if (signal.aborted) return;
@@ -186,66 +216,50 @@ export const useTransactionLogStore = create<
         console.error("Transaction log subscription error:", msg);
 
         set((s) => {
-          s.status = "error";
-          s.error = msg;
+          const market = s.markets[key];
+          if (market) {
+            market.status = "error";
+            market.error = msg;
+          }
         });
 
         const backoff = Math.min(
-          RECONNECT_BASE_MS * 2 ** reconnectAttempts,
+          RECONNECT_BASE_MS * 2 ** sub.reconnectAttempts,
           RECONNECT_MAX_MS,
         );
-        reconnectAttempts++;
+        sub.reconnectAttempts++;
 
-        reconnectTimeout = setTimeout(() => {
-          reconnectTimeout = null;
-          void startSubscription();
+        sub.reconnectTimeout = setTimeout(() => {
+          sub.reconnectTimeout = null;
+          void startSubscription(marketAddress);
         }, backoff);
       }
     }
 
     return {
-      transactions: [],
-      status: "disconnected" as ConnectionStatus,
-      error: null,
+      markets: {},
 
-      connect: () => {
-        void backfillRecent().then(() => startSubscription());
+      connect: (marketAddress: Address) => {
+        const key = marketAddress as string;
+
+        // Tear down any existing subscription for this address.
+        teardown(key);
+        getOrCreateSub(key);
+
+        set((s) => {
+          s.markets[key] = { ...DEFAULT_MARKET_STATE };
+        });
+
+        void backfillRecent(marketAddress).then(() =>
+          startSubscription(marketAddress),
+        );
+
         return () => {
-          if (abortController) {
-            abortController.abort();
-            abortController = null;
-          }
-          if (reconnectTimeout) {
-            clearTimeout(reconnectTimeout);
-            reconnectTimeout = null;
-          }
-          resetModuleState();
+          teardown(key);
           set((s) => {
-            s.status = "disconnected";
+            delete s.markets[key];
           });
         };
-      },
-
-      disconnect: () => {
-        if (abortController) {
-          abortController.abort();
-          abortController = null;
-        }
-        if (reconnectTimeout) {
-          clearTimeout(reconnectTimeout);
-          reconnectTimeout = null;
-        }
-        resetModuleState();
-        set((s) => {
-          s.status = "disconnected";
-        });
-      },
-
-      clear: () => {
-        resetModuleState();
-        set((s) => {
-          s.transactions = [];
-        });
       },
     };
   }),

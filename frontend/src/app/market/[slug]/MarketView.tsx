@@ -59,7 +59,7 @@ export function MarketView({ address }: { address: Address }) {
       </MarketProvider>
 
       <div className="mx-auto mt-6 max-w-2xl">
-        <TransactionLog />
+        <TransactionLog marketAddress={address} />
       </div>
     </div>
   );
