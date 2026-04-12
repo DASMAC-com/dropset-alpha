@@ -20,7 +20,6 @@ import {
   getRegisterMarketEventInstructionDataDecoder,
   getWithdrawEventInstructionDataDecoder,
   HEADER_EVENT_DISCRIMINATOR,
-  type HeaderEventInstructionData,
   POST_ORDER_EVENT_DISCRIMINATOR,
   type PostOrderEventInstructionData,
   REGISTER_MARKET_EVENT_DISCRIMINATOR,
@@ -32,7 +31,6 @@ import {
 const FLUSH_EVENTS_TAG = 8;
 
 export type DropsetEvent =
-  | { kind: "header"; data: HeaderEventInstructionData }
   | { kind: "deposit"; data: DepositEventInstructionData }
   | { kind: "withdraw"; data: WithdrawEventInstructionData }
   | { kind: "registerMarket"; data: RegisterMarketEventInstructionData }
@@ -62,11 +60,6 @@ type EventEntry = {
 };
 
 const EVENT_TABLE: EventEntry[] = [
-  {
-    discriminator: HEADER_EVENT_DISCRIMINATOR,
-    kind: "header",
-    decoder: headerDecoder,
-  },
   {
     discriminator: DEPOSIT_EVENT_DISCRIMINATOR,
     kind: "deposit",
@@ -111,6 +104,7 @@ const EVENT_TABLE: EventEntry[] = [
 
 const DISC_TO_ENTRY = new Map(EVENT_TABLE.map((e) => [e.discriminator, e]));
 
+///
 export function parseDropsetEvents(
   instructionData: ReadonlyUint8Array,
 ): DropsetEvent[] {
