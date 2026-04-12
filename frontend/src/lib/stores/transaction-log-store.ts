@@ -44,8 +44,15 @@ let abortController: AbortController | null = null;
 let reconnectAttempts = 0;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 const seenSignatures = new Set<string>();
-const fetchQueue: string[] = [];
+let fetchQueue: string[] = [];
 let processing = false;
+
+function resetModuleState() {
+  fetchQueue = [];
+  processing = false;
+  seenSignatures.clear();
+  reconnectAttempts = 0;
+}
 
 const rpc = createSolanaRpc(PUBLIC_RPC_URL);
 
@@ -69,6 +76,8 @@ export const useTransactionLogStore = create<
       processing = true;
 
       while (fetchQueue.length > 0) {
+        if (abortController?.signal.aborted) break;
+
         const sig = fetchQueue.shift();
         if (!sig) break;
 
@@ -80,6 +89,8 @@ export const useTransactionLogStore = create<
               maxSupportedTransactionVersion: 0,
             })
             .send();
+
+          if (abortController?.signal.aborted) break;
 
           if (result) {
             const parsed = parseTransaction(result);
@@ -208,6 +219,7 @@ export const useTransactionLogStore = create<
             clearTimeout(reconnectTimeout);
             reconnectTimeout = null;
           }
+          resetModuleState();
           set((s) => {
             s.status = "disconnected";
           });
@@ -223,15 +235,18 @@ export const useTransactionLogStore = create<
           clearTimeout(reconnectTimeout);
           reconnectTimeout = null;
         }
+        resetModuleState();
         set((s) => {
           s.status = "disconnected";
         });
       },
 
-      clear: () =>
+      clear: () => {
+        resetModuleState();
         set((s) => {
           s.transactions = [];
-        }),
+        });
+      },
     };
   }),
 );
