@@ -67,6 +67,8 @@ fn main() {
     ]);
     root.program.accounts = vec![dropset_market_account_node()];
 
+    // Events are emitted as self-CPI instruction data. We model them as instruction
+    // nodes so Codama generates TS decoders for parsing them from transaction logs.
     let event_root = DropsetEventTag::codama_root("dropset", &PROGRAM_ID.to_string());
     root.program
         .instructions
