@@ -1,4 +1,4 @@
-//! Derive helper for [`CodamaProgram`] on event enums.
+//! Derive helper for [`CodamaEvents`] on event enums.
 //!
 //! Identical to `derive_codama_program` but parses the enum as instruction events
 //! (`as_instruction_events = true`) so that the "no accounts" validation passes.
