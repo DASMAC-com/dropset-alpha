@@ -223,7 +223,7 @@ export function TransactionLog() {
             fill={fill}
             barPercent={
               totalLiquidity > 0n
-                ? Number((fill.quoteFilled * 100n) / totalLiquidity)
+                ? Math.min(Number((fill.quoteFilled * 100n) / totalLiquidity), 100)
                 : 0
             }
           />
