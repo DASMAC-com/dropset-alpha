@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchAllMarketsCached } from "@/lib/queries/fetch-all-markets";
 import { resolveSlug } from "@/lib/slug";
-import { MarketView } from "./market-view";
+import { MarketView } from "./MarketView";
 
 type Props = {
   params: Promise<{ slug: string }>;

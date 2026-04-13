@@ -24,6 +24,7 @@ use derive::{
 };
 
 use crate::derive::{
+    derive_codama_events,
     derive_codama_program,
     derive_codama_type,
     derive_pack,
@@ -153,6 +154,21 @@ pub fn codama_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn codama_program(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let codama_impl = match derive_codama_program(input) {
+        Ok(render) => render,
+        Err(e) => return e.into_compile_error().into(),
+    };
+
+    debug_paths_if_env_var_set(&[&codama_impl]);
+
+    codama_impl.into()
+}
+
+/// Generates a [`CodamaEvents`] impl on an event enum that produces [`EventNode`]s for each
+/// variant. Must be used alongside [`ProgramInstructionEvent`] on the same enum.
+#[proc_macro_derive(CodamaEvents, attributes(args, program_id))]
+pub fn codama_events(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let codama_impl = match derive_codama_events(input) {
         Ok(render) => render,
         Err(e) => return e.into_compile_error().into(),
     };

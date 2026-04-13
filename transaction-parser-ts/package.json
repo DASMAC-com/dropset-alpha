@@ -1,0 +1,29 @@
+{
+  "name": "@dasmac-com/transaction-parser",
+  "version": "0.1.0",
+  "description": "TypeScript port of the Dropset transaction parser",
+  "license": "Apache-2.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "source": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "biome check",
+    "lint:fix": "pnpm lint --write",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@solana/kit": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@jest/globals": "catalog:",
+    "@types/node": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "typescript": "catalog:"
+  }
+}

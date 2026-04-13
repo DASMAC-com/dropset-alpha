@@ -15,7 +15,7 @@ use client::{
     },
 };
 use dropset_interface::{
-    events::MarketOrderEventInstructionData,
+    events::FillEventInstructionData,
     instructions::{
         MarketOrderInstructionData,
         PostOrderInstructionData,
@@ -396,12 +396,12 @@ async fn main() -> anyhow::Result<()> {
         // Ensure that there's a single market order event in each transaction, both with the same
         // exact fill sizes.
         let get_market_order_event =
-            |txn: &ParsedTransactionWithEvents| -> MarketOrderEventInstructionData {
-                let mut orders: Vec<&MarketOrderEventInstructionData> = txn
+            |txn: &ParsedTransactionWithEvents| -> FillEventInstructionData {
+                let mut orders: Vec<&FillEventInstructionData> = txn
                     .events
                     .iter()
                     .filter_map(|ev| match ev {
-                        DropsetEvent::MarketOrder(m) => Some(m),
+                        DropsetEvent::Fill(m) => Some(m),
                         _ => None,
                     })
                     .collect_vec();
@@ -413,8 +413,8 @@ async fn main() -> anyhow::Result<()> {
         let event_2 = get_market_order_event(&fill_2);
 
         // Check the inputs against the emitted config.
-        assert_eq!(event_1.order_size, taker_base_size);
-        assert_eq!(event_2.order_size, taker_quote_size);
+        assert_eq!(event_1.base_filled, taker_base_size);
+        assert_eq!(event_2.quote_filled, taker_quote_size);
         assert!(event_1.is_base);
         assert!(!event_2.is_base);
 

@@ -137,12 +137,30 @@ pub struct HealthResponse {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct InfoResponse {
+    pub cluster: ClusterType,
+    /// Base58-encoded [Address] string.
+    pub market: String,
+    /// Base58-encoded [Address] string.
+    pub base_mint: String,
+    /// Base58-encoded [Address] string.
+    pub quote_mint: String,
+    /// Base58-encoded [Address] string.
+    pub base_token_program: String,
+    /// Base58-encoded [Address] string.
+    pub quote_token_program: String,
+    pub base_decimals: u8,
+    pub quote_decimals: u8,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct MintResponse {
     pub transaction: Transaction,
 }
 
 pub enum FaucetEndpoint {
     Health,
+    Info,
     Faucet,
 }
 
@@ -150,6 +168,7 @@ impl FaucetEndpoint {
     pub fn route(&self) -> &'static str {
         match self {
             FaucetEndpoint::Health => "/health",
+            FaucetEndpoint::Info => "/info",
             FaucetEndpoint::Faucet => "/faucet",
         }
     }

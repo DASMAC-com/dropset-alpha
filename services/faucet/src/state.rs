@@ -9,6 +9,7 @@ use std::{
 
 use client::{
     context::token::TokenContext,
+    pda::find_market_address,
     transactions::CustomRpcClient,
 };
 use solana_address::Address;
@@ -24,6 +25,7 @@ use crate::config::ValidFaucetConfig;
 pub struct FaucetState {
     pub keypair: Keypair,
     pub rpc: Arc<CustomRpcClient>,
+    pub market: Address,
     pub base: TokenContext,
     pub quote: TokenContext,
     pub max_public_tokens: u64,
@@ -51,6 +53,8 @@ impl FaucetState {
             allowlist,
             ..
         } = config;
+
+        let (market, _) = find_market_address(&base.mint_address, &quote.mint_address);
 
         let (initial_blockhash, _) = rpc
             .client
@@ -91,6 +95,7 @@ impl FaucetState {
         Ok(Self {
             keypair,
             rpc,
+            market,
             base,
             quote,
             max_public_tokens,

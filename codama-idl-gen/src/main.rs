@@ -1,4 +1,5 @@
 use dropset_interface::{
+    events::DropsetEventTag,
     instructions::DropsetInstruction,
     state::{
         codama_types::dropset_market_account_node,
@@ -65,6 +66,16 @@ fn main() {
         MarketHeader::defined_type_node(),
     ]);
     root.program.accounts = vec![dropset_market_account_node()];
+
+    // Events are emitted as self-CPI instruction data. We model them as instruction
+    // nodes so Codama generates TS decoders for parsing them from transaction logs.
+    let event_root = DropsetEventTag::codama_root("dropset", &PROGRAM_ID.to_string());
+    root.program
+        .instructions
+        .extend(event_root.program.instructions);
+    root.program
+        .defined_types
+        .extend(event_root.program.defined_types);
 
     let json = serde_json::to_string_pretty(&root).expect("Failed to serialize IDL");
     std::fs::write(&out, &json).expect("Failed to write IDL file");

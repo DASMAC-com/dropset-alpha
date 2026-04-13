@@ -38,44 +38,80 @@ import {
 } from "../accounts";
 import {
   type BatchReplaceInput,
+  type CancelOrderEventInput,
   type CancelOrderInput,
+  type CloseSeatEventInput,
   type CloseSeatInput,
+  type DepositEventInput,
   type DepositInput,
+  type ExpandMarketEventInput,
   type ExpandMarketInput,
+  type FillEventInput,
   type FlushEventsInput,
   getBatchReplaceInstruction,
+  getCancelOrderEventInstruction,
   getCancelOrderInstruction,
+  getCloseSeatEventInstruction,
   getCloseSeatInstruction,
+  getDepositEventInstruction,
   getDepositInstruction,
+  getExpandMarketEventInstruction,
   getExpandMarketInstruction,
+  getFillEventInstruction,
   getFlushEventsInstruction,
+  getHeaderEventInstruction,
   getMarketOrderInstruction,
+  getPostOrderEventInstruction,
   getPostOrderInstruction,
+  getRegisterMarketEventInstruction,
   getRegisterMarketInstruction,
+  getWithdrawEventInstruction,
   getWithdrawInstruction,
+  type HeaderEventInput,
   type MarketOrderInput,
   type ParsedBatchReplaceInstruction,
+  type ParsedCancelOrderEventInstruction,
   type ParsedCancelOrderInstruction,
+  type ParsedCloseSeatEventInstruction,
   type ParsedCloseSeatInstruction,
+  type ParsedDepositEventInstruction,
   type ParsedDepositInstruction,
+  type ParsedExpandMarketEventInstruction,
   type ParsedExpandMarketInstruction,
+  type ParsedFillEventInstruction,
   type ParsedFlushEventsInstruction,
+  type ParsedHeaderEventInstruction,
   type ParsedMarketOrderInstruction,
+  type ParsedPostOrderEventInstruction,
   type ParsedPostOrderInstruction,
+  type ParsedRegisterMarketEventInstruction,
   type ParsedRegisterMarketInstruction,
+  type ParsedWithdrawEventInstruction,
   type ParsedWithdrawInstruction,
+  type PostOrderEventInput,
   type PostOrderInput,
   parseBatchReplaceInstruction,
+  parseCancelOrderEventInstruction,
   parseCancelOrderInstruction,
+  parseCloseSeatEventInstruction,
   parseCloseSeatInstruction,
+  parseDepositEventInstruction,
   parseDepositInstruction,
+  parseExpandMarketEventInstruction,
   parseExpandMarketInstruction,
+  parseFillEventInstruction,
   parseFlushEventsInstruction,
+  parseHeaderEventInstruction,
   parseMarketOrderInstruction,
+  parsePostOrderEventInstruction,
   parsePostOrderInstruction,
+  parseRegisterMarketEventInstruction,
   parseRegisterMarketInstruction,
+  parseWithdrawEventInstruction,
   parseWithdrawInstruction,
+  type RegisterMarketEventInput,
   type RegisterMarketInput,
+  type WithdrawEventInput,
   type WithdrawInput,
 } from "../instructions";
 
@@ -110,6 +146,15 @@ export enum DropsetInstruction {
   MarketOrder,
   FlushEvents,
   ExpandMarket,
+  HeaderEvent,
+  DepositEvent,
+  WithdrawEvent,
+  RegisterMarketEvent,
+  PostOrderEvent,
+  CancelOrderEvent,
+  FillEvent,
+  CloseSeatEvent,
+  ExpandMarketEvent,
 }
 
 export function identifyDropsetInstruction(
@@ -145,6 +190,33 @@ export function identifyDropsetInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return DropsetInstruction.ExpandMarket;
+  }
+  if (containsBytes(data, getU8Encoder().encode(0), 0)) {
+    return DropsetInstruction.HeaderEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(1), 0)) {
+    return DropsetInstruction.DepositEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
+    return DropsetInstruction.WithdrawEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+    return DropsetInstruction.RegisterMarketEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+    return DropsetInstruction.PostOrderEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+    return DropsetInstruction.CancelOrderEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return DropsetInstruction.FillEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return DropsetInstruction.CloseSeatEvent;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return DropsetInstruction.ExpandMarketEvent;
   }
   throw new SolanaError(
     SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
@@ -184,7 +256,34 @@ export type ParsedDropsetInstruction<
     } & ParsedFlushEventsInstruction<TProgram>)
   | ({
       instructionType: DropsetInstruction.ExpandMarket;
-    } & ParsedExpandMarketInstruction<TProgram>);
+    } & ParsedExpandMarketInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.HeaderEvent;
+    } & ParsedHeaderEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.DepositEvent;
+    } & ParsedDepositEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.WithdrawEvent;
+    } & ParsedWithdrawEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.RegisterMarketEvent;
+    } & ParsedRegisterMarketEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.PostOrderEvent;
+    } & ParsedPostOrderEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.CancelOrderEvent;
+    } & ParsedCancelOrderEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.FillEvent;
+    } & ParsedFillEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.CloseSeatEvent;
+    } & ParsedCloseSeatEventInstruction<TProgram>)
+  | ({
+      instructionType: DropsetInstruction.ExpandMarketEvent;
+    } & ParsedExpandMarketEventInstruction<TProgram>);
 
 export function parseDropsetInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -261,6 +360,60 @@ export function parseDropsetInstruction<TProgram extends string>(
         ...parseExpandMarketInstruction(instruction),
       };
     }
+    case DropsetInstruction.HeaderEvent: {
+      return {
+        instructionType: DropsetInstruction.HeaderEvent,
+        ...parseHeaderEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.DepositEvent: {
+      return {
+        instructionType: DropsetInstruction.DepositEvent,
+        ...parseDepositEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.WithdrawEvent: {
+      return {
+        instructionType: DropsetInstruction.WithdrawEvent,
+        ...parseWithdrawEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.RegisterMarketEvent: {
+      return {
+        instructionType: DropsetInstruction.RegisterMarketEvent,
+        ...parseRegisterMarketEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.PostOrderEvent: {
+      return {
+        instructionType: DropsetInstruction.PostOrderEvent,
+        ...parsePostOrderEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.CancelOrderEvent: {
+      return {
+        instructionType: DropsetInstruction.CancelOrderEvent,
+        ...parseCancelOrderEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.FillEvent: {
+      return {
+        instructionType: DropsetInstruction.FillEvent,
+        ...parseFillEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.CloseSeatEvent: {
+      return {
+        instructionType: DropsetInstruction.CloseSeatEvent,
+        ...parseCloseSeatEventInstruction(instruction),
+      };
+    }
+    case DropsetInstruction.ExpandMarketEvent: {
+      return {
+        instructionType: DropsetInstruction.ExpandMarketEvent,
+        ...parseExpandMarketEventInstruction(instruction),
+      };
+    }
     default:
       throw new SolanaError(
         SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
@@ -311,6 +464,39 @@ export type DropsetPluginInstructions = {
   expandMarket: (
     input: ExpandMarketInput,
   ) => ReturnType<typeof getExpandMarketInstruction> & SelfPlanAndSendFunctions;
+  headerEvent: (
+    input: HeaderEventInput,
+  ) => ReturnType<typeof getHeaderEventInstruction> & SelfPlanAndSendFunctions;
+  depositEvent: (
+    input: DepositEventInput,
+  ) => ReturnType<typeof getDepositEventInstruction> & SelfPlanAndSendFunctions;
+  withdrawEvent: (
+    input: WithdrawEventInput,
+  ) => ReturnType<typeof getWithdrawEventInstruction> &
+    SelfPlanAndSendFunctions;
+  registerMarketEvent: (
+    input: RegisterMarketEventInput,
+  ) => ReturnType<typeof getRegisterMarketEventInstruction> &
+    SelfPlanAndSendFunctions;
+  postOrderEvent: (
+    input: PostOrderEventInput,
+  ) => ReturnType<typeof getPostOrderEventInstruction> &
+    SelfPlanAndSendFunctions;
+  cancelOrderEvent: (
+    input: CancelOrderEventInput,
+  ) => ReturnType<typeof getCancelOrderEventInstruction> &
+    SelfPlanAndSendFunctions;
+  fillEvent: (
+    input: FillEventInput,
+  ) => ReturnType<typeof getFillEventInstruction> & SelfPlanAndSendFunctions;
+  closeSeatEvent: (
+    input: CloseSeatEventInput,
+  ) => ReturnType<typeof getCloseSeatEventInstruction> &
+    SelfPlanAndSendFunctions;
+  expandMarketEvent: (
+    input: ExpandMarketEventInput,
+  ) => ReturnType<typeof getExpandMarketEventInstruction> &
+    SelfPlanAndSendFunctions;
 };
 
 export type DropsetPluginRequirements = ClientWithRpc<
@@ -365,6 +551,48 @@ export function dropsetProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getExpandMarketInstruction(input),
+            ),
+          headerEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getHeaderEventInstruction(input),
+            ),
+          depositEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getDepositEventInstruction(input),
+            ),
+          withdrawEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getWithdrawEventInstruction(input),
+            ),
+          registerMarketEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getRegisterMarketEventInstruction(input),
+            ),
+          postOrderEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getPostOrderEventInstruction(input),
+            ),
+          cancelOrderEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelOrderEventInstruction(input),
+            ),
+          fillEvent: (input) =>
+            addSelfPlanAndSendFunctions(client, getFillEventInstruction(input)),
+          closeSeatEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCloseSeatEventInstruction(input),
+            ),
+          expandMarketEvent: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getExpandMarketEventInstruction(input),
             ),
         },
       },
