@@ -1,0 +1,17 @@
+# Lychee link checker configuration.
+# Run via: make docs-links
+
+# Ignore localhost links (used in examples).
+exclude = [
+  "http://localhost",
+  "https://localhost",
+]
+
+# Don't fail on these status codes (some sites block bots).
+accept = [200, 206, 429]
+
+# Timeout per request in seconds.
+timeout = 20
+
+# Max retries per link.
+max_retries = 3

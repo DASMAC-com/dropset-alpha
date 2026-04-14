@@ -1,0 +1,16 @@
+{
+  "name": "dropset-docs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "vitepress": "^1.6.3"
+  }
+}

@@ -1,0 +1,22 @@
+---
+jobs:
+  build-docs:
+    name: 'Build docs'
+    runs-on: 'ubuntu-latest'
+    steps:
+    - uses: 'actions/checkout@v6'
+    - uses: 'actions/setup-node@v6'
+      with:
+        cache: 'npm'
+        cache-dependency-path: 'docs/package-lock.json'
+        node-version: 24
+    - run: 'npm ci'
+      working-directory: 'docs'
+    - run: 'npm run format:check'
+      working-directory: 'docs'
+    - run: 'npm run build'
+      working-directory: 'docs'
+name: 'Build docs'
+'on':
+  pull_request: null
+...
