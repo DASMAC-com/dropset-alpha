@@ -1,9 +1,16 @@
 "use client";
 
 import type { Address } from "@solana/addresses";
+import { useWalletSession } from "@solana/react-hooks";
 import { Decimal } from "decimal.js";
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  type ParticipantLike,
+  resolveParticipant,
+  roleStyle,
+  useParticipants,
+} from "@/lib/participants";
 import { solscanTxUrl } from "@/lib/solana/explorer";
 import { truncateAddress } from "@/lib/solana/format";
 import { useMarketStore } from "@/lib/stores/market-store";
@@ -45,6 +52,7 @@ type FillData = {
   relativeTime: string;
   signature: string;
   accounts: ResolvedAccount[];
+  participant: ParticipantLike;
   lastFillPrice: Decimal;
   discriminator: number;
   isBuy: boolean;
@@ -55,6 +63,18 @@ type FillData = {
   quoteFilledUi: string;
   encodedPrice: number;
 };
+
+function ParticipantBadge({ p }: { p: ParticipantLike }) {
+  const display = p.role === "unknown" ? truncateAddress(p.label) : p.label;
+  return (
+    <span
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ${roleStyle(p.role)}`}
+      title={p.address}
+    >
+      {display}
+    </span>
+  );
+}
 
 function FillEntry({
   fill,
@@ -89,6 +109,10 @@ function FillEntry({
         {fill.relativeTime}
       </span>
 
+      <span className="z-10 w-24 shrink-0">
+        <ParticipantBadge p={fill.participant} />
+      </span>
+
       <span className={`w-20 shrink-0 font-mono text-xs tabular-nums ${color}`}>
         {fill.lastFillPrice.toDecimalPlaces(6).toString()}
       </span>
@@ -121,6 +145,13 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
   const connect = useTransactionLogStore((s) => s.connect);
   const [hovered, setHovered] = useState(false);
   const [frozen, setFrozen] = useState<TransactionEntry[]>([]);
+  const [activeRoles, setActiveRoles] = useState<
+    Set<ParticipantLike["role"]> | null
+  >(null);
+
+  const { data: participantsData } = useParticipants();
+  const session = useWalletSession();
+  const walletAddress = session?.account.address as string | undefined;
 
   const transactions = hovered ? frozen : allTransactions;
 
@@ -146,12 +177,22 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
   const baseDecimals = market?.base.decimals ?? 0;
   const quoteDecimals = market?.quote.decimals ?? 0;
 
+  const byAddress = participantsData?.byAddress;
+
   const fills: (FillData & { key: string })[] = useMemo(
     () =>
       transactions
         .filter((tx) => !tx.err)
-        .flatMap((tx) =>
-          tx.parsed.dropsetEvents
+        .flatMap((tx) => {
+          const signer =
+            (tx.parsed.accounts.find((a) => a.signer)?.address as string) ??
+            (tx.parsed.accounts[0]?.address as string);
+          const participant = resolveParticipant(
+            signer,
+            byAddress,
+            walletAddress,
+          );
+          return tx.parsed.dropsetEvents
             .filter((e) => e.kind === "fill")
             .map((fill, i) => ({
               ...fill.data,
@@ -159,6 +200,7 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
               relativeTime: tx.blockTime ? relativeTime(tx.blockTime) : "—",
               signature: tx.signature,
               accounts: tx.parsed.accounts,
+              participant,
               lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
               baseFilledUi: new Decimal(fill.data.baseFilled.toString())
                 .div(new Decimal(10).pow(baseDecimals))
@@ -168,10 +210,37 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
                 .div(new Decimal(10).pow(quoteDecimals))
                 .toDecimalPlaces(quoteDecimals)
                 .toString(),
-            })),
-        ),
-    [transactions, baseDecimals, quoteDecimals],
+            }));
+        }),
+    [transactions, baseDecimals, quoteDecimals, byAddress, walletAddress],
   );
+
+  // Only offer a filter chip for roles that actually appear in the current log.
+  const presentRoles = useMemo(() => {
+    const set = new Set<ParticipantLike["role"]>();
+    for (const f of fills) set.add(f.participant.role);
+    return set;
+  }, [fills]);
+
+  const visibleFills = useMemo(
+    () =>
+      activeRoles === null
+        ? fills
+        : fills.filter((f) => activeRoles.has(f.participant.role)),
+    [fills, activeRoles],
+  );
+
+  function toggleRole(role: ParticipantLike["role"]) {
+    setActiveRoles((prev) => {
+      const base = prev ?? new Set(presentRoles);
+      const next = new Set(base);
+      if (next.has(role)) next.delete(role);
+      else next.add(role);
+      // "All on" collapses back to the null sentinel.
+      if (next.size === presentRoles.size) return null;
+      return next;
+    });
+  }
 
   return (
     <div className="rounded-lg border border-border bg-background">
@@ -195,6 +264,31 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
         )}
       </div>
 
+      {presentRoles.size > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-border/50 border-b px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setActiveRoles(null)}
+            className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${activeRoles === null ? "border-primary/40 bg-primary/20 text-primary" : "border-border bg-muted/30 text-muted-fg hover:text-foreground"}`}
+          >
+            All
+          </button>
+          {Array.from(presentRoles).map((role) => {
+            const on = activeRoles === null || activeRoles.has(role);
+            return (
+              <button
+                type="button"
+                key={role}
+                onClick={() => toggleRole(role)}
+                className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${on ? roleStyle(role) : "border-border bg-muted/30 text-muted-fg hover:text-foreground"}`}
+              >
+                {role}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div
         role="log"
         className="max-h-100 overflow-y-auto"
@@ -204,9 +298,12 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
         }}
         onMouseLeave={() => setHovered(false)}
       >
-        {fills.length > 0 && (
+        {visibleFills.length > 0 && (
           <div className="flex items-center gap-3 border-border/50 border-b px-3 py-1.5">
             <span className="w-16 shrink-0 text-muted-fg/60 text-xs">Time</span>
+            <span className="w-24 shrink-0 text-muted-fg/60 text-xs">
+              Who
+            </span>
             <span className="w-20 shrink-0 text-muted-fg/60 text-xs">
               Price
             </span>
@@ -227,7 +324,13 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
           </div>
         )}
 
-        {fills.map((fill) => (
+        {fills.length > 0 && visibleFills.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-fg">
+            <p className="text-sm">No fills match the active filters.</p>
+          </div>
+        )}
+
+        {visibleFills.map((fill) => (
           <FillEntry
             key={fill.key}
             fill={fill}

@@ -82,6 +82,28 @@ See each service's `README.md` for how to run it:
 - [maker-bot/README.md](services/maker-bot/README.md)
 - [taker-bot/README.md](services/taker-bot/README.md)
 
+For quick bootstrapping across all three, use
+[`services/run-services-on-localnet.sh`](services/run-services-on-localnet.sh).
+
+#### Troubleshooting: `InvalidPriceMantissa` when opening a market
+
+If the frontend throws `InvalidPriceMantissa` on a market page, the local
+validator is likely carrying `Order` sectors written by an older build of the
+`dropset` program whose `EncodedPrice` bytes no longer validate against the
+current layout. `run-services-on-localnet.sh` intentionally does **not** reset
+an existing localnet, so stale ledger state survives across runs.
+
+Wipe the ledger and re-bootstrap everything from scratch:
+
+```bash
+pkill -x solana-test-validator
+rm -rf test-ledger
+./services/run-services-on-localnet.sh --force
+```
+
+`--force` also regenerates the faucet/maker/taker keypairs so the new market is
+fully clean.
+
 ## 📚 Documentation
 
 You can generate and open the full internal documentation (including private
