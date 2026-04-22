@@ -54,6 +54,16 @@ See [taker-bot/README.md](services/taker-bot/README.md) for more info.
 
 ## ▶️ Running
 
+### Frontend
+
+Start the Next.js frontend from the repository root with:
+
+```bash
+pnpm run dev
+```
+
+The app runs on [http://localhost:3001](http://localhost:3001).
+
 ### ⚡ Benchmarks
 
 See [cu-bench/README.md](cu-bench/README.md) for details on what is measured and why.

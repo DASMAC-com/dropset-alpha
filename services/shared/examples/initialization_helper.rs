@@ -1,6 +1,10 @@
 use std::{
     collections::HashSet,
     io::ErrorKind,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use anyhow::Context;
@@ -19,9 +23,11 @@ use client::{
 };
 use dropset_interface::state::sector::NIL;
 use dropset_services_shared::config::{
+    deserialize_service_config,
     load_raw_service_config,
     ServiceConfig,
 };
+use serde::Deserialize;
 use solana_keypair::{
     read_keypair_file,
     Keypair,
@@ -42,17 +48,34 @@ const MAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 const TAKER_INITIAL_BASE: u64 = 1_000_000_000_000;
 const TAKER_INITIAL_QUOTE: u64 = 1_000_000_000_000;
 
-/// A helper example to bootstrap a market and a market maker on a localnet validator.
+/// Minimal view of `services/taker-bot/config.toml` — just the fields the
+/// helper needs to know about per agent. Extra fields (archetype, overrides,
+/// etc.) are tolerated by serde's default behavior.
+#[derive(Deserialize)]
+struct TakerManifest {
+    #[serde(default, rename = "agent")]
+    agents: Vec<AgentManifestEntry>,
+}
+
+#[derive(Deserialize)]
+struct AgentManifestEntry {
+    name: String,
+    keypair_path: PathBuf,
+}
+
+/// A helper example to bootstrap a market and all participants on a localnet validator.
 ///
 /// It does the following:
 ///
 /// - Creates a market from two new tokens.
-/// - Mints initial base/quote amounts to the faucet, maker, and taker.
+/// - Mints initial base/quote amounts to the faucet, maker, and every taker agent declared in
+///   `services/taker-bot/config.toml`.
 /// - For the maker, the base/quote amounts are deposited to the `dropset` market, creating a seat.
-/// - The taker keeps their balance in their associated token accounts, since the MarketOrder
-///   instruction expects the balance to be in their ATA, not their seat.
-/// - Writes the maker, taker, and faucet's keypair to their appropriate, respective keypair files.
-/// - Patches `base_mint` and `quote_mint` into the appropriate config files.
+/// - Each taker agent keeps its balance in its associated token accounts, since the MarketOrder
+///   instruction expects the balance to be in the ATA, not a seat.
+/// - Writes the maker, faucet, and each taker agent's keypair to their configured keypair files.
+///   Reruns are idempotent: an existing keypair file is reused unless `--force` is passed.
+/// - Patches `base_mint` and `quote_mint` into the shared config file.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let rpc = CustomRpcClient::new(
@@ -66,49 +89,140 @@ async fn main() -> anyhow::Result<()> {
 
     rpc.validate_endpoint().await?;
 
+    let force = should_force_overwrite();
+
     let faucet = test_accounts::default_payer();
     let maker = test_accounts::acc_FFFF();
-    let taker = test_accounts::acc_1111();
     airdrop(&rpc.client, &faucet.pubkey()).await?;
     airdrop(&rpc.client, &maker.pubkey()).await?;
-    airdrop(&rpc.client, &taker.pubkey()).await?;
+
+    // Load the taker-bot agent manifest before touching the chain so a config
+    // error fails fast.
+    let manifest: TakerManifest = deserialize_service_config(ServiceConfig::Taker)?;
+    if manifest.agents.is_empty() {
+        anyhow::bail!(
+            "No `[[agent]]` entries in services/taker-bot/config.toml — \
+             copy config.toml.example as a starting point"
+        );
+    }
+    ensure_unique_agent_names(&manifest.agents)?;
+
+    // Materialize (or load) a keypair per agent. We keep these in a Vec so the
+    // &Keypair references passed to `User::new` stay valid for the whole helper.
+    let agent_keypairs: Vec<Keypair> = manifest
+        .agents
+        .iter()
+        .map(|entry| {
+            let path = resolve_agent_keypair_path(&entry.keypair_path);
+            load_or_create_keypair(&path, force).with_context(|| {
+                format!(
+                    "Failed to prepare keypair for agent `{}` at {}",
+                    entry.name,
+                    path.display()
+                )
+            })
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+    for kp in &agent_keypairs {
+        airdrop(&rpc.client, &kp.pubkey()).await?;
+    }
 
     // Mint the initial amounts to each account.
     // Pass the faucet keypair as the mint authority so the faucet service
     // can mint tokens on demand.
+    let mut users = vec![
+        User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
+        User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
+    ];
+    users.extend(
+        agent_keypairs
+            .iter()
+            .map(|kp| User::new(kp, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE)),
+    );
+
     let e2e = E2e::new_users_and_market_with_options(
         Some(rpc),
-        [
-            User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
-            User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
-            User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
-        ],
+        users,
         Some(6),
         Some(6),
         Some(faucet),
     )
     .await?;
 
-    // Create the maker market seat by depositing base and quote. Note that the taker does not need
-    // a market seat and must have the base/quote token in their token accounts, not market seats.
+    // Create the maker market seat by depositing base and quote. Note that taker agents do not
+    // need a market seat and must keep their base/quote tokens in their token accounts.
     deposit_base_and_quote_to_market(maker, &e2e, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE).await?;
 
-    // Write each keypair to the appropriate file.
+    // Write the faucet + maker keypair files (the taker-bot service-level
+    // keypair file is still written below for shared-config compatibility).
     write_keypair_to_file(ServiceConfig::Faucet, faucet)?;
     write_keypair_to_file(ServiceConfig::Maker, maker)?;
-    write_keypair_to_file(ServiceConfig::Taker, taker)?;
+
+    // The shared config loader for the taker service still reads
+    // `services/taker-bot/keypair.json`. Its content is unused at runtime
+    // (each agent signs with its own keypair), but the file needs to exist.
+    // Reuse the first agent's keypair so we don't create a second dangling file.
+    let service_identity = agent_keypairs
+        .first()
+        .expect("At least one agent exists — checked above");
+    write_keypair_to_file(ServiceConfig::Taker, service_identity)?;
 
     // Patch base_mint and quote_mint into the shared config file in-place.
     update_base_and_quote_mints(&e2e)?;
 
     println!("Faucet address : {}", faucet.pubkey());
-    println!("Maker address : {}", maker.pubkey());
-    println!("Taker address : {}", taker.pubkey());
-    println!("Base mint     : {}", e2e.market.base.mint_address);
-    println!("Quote mint    : {}", e2e.market.quote.mint_address);
-    println!("Market        : {}", e2e.market.market);
+    println!("Maker address  : {}", maker.pubkey());
+    for (entry, kp) in manifest.agents.iter().zip(agent_keypairs.iter()) {
+        println!("Agent `{}` : {}", entry.name, kp.pubkey());
+    }
+    println!("Base mint      : {}", e2e.market.base.mint_address);
+    println!("Quote mint     : {}", e2e.market.quote.mint_address);
+    println!("Market         : {}", e2e.market.market);
 
     Ok(())
+}
+
+fn ensure_unique_agent_names(agents: &[AgentManifestEntry]) -> anyhow::Result<()> {
+    let mut seen = HashSet::new();
+    for a in agents {
+        if !seen.insert(a.name.as_str()) {
+            anyhow::bail!("Duplicate agent name `{}` in taker-bot config", a.name);
+        }
+    }
+    Ok(())
+}
+
+/// Relative paths are resolved against `services/taker-bot/` so configs can
+/// say `keypair_path = "keypairs/retail-1.json"` without the caller having to
+/// care about the current working directory.
+fn resolve_agent_keypair_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        ServiceConfig::Taker.config_dir().join(path)
+    }
+}
+
+/// Loads an existing keypair at `path`, or generates and persists a new one
+/// if the file is missing. When `force` is true the file is overwritten with
+/// a fresh keypair regardless.
+fn load_or_create_keypair(path: &Path, force: bool) -> anyhow::Result<Keypair> {
+    if path.exists() && !force {
+        return read_keypair_file(path)
+            .map_err(|e| anyhow::anyhow!("Couldn't read keypair file `{}`: {e}", path.display()));
+    }
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!("Failed to create parent directory for {}", path.display())
+        })?;
+    }
+
+    let kp = Keypair::new();
+    std::fs::write(path, serde_json::to_string(&kp.to_bytes().to_vec())?)
+        .with_context(|| format!("Failed to write keypair file {}", path.display()))?;
+    Ok(kp)
 }
 
 fn write_keypair_to_file(service: ServiceConfig, kp: &Keypair) -> anyhow::Result<()> {
@@ -118,7 +232,7 @@ fn write_keypair_to_file(service: ServiceConfig, kp: &Keypair) -> anyhow::Result
             anyhow::anyhow!("Couldn't open existing keypair file: {kp_path:#?}, err: ({e})")
         })?;
 
-        if existing_keypair == kp {
+        if existing_keypair == *kp {
             return Ok(());
         }
 

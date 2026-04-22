@@ -1,5 +1,7 @@
 {
   "scripts": {
+    "dev": "pnpm --filter @dasmac-com/dropset-alpha-frontend run dev",
+    "dev:frontend": "pnpm --filter @dasmac-com/dropset-alpha-frontend run dev",
     "build": "pnpm run build:ts && pnpm run build:rust && pnpm run build:sbf",
     "build:ts": "turbo run build",
     "build:rust": "cargo build --workspace",

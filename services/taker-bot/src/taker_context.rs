@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use client::{
     context::market::MarketContext,
     transactions::{
@@ -7,10 +9,7 @@ use client::{
     },
 };
 use dropset_interface::instructions::MarketOrderInstructionData;
-use dropset_services_shared::{
-    config::ValidSharedConfig,
-    faucet_client::FaucetClient,
-};
+use dropset_services_shared::faucet_client::FaucetClient;
 use solana_address::Address;
 use solana_keypair::{
     Keypair,
@@ -22,38 +21,28 @@ use crate::taker::{
     TakerFill,
 };
 
+/// Per-agent submission context. Each `[[agent]]` in the taker config gets one
+/// of these: its own keypair, sharing the service-wide RPC and faucet clients.
 pub struct TakerContext {
-    pub rpc: CustomRpcClient,
+    pub rpc: Arc<CustomRpcClient>,
     pub keypair: Keypair,
-    pub market_ctx: MarketContext,
-    pub faucet_client: Option<FaucetClient>,
+    pub market_ctx: Arc<MarketContext>,
+    pub faucet_client: Option<Arc<FaucetClient>>,
 }
 
 impl TakerContext {
-    pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
-        let faucet_client = match FaucetClient::new(&rpc, &shared).await {
-            Ok(c) => Some(c),
-            Err(e) => {
-                tracing::warn!(error = %e, "Faucet client is unavailable");
-                None
-            }
-        };
-
-        let ValidSharedConfig {
-            keypair,
-            base,
-            quote,
-            ..
-        } = shared;
-
-        let market_ctx = MarketContext::new(base, quote);
-
-        Ok(Self {
+    pub fn new(
+        rpc: Arc<CustomRpcClient>,
+        market_ctx: Arc<MarketContext>,
+        faucet_client: Option<Arc<FaucetClient>>,
+        keypair: Keypair,
+    ) -> Self {
+        Self {
             rpc,
             keypair,
             market_ctx,
             faucet_client,
-        })
+        }
     }
 
     pub fn address(&self) -> Address {

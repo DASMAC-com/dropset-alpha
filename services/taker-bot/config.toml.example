@@ -7,33 +7,35 @@
 verbose = false
 
 # ------------------------------------------------------------------
-# Taker strategy
+# Taker agents
+#
+# Every `[[agent]]` block spawns one independent participant inside this
+# service, sharing the same RPC and faucet clients. Each agent picks a named
+# `archetype` (one of: passive, retail, aggressive, whale, sniper, noise) which
+# supplies defaults for every other field. Any field set here overrides that
+# preset.
+#
+# `name` is free-form and appears in the agent's tracing span.
+# `keypair_path` is resolved relative to this file's directory if not absolute.
+# `seed` is optional; omit for a random seed each run.
 
-[strategy]
-# Milliseconds between ticks of the interval loop.
-interval_ms = 750
+[[agent]]
+name = "retail-1"
+archetype = "retail"
+keypair_path = "keypairs/retail-1.json"
 
-# Base arrival rate (orders/tick) during quiet periods.
-lambda_quiet = 0.5
+[[agent]]
+name = "whale-1"
+archetype = "whale"
+keypair_path = "keypairs/whale-1.json"
 
-# Arrival rate during an active burst.
-lambda_burst = 5.0
+[[agent]]
+name = "sniper-1"
+archetype = "sniper"
+keypair_path = "keypairs/sniper-1.json"
 
-# Probability of entering a burst each quiet tick.
-burst_entry_prob = 0.1
-
-# Probability of exiting the burst each tick (controls burst duration).
-burst_exit_prob = 0.3
-
-# Median order size in base atoms.
-median_order_size = 3000
-
-# Order size spread: sizes range roughly from median/x to median*x.
-spread_multiplier = 2.0
-
-# Probability the next order is a buy (0.0–1.0).
-buy_bias = 0.5
-
-# Optional RNG seed for reproducible runs (comment out for random).
-# seed = 42
+[[agent]]
+name = "noise-1"
+archetype = "noise"
+keypair_path = "keypairs/noise-1.json"
 # ------------------------------------------------------------------
