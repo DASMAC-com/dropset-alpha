@@ -28,6 +28,7 @@ use crate::derive::{
     derive_codama_program,
     derive_codama_type,
     derive_pack,
+    derive_transmutable,
     derive_unpack,
 };
 
@@ -141,6 +142,20 @@ pub fn codama_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     debug_paths_if_env_var_set(&[&codama_impl]);
 
     codama_impl.into()
+}
+
+/// The entrypoint for the proc macro derive [`Transmutable`].
+#[proc_macro_derive(Transmutable)]
+pub fn transmutable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let transmutable_impl = match derive_transmutable(input) {
+        Ok(render) => render,
+        Err(e) => return e.into_compile_error().into(),
+    };
+
+    debug_paths_if_env_var_set(&[&transmutable_impl]);
+    transmutable_impl.into()
 }
 
 /// Generates a [`CodamaProgram`] impl on an instruction enum

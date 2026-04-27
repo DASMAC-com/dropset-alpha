@@ -99,7 +99,7 @@ pub const ORDER_PADDING: usize =
 
 /// Represents a maker order in the order book.
 #[repr(C)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, instruction_macros::Transmutable)]
 pub struct Order {
     /// The LE bytes representing an [`EncodedPrice`].
     encoded_price: LeEncodedPrice,
@@ -178,21 +178,6 @@ impl Order {
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8; Self::LEN] {
         unsafe { &*(self as *const Self as *const [u8; Self::LEN]) }
-    }
-}
-
-// Safety:
-//
-// - Stable layout with `#[repr(C)]`.
-// - `size_of` and `align_of` are checked below.
-// - All bit patterns are valid.
-unsafe impl Transmutable for Order {
-    const LEN: usize = size_of::<Order>();
-
-    #[inline(always)]
-    fn validate_bit_patterns(_bytes: &[u8]) -> crate::error::DropsetResult {
-        // All bit patterns are valid: no enums, bools, or other types with invalid states.
-        Ok(())
     }
 }
 
