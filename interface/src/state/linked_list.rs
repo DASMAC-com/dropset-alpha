@@ -1,7 +1,5 @@
 use core::marker::PhantomData;
 
-use crate::state::transmutable::Transmutable;
-
 use crate::{
     error::DropsetError,
     state::{
