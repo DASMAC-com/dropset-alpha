@@ -62,51 +62,10 @@ pub unsafe fn process_market_order<'a>(
 
     // Try to transfer the taker side's tokens to the market account.
     // Safety: No account data is currently borrowed.
-    let (taker_amount_filled, taker_amount_deposited) = unsafe {
-        // A buy means taker transfers quote to the market.
-        if is_buy {
-            let quote_transferred = deposit_non_zero_to_market(
-                &ctx.quote_user_ata,
-                &ctx.quote_market_ata,
-                ctx.user,
-                &ctx.quote_mint,
-                quote_filled,
-            )?;
+    let (taker_amount_filled, taker_amount_deposited) =
+        unsafe { settle_market_order(&ctx, is_buy, base_filled, quote_filled) }?;
 
-            // And receives base.
-            withdraw_non_zero_from_market(
-                &ctx.base_user_ata,
-                &ctx.base_market_ata,
-                &ctx.market_account,
-                &ctx.base_mint,
-                base_filled,
-            )?;
-
-            (quote_filled, quote_transferred)
-        // A sell means taker transfers base to the market.
-        } else {
-            let base_transferred = deposit_non_zero_to_market(
-                &ctx.base_user_ata,
-                &ctx.base_market_ata,
-                ctx.user,
-                &ctx.base_mint,
-                base_filled,
-            )?;
-
-            // And receives quote.
-            withdraw_non_zero_from_market(
-                &ctx.quote_user_ata,
-                &ctx.quote_market_ata,
-                &ctx.market_account,
-                &ctx.quote_mint,
-                quote_filled,
-            )?;
-
-            (base_filled, base_transferred)
-        }
-    };
-
-    // Ensure that the order size matches the exact amount transferred.
+    // makes sure that the order size matches the exact amount transferred
     if taker_amount_filled != taker_amount_deposited {
         return Err(DropsetError::AmountFilledVsTransferredMismatch.into());
     }
@@ -115,4 +74,50 @@ pub unsafe fn process_market_order<'a>(
         event_authority: ctx.event_authority,
         market_account: ctx.market_account,
     })
+}
+
+#[inline(never)]
+unsafe fn settle_market_order(
+    ctx: &MarketOrderContext<'_>,
+    is_buy: bool,
+    base_filled: u64,
+    quote_filled: u64,
+) -> Result<(u64, u64), ProgramError> {
+    if is_buy {
+        let quote_transferred = deposit_non_zero_to_market(
+            &ctx.quote_user_ata,
+            &ctx.quote_market_ata,
+            ctx.user,
+            &ctx.quote_mint,
+            quote_filled,
+        )?;
+
+        withdraw_non_zero_from_market(
+            &ctx.base_user_ata,
+            &ctx.base_market_ata,
+            &ctx.market_account,
+            &ctx.base_mint,
+            base_filled,
+        )?;
+
+        Ok((quote_filled, quote_transferred))
+    } else {
+        let base_transferred = deposit_non_zero_to_market(
+            &ctx.base_user_ata,
+            &ctx.base_market_ata,
+            ctx.user,
+            &ctx.base_mint,
+            base_filled,
+        )?;
+
+        withdraw_non_zero_from_market(
+            &ctx.quote_user_ata,
+            &ctx.quote_market_ata,
+            &ctx.market_account,
+            &ctx.quote_mint,
+            quote_filled,
+        )?;
+
+        Ok((base_filled, base_transferred))
+    }
 }

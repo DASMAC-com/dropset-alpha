@@ -40,6 +40,23 @@ pub fn process_instruction(
 
     let instruction_tag = DropsetInstruction::try_from(*tag)?;
 
+    if matches!(
+        instruction_tag,
+        DropsetInstruction::FlushEvents | DropsetInstruction::BatchReplace
+    ) {
+        // these instruction handlers do not use the stack-allocated event buffer
+        //try not to create it for self-CPIs so the nested frame stays as small as possible
+        return unsafe {
+            match instruction_tag {
+                DropsetInstruction::FlushEvents => process_flush_events(accounts, instruction_data),
+                DropsetInstruction::BatchReplace => {
+                    process_batch_replace(accounts, instruction_data)
+                }
+                _ => unreachable!(),
+            }
+        };
+    }
+
     let event_buffer = &mut EventBuffer::new(instruction_tag);
 
     // Safety: No account data is currently borrowed. CPIs to this program must ensure they do not
@@ -67,12 +84,7 @@ pub fn process_instruction(
             DropsetInstruction::MarketOrder => {
                 process_market_order(accounts, instruction_data, event_buffer)
             }
-            DropsetInstruction::FlushEvents => {
-                return process_flush_events(accounts, instruction_data)
-            }
-            DropsetInstruction::BatchReplace => {
-                return process_batch_replace(accounts, instruction_data)
-            }
+            DropsetInstruction::FlushEvents | DropsetInstruction::BatchReplace => unreachable!(),
             DropsetInstruction::ExpandMarket => {
                 process_expand_market(accounts, instruction_data, event_buffer)
             }

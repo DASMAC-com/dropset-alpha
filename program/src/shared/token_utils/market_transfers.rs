@@ -36,6 +36,7 @@ use crate::{
 ///   1. `[WRITE]` Market token account (destination)
 ///   2. `[READ]` User account (authority)
 ///   3. `[READ]` Mint account
+#[inline(never)]
 pub unsafe fn deposit_non_zero_to_market<'a, 't>(
     user_ata: &'t TokenAccountView<'a>,
     market_ata: &'t TokenAccountView<'a>,
@@ -105,6 +106,7 @@ pub unsafe fn deposit_non_zero_to_market<'a, 't>(
 ///   1. `[WRITE]` Market token account (source)
 ///   2. `[READ]`  Market account (authority)
 ///   3. `[READ]`  Mint account
+#[inline(never)]
 pub unsafe fn withdraw_non_zero_from_market<'t, 'a>(
     user_ata: &'t TokenAccountView<'a>,
     market_ata: &'t TokenAccountView<'a>,

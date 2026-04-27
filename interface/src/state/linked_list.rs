@@ -1,5 +1,7 @@
 use core::marker::PhantomData;
 
+use crate::state::transmutable::Transmutable;
+
 use crate::{
     error::DropsetError,
     state::{
@@ -166,11 +168,28 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
     ///
     /// Caller guarantees `index` is in-bounds.
     pub unsafe fn remove_at(&mut self, index: SectorIndex) {
+
+        let num_sectors = self.sectors.len() / Sector::LEN;
+        assert!((index as usize) < num_sectors);
         let (prev_index, next_index) = {
+            let sector = unsafe { Sector::from_sector_index_mut(self.sectors, index) };
+            let prev = sector.prev();
+            let next = sector.next();
+            if prev != NIL {
+                assert!((prev as usize) < num_sectors);
+            }
+            if next != NIL {
+                assert!((next as usize) < num_sectors);
+            }
+            (prev, next)
+        };
+
+        /*let (prev_index, next_index) = {
             // Safety: Caller guarantees `index` is in-bounds.
             let sector = unsafe { Sector::from_sector_index_mut(self.sectors, index) };
             (sector.prev(), sector.next())
         };
+        */
 
         match prev_index {
             NIL => T::set_head(self.header, next_index),
