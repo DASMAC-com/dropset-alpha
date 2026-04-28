@@ -3,6 +3,11 @@ use strum::IntoEnumIterator;
 extern crate std;
 use std::collections::HashSet;
 
+use instruction_macros::{
+    Pack,
+    Tagged,
+};
+
 use super::*;
 
 #[test]
@@ -37,4 +42,19 @@ fn test_ixn_tag_try_from_u8_exhaustive() {
             );
         }
     }
+}
+
+#[test]
+fn test_fill_event_tagged_len_matches_written_bytes() {
+    let event = FillEventInstructionData::new(true, false, 11, 22, 33);
+
+    let untagged = event.pack();
+    let tagged = event.pack_tagged();
+
+    assert_eq!(FillEventInstructionData::LEN, 22);
+    assert_eq!(FillEventInstructionData::LEN_WITH_TAG, FillEventInstructionData::LEN + 1);
+    assert_eq!(untagged.len(), FillEventInstructionData::LEN);
+    assert_eq!(tagged.len(), FillEventInstructionData::LEN_WITH_TAG);
+    assert_eq!(tagged[0], FillEventInstructionData::TAG_BYTE);
+    assert_eq!(&tagged[1..], untagged.as_ref());
 }

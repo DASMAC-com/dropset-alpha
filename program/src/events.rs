@@ -15,6 +15,7 @@ use instruction_macros_traits::Tagged;
 use pinocchio::{
     account::AccountView,
     cpi::invoke_signed,
+    error::ProgramError,
     hint::unlikely,
     ProgramResult,
 };
@@ -72,7 +73,7 @@ const HEADER_DATA_OFFSET: usize = 1;
 /// tag + the header instruction event data.
 ///
 /// This is essentially where the emitted events data actually starts.
-const HEADER_SIZE_WITH_TAGS: usize =
+pub(crate) const HEADER_SIZE_WITH_TAGS: usize =
     size_of::<DropsetInstruction>() + HeaderEventInstructionData::LEN_WITH_TAG;
 
 impl EventBuffer {
@@ -122,9 +123,13 @@ impl EventBuffer {
         }
 
         let market_address = *market_account.account().address();
-        // Safety: `market_account` is not currently borrowed in any capacity.
-        let market_ref_mut = unsafe { market_account.load_unchecked_mut() };
-        market_ref_mut.header.increment_num_events_by(emitted_count);
+        let total_emitted_events = {
+            // scope the mutable market borrow so the nested self-CPI does not re-enter while the
+            // outer frame still holds an active mutable reference into the same account data
+            let market_ref_mut = unsafe { market_account.load_unchecked_mut() };
+            market_ref_mut.header.increment_num_events_by(emitted_count);
+            market_ref_mut.header.num_events()
+        };
 
         // Safety:
         // The header prefix bytes have already been zeroed, so `self.data` is long enough.
@@ -134,7 +139,7 @@ impl EventBuffer {
             HeaderEventInstructionData::new(
                 self.instruction_tag as u8,
                 self.emitted_count,
-                market_ref_mut.header.num_events(),
+                total_emitted_events,
                 market_address,
             )
             .write_bytes_tagged(self.data.as_mut_ptr().add(HEADER_DATA_OFFSET) as *mut u8);
@@ -169,15 +174,24 @@ impl EventBuffer {
         event_authority: &'a AccountView,
         market_account: MarketAccountView<'a>,
     ) -> ProgramResult {
-        let len: usize = self.len;
-        if len + T::LEN_WITH_TAG > EVENT_BUFFER_LEN {
+        crate::debug!("event_buffer.len: {}", self.len);
+        crate::debug!("event.size: {}", T::LEN_WITH_TAG);
+        crate::debug!("event_buffer.cap: {}", EVENT_BUFFER_LEN);
+
+        if self.len + T::LEN_WITH_TAG > EVENT_BUFFER_LEN {
             // Safety: `market_account` is not currently borrowed in any capacity.
             unsafe { self.flush_events(event_authority, market_account) }?;
         }
 
+        let len = self.len;
+
         // Since the length isn't checked again after flushing, check the very unlikely
         // edge case that we've defined an event that's larger than the size of a newly
         // flushed event buffer.
+        if len + T::LEN_WITH_TAG > EVENT_BUFFER_LEN {
+            return Err(ProgramError::InvalidInstructionData);
+        }
+
         debug_assert!(
             T::LEN_WITH_TAG < EVENT_BUFFER_LEN - HEADER_SIZE_WITH_TAGS,
             "Event is way too big"
