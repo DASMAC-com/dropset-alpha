@@ -100,7 +100,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.86.0
       - uses: Swatinem/rust-cache@v2
       # cu-bench-* tests load pre-built .so files via mollusk; they run in the
-      # dedicated bench job with the Solana toolchain installed.
+      # bench workflow with the Solana toolchain installed.
       - run: >
           cargo test --workspace
           --exclude cu-bench-dropset
