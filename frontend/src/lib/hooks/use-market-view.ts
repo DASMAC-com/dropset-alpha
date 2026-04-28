@@ -71,7 +71,6 @@ export function useMarketView(address: Address) {
     queryKey: ["market-view", address],
     queryFn: () => fetchMarketViewData(address),
     enabled: !!address,
-    refetchInterval: 500,
   });
 
   useEffect(() => {

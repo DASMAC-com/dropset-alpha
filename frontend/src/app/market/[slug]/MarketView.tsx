@@ -1,7 +1,6 @@
 "use client";
 
 import type { Address } from "@solana/addresses";
-import { OrderBook } from "@/components/OrderBook";
 import { SolBalance } from "@/components/swap/SolBalance";
 import { SwapPanel } from "@/components/swap/SwapPanel";
 import { TransactionLog } from "@/components/TransactionLog";
@@ -53,18 +52,13 @@ export function MarketView({ address }: { address: Address }) {
       )}
 
       <MarketProvider>
-        <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="w-full max-w-sm shrink-0 lg:mx-0">
-            <SwapPanel />
-            <SolBalance />
-          </div>
-          <div className="min-w-0 flex-1">
-            <OrderBook />
-          </div>
+        <div className="mx-auto mt-8 max-w-sm">
+          <SwapPanel />
+          <SolBalance />
         </div>
       </MarketProvider>
 
-      <div className="mt-6">
+      <div className="mx-auto mt-6 max-w-2xl">
         <TransactionLog marketAddress={address} />
       </div>
     </div>
