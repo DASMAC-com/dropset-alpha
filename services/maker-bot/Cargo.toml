@@ -12,6 +12,7 @@ dropset-interface = { path = "../../interface" }
 dropset-services-shared = { path = "../shared" }
 itertools.workspace = true
 price = { path = "../../price", features = ["client" ] }
+rand.workspace = true
 reqwest.workspace = true
 rust_decimal = { workspace = true, features = ["macros", "serde-with-arbitrary-precision"] }
 solana-address.workspace = true
