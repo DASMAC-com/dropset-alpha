@@ -198,11 +198,14 @@ pub async fn validate_config_and_endpoint(
         ("replenish_ratio_bps", replenish_ratio_bps),
         ("size_jitter_bps", size_jitter_bps),
         ("hit_widening_bps", hit_widening_bps),
-        ("local_book_weight_bps", local_book_weight_bps),
         ("spread_multiplier_bps", spread_multiplier_bps),
     ] {
         anyhow::ensure!(value <= 20_000, "{name} must be <= 20000 bps");
     }
+    anyhow::ensure!(
+        local_book_weight_bps <= 10_000,
+        "local_book_weight_bps must be <= 10000 bps (convex weight in [0, 1])"
+    );
     anyhow::ensure!(
         price_jitter_pct <= 100,
         "price_jitter_pct must be <= 100 (percent of step)"
