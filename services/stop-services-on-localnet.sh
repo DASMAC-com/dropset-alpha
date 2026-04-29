@@ -4,7 +4,7 @@
 # - the three Dockerized services (faucet, maker-bot, taker-bot)
 # - the backgrounded solana-test-validator
 
-set -uo pipefail
+set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
