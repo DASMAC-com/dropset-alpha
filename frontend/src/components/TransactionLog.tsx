@@ -61,16 +61,16 @@ type FillData = {
 };
 
 const TAKER_PERSONALITY_COLORS: Record<string, string> = {
-  retail: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  whale: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  sniper: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  noise: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
-  passive: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  aggressive: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  retail: "border-sky-500/30 bg-sky-500/15 text-sky-400",
+  whale: "border-violet-500/30 bg-violet-500/15 text-violet-400",
+  sniper: "border-amber-500/30 bg-amber-500/15 text-amber-400",
+  noise: "border-zinc-500/30 bg-zinc-500/15 text-zinc-400",
+  passive: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+  aggressive: "border-rose-500/30 bg-rose-500/15 text-rose-400",
 };
 
-const MAKER_BADGE = "bg-indigo-500/15 text-indigo-400 border-indigo-500/30";
-const UNKNOWN_BADGE = "bg-muted/40 text-muted-fg border-border";
+const MAKER_BADGE = "border-indigo-500/30 bg-indigo-500/15 text-indigo-400";
+const UNKNOWN_BADGE = "border-border bg-muted/40 text-muted-fg";
 
 function traderBadgeClass(trader: AgentRegistryEntry | null): string {
   if (!trader) return UNKNOWN_BADGE;
