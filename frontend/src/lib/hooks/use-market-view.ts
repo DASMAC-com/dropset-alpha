@@ -71,6 +71,8 @@ export function useMarketView(address: Address) {
     queryKey: ["market-view", address],
     queryFn: () => fetchMarketViewData(address),
     enabled: !!address,
+    // 500ms poll drives the live feel of the OrderBook visualizer.
+    // Tune carefully: too aggressive and the RPC bills add up.
     refetchInterval: 500,
   });
 
