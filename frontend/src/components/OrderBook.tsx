@@ -5,18 +5,23 @@ import { useMemo } from "react";
 import { useMarketStore } from "@/lib/stores/market-store";
 import { atomsToUiAmount, encodedU32ToDecimal } from "@/ts-sdk";
 
+// Depth shown per side. Rows are padded to this length so the layout
+// doesn't jump as the book fills and empties.
 const MAX_ROWS = 10;
 
 type OrderRow = {
   price: Decimal;
-  sizeAtoms: bigint;
-  sizeUi: string;
+  sizeAtoms: bigint; // raw on-chain size, used for the depth-bar math
+  sizeUi: string; // human-readable size, decimals applied
 };
 
 function decodeOrders(
   orders: { encodedPrice: number; baseRemaining: bigint }[],
   baseDecimals: number,
 ): OrderRow[] {
+  // flatMap + try/catch: drop individual malformed orders rather than
+  // failing the whole side. encodedPrice is a custom u32 fixed-point
+  // format and can throw on edge values.
   return orders.flatMap((o) => {
     try {
       const price = encodedU32ToDecimal(o.encodedPrice);
@@ -45,6 +50,9 @@ function Row({
   const flashColor = isAsk ? "rgba(240,75,90,0.4)" : "rgba(30,135,80,0.4)";
   const textColor = isAsk ? "#f04b5a" : "#1e8750";
 
+  // Keying the flash overlay on sizeAtoms forces React to remount it
+  // whenever the size changes, which restarts the fade-out animation.
+  // the "blink on update" effect
   const flashKey = row ? row.sizeAtoms.toString() : "empty";
 
   return (
@@ -90,6 +98,10 @@ export function OrderBook() {
 
     const baseDecimals = market.base.decimals;
 
+    // Both sides sort price-descending. That gives the standard book
+    // layout: asks render top-down high→low so the best ask sits at the
+    // bottom touching the spread, and bids render top-down high→low so
+    // the best bid sits at the top touching the spread.
     const decodedAsks = decodeOrders(view.asks, baseDecimals)
       .sort((a, b) => b.price.comparedTo(a.price))
       .slice(0, MAX_ROWS);
@@ -98,6 +110,7 @@ export function OrderBook() {
       .sort((a, b) => b.price.comparedTo(a.price))
       .slice(0, MAX_ROWS);
 
+    // Shared scale so depth bars on both sides are comparable.
     const maxSizeAtoms = [...decodedAsks, ...decodedBids].reduce(
       (m, o) => (o.sizeAtoms > m ? o.sizeAtoms : m),
       1n,
@@ -108,14 +121,19 @@ export function OrderBook() {
 
   if (!view) return null;
 
+  // Floor at 2% so even tiny resting orders are visible as a sliver.
   const barPct = (sizeAtoms: bigint) =>
     Math.max(Number((sizeAtoms * 100n) / maxSizeAtoms), 2);
 
+  // asks are sorted high→low, so the *last* ask is the best (lowest) ask;
+  // bids are sorted high→low, so the *first* bid is the best (highest).
   const spread =
     asks.length > 0 && bids.length > 0
       ? asks[asks.length - 1].price.minus(bids[0].price)
       : null;
 
+  // Pad to MAX_ROWS with nulls so the table is always the same height.
+  // Empty rows render transparent placeholders in <Row>.
   const askSlots: (OrderRow | null)[] = Array.from(
     { length: MAX_ROWS },
     (_, i) => asks[i] ?? null,
