@@ -97,7 +97,7 @@ pub struct MakerContext {
     max_refill_delay: Duration,
     replenish_ratio: Decimal,
     size_jitter_bps: u16,
-    price_jitter_bps: u16,
+    price_jitter_pct: u16,
     hit_widening_bps: u16,
     local_book_weight: Decimal,
     max_quote_levels: usize,
@@ -127,7 +127,7 @@ impl MakerContext {
             max_refill_delay_ms,
             replenish_ratio_bps,
             size_jitter_bps,
-            price_jitter_bps,
+            price_jitter_pct,
             hit_widening_bps,
             local_book_weight_bps,
             max_quote_levels,
@@ -190,7 +190,7 @@ impl MakerContext {
             max_refill_delay: Duration::from_millis(max_refill_delay_ms),
             replenish_ratio: Decimal::from(replenish_ratio_bps) / Decimal::from(10_000u64),
             size_jitter_bps,
-            price_jitter_bps,
+            price_jitter_pct,
             hit_widening_bps,
             local_book_weight: Decimal::from(local_book_weight_bps) / Decimal::from(10_000u64),
             max_quote_levels,
@@ -634,7 +634,7 @@ impl MakerContext {
             };
             let price_jitter =
                 step * Decimal::from(self.rng.random_range(
-                    -(self.price_jitter_bps as i32)..=(self.price_jitter_bps as i32),
+                    -(self.price_jitter_pct as i32)..=(self.price_jitter_pct as i32),
                 )) / Decimal::from(100u64);
             price += price_jitter;
             if price <= Decimal::ZERO {

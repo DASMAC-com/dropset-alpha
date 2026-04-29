@@ -31,7 +31,7 @@ pub struct MakerStyleDefaults {
     pub max_refill_delay_ms: u64,
     pub replenish_ratio_bps: u16,
     pub size_jitter_bps: u16,
-    pub price_jitter_bps: u16,
+    pub price_jitter_pct: u16,
     pub hit_widening_bps: u16,
     pub local_book_weight_bps: u16,
     pub max_quote_levels: usize,
@@ -47,7 +47,7 @@ impl MakerStyle {
                 max_refill_delay_ms: 900,
                 replenish_ratio_bps: 9_000,
                 size_jitter_bps: 1_000,
-                price_jitter_bps: 6,
+                price_jitter_pct: 6,
                 hit_widening_bps: 10,
                 local_book_weight_bps: 2_500,
                 max_quote_levels: 10,
@@ -59,7 +59,7 @@ impl MakerStyle {
                 max_refill_delay_ms: 2_000,
                 replenish_ratio_bps: 7_000,
                 size_jitter_bps: 1_800,
-                price_jitter_bps: 12,
+                price_jitter_pct: 12,
                 hit_widening_bps: 18,
                 local_book_weight_bps: 4_000,
                 max_quote_levels: 8,
@@ -71,7 +71,7 @@ impl MakerStyle {
                 max_refill_delay_ms: 4_000,
                 replenish_ratio_bps: 5_500,
                 size_jitter_bps: 2_500,
-                price_jitter_bps: 18,
+                price_jitter_pct: 18,
                 hit_widening_bps: 28,
                 local_book_weight_bps: 5_500,
                 max_quote_levels: 6,
@@ -97,7 +97,7 @@ pub struct ValidMakerConfig {
     pub max_refill_delay_ms: u64,
     pub replenish_ratio_bps: u16,
     pub size_jitter_bps: u16,
-    pub price_jitter_bps: u16,
+    pub price_jitter_pct: u16,
     pub hit_widening_bps: u16,
     pub local_book_weight_bps: u16,
     pub max_quote_levels: usize,
@@ -125,7 +125,7 @@ pub struct MakerConfigInput {
     pub max_refill_delay_ms: Option<u64>,
     pub replenish_ratio_bps: Option<u16>,
     pub size_jitter_bps: Option<u16>,
-    pub price_jitter_bps: Option<u16>,
+    pub price_jitter_pct: Option<u16>,
     pub hit_widening_bps: Option<u16>,
     pub local_book_weight_bps: Option<u16>,
     pub max_quote_levels: Option<usize>,
@@ -155,7 +155,7 @@ pub async fn validate_config_and_endpoint(
         max_refill_delay_ms,
         replenish_ratio_bps,
         size_jitter_bps,
-        price_jitter_bps,
+        price_jitter_pct,
         hit_widening_bps,
         local_book_weight_bps,
         max_quote_levels,
@@ -170,7 +170,7 @@ pub async fn validate_config_and_endpoint(
     let max_refill_delay_ms = max_refill_delay_ms.unwrap_or(defaults.max_refill_delay_ms);
     let replenish_ratio_bps = replenish_ratio_bps.unwrap_or(defaults.replenish_ratio_bps);
     let size_jitter_bps = size_jitter_bps.unwrap_or(defaults.size_jitter_bps);
-    let price_jitter_bps = price_jitter_bps.unwrap_or(defaults.price_jitter_bps);
+    let price_jitter_pct = price_jitter_pct.unwrap_or(defaults.price_jitter_pct);
     let hit_widening_bps = hit_widening_bps.unwrap_or(defaults.hit_widening_bps);
     let local_book_weight_bps = local_book_weight_bps.unwrap_or(defaults.local_book_weight_bps);
     let max_quote_levels = max_quote_levels.unwrap_or(defaults.max_quote_levels);
@@ -197,13 +197,16 @@ pub async fn validate_config_and_endpoint(
     for (name, value) in [
         ("replenish_ratio_bps", replenish_ratio_bps),
         ("size_jitter_bps", size_jitter_bps),
-        ("price_jitter_bps", price_jitter_bps),
         ("hit_widening_bps", hit_widening_bps),
         ("local_book_weight_bps", local_book_weight_bps),
         ("spread_multiplier_bps", spread_multiplier_bps),
     ] {
         anyhow::ensure!(value <= 20_000, "{name} must be <= 20000 bps");
     }
+    anyhow::ensure!(
+        price_jitter_pct <= 100,
+        "price_jitter_pct must be <= 100 (percent of step)"
+    );
 
     let oanda_args = OandaArgs {
         auth_token: oanda_auth_token,
@@ -237,7 +240,7 @@ pub async fn validate_config_and_endpoint(
         max_refill_delay_ms,
         replenish_ratio_bps,
         size_jitter_bps,
-        price_jitter_bps,
+        price_jitter_pct,
         hit_widening_bps,
         local_book_weight_bps,
         max_quote_levels,
