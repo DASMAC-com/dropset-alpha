@@ -1,6 +1,7 @@
 use std::{
     collections::HashSet,
     io::ErrorKind,
+    path::PathBuf,
 };
 
 use anyhow::Context;
@@ -22,6 +23,7 @@ use dropset_services_shared::config::{
     load_raw_service_config,
     ServiceConfig,
 };
+use serde::Deserialize;
 use solana_keypair::{
     read_keypair_file,
     Keypair,
@@ -41,6 +43,9 @@ const MAKER_INITIAL_QUOTE: u64 = 10_000_000_000;
 
 const TAKER_INITIAL_BASE: u64 = 1_000_000_000_000;
 const TAKER_INITIAL_QUOTE: u64 = 1_000_000_000_000;
+
+const AGENT_INITIAL_BASE: u64 = 1_000_000_000_000;
+const AGENT_INITIAL_QUOTE: u64 = 1_000_000_000_000;
 
 /// A helper example to bootstrap a market and a market maker on a localnet validator.
 ///
@@ -73,16 +78,30 @@ async fn main() -> anyhow::Result<()> {
     airdrop(&rpc.client, &maker.pubkey()).await?;
     airdrop(&rpc.client, &taker.pubkey()).await?;
 
+    // Per-agent taker keypairs (one per `[[agent]]` in `taker-bot/config.toml`).
+    // Each one signs its own market orders, so each one needs SOL for fees plus
+    // base/quote tokens to trade with. They are created on demand if missing.
+    let agents = load_or_create_agent_keypairs()?;
+    for agent in &agents {
+        airdrop(&rpc.client, &agent.keypair.pubkey()).await?;
+    }
+
     // Mint the initial amounts to each account.
     // Pass the faucet keypair as the mint authority so the faucet service
     // can mint tokens on demand.
+    let mut users = vec![
+        User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
+        User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
+        User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
+    ];
+    users.extend(
+        agents
+            .iter()
+            .map(|agent| User::new(&agent.keypair, AGENT_INITIAL_BASE, AGENT_INITIAL_QUOTE)),
+    );
     let e2e = E2e::new_users_and_market_with_options(
         Some(rpc),
-        [
-            User::new(faucet, FAUCET_INITIAL_BASE, FAUCET_INITIAL_QUOTE),
-            User::new(maker, MAKER_INITIAL_BASE, MAKER_INITIAL_QUOTE),
-            User::new(taker, TAKER_INITIAL_BASE, TAKER_INITIAL_QUOTE),
-        ],
+        users,
         Some(6),
         Some(6),
         Some(faucet),
@@ -101,14 +120,111 @@ async fn main() -> anyhow::Result<()> {
     // Patch base_mint and quote_mint into the shared config file in-place.
     update_base_and_quote_mints(&e2e)?;
 
+    // Write the agent registry that the frontend reads to label each fill with
+    // the trader personality that submitted it.
+    write_agent_registry(maker, &agents)?;
+
     println!("Faucet address : {}", faucet.pubkey());
     println!("Maker address : {}", maker.pubkey());
     println!("Taker address : {}", taker.pubkey());
+    for agent in &agents {
+        println!("Agent {:<8}: {}", agent.name, agent.keypair.pubkey());
+    }
     println!("Base mint     : {}", e2e.market.base.mint_address);
     println!("Quote mint    : {}", e2e.market.quote.mint_address);
     println!("Market        : {}", e2e.market.market);
 
     Ok(())
+}
+
+#[derive(Deserialize)]
+struct TakerConfigAgents {
+    #[serde(default, rename = "agent")]
+    agents: Vec<TakerAgentEntry>,
+}
+
+#[derive(Deserialize)]
+struct TakerAgentEntry {
+    name: String,
+    keypair_path: PathBuf,
+}
+
+pub struct AgentEntry {
+    pub name: String,
+    pub keypair: Keypair,
+}
+
+/// Reads `services/taker-bot/config.toml`, loads each agent's keypair file, and
+/// generates a fresh keypair (writing it to disk) for any path that doesn't
+/// exist yet. Relative `keypair_path` entries are resolved against the
+/// taker-bot config directory, mirroring `taker-bot/src/config.rs`.
+fn load_or_create_agent_keypairs() -> anyhow::Result<Vec<AgentEntry>> {
+    let raw = load_raw_service_config(ServiceConfig::Taker)?;
+    let parsed: TakerConfigAgents = toml::from_str(&raw)
+        .context("Failed to parse taker-bot config.toml while loading agent keypairs")?;
+
+    let taker_dir = ServiceConfig::Taker.config_dir();
+    parsed
+        .agents
+        .into_iter()
+        .map(|entry| {
+            let path = if entry.keypair_path.is_absolute() {
+                entry.keypair_path
+            } else {
+                taker_dir.join(&entry.keypair_path)
+            };
+            let keypair = load_or_create_keypair_file(&path)?;
+            Ok(AgentEntry {
+                name: entry.name,
+                keypair,
+            })
+        })
+        .collect()
+}
+
+/// Writes `services/taker-bot/agents.json` with one entry per known trader
+/// (the maker plus every taker agent), so the frontend can label each fill
+/// with the personality that submitted it.
+fn write_agent_registry(maker: &Keypair, agents: &[AgentEntry]) -> anyhow::Result<()> {
+    let mut entries: Vec<serde_json::Value> =
+        Vec::with_capacity(agents.len() + 1);
+    entries.push(serde_json::json!({
+        "name": "maker",
+        "kind": "maker",
+        "pubkey": maker.pubkey().to_string(),
+    }));
+    for agent in agents {
+        entries.push(serde_json::json!({
+            "name": agent.name,
+            "kind": "taker",
+            "pubkey": agent.keypair.pubkey().to_string(),
+        }));
+    }
+
+    let path = ServiceConfig::Taker.config_dir().join("agents.json");
+    std::fs::write(&path, serde_json::to_string_pretty(&entries)?)
+        .with_context(|| format!("Failed to write agent registry to {path:#?}"))?;
+    Ok(())
+}
+
+/// Loads a keypair from `path` if it exists, otherwise generates a new one and
+/// writes it to disk in the same JSON-array format that `solana-keygen` uses.
+fn load_or_create_keypair_file(path: &std::path::Path) -> anyhow::Result<Keypair> {
+    if path.exists() {
+        return read_keypair_file(path).map_err(|e| {
+            anyhow::anyhow!("Couldn't open agent keypair file: {path:#?}, err: ({e})")
+        });
+    }
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!("Failed to create agent keypair directory: {parent:#?}")
+        })?;
+    }
+    let kp = Keypair::new();
+    std::fs::write(path, serde_json::to_string(&kp.to_bytes().to_vec())?)
+        .with_context(|| format!("Failed to write new agent keypair to {path:#?}"))?;
+    Ok(kp)
 }
 
 fn write_keypair_to_file(service: ServiceConfig, kp: &Keypair) -> anyhow::Result<()> {
