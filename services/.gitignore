@@ -1,4 +1,4 @@
 config.toml
 keypair.json
 keypairs/
-services/taker-bot/agents.json
+taker-bot/agents.json
