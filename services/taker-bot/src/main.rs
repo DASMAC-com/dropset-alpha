@@ -131,9 +131,11 @@ async fn agent_loop(name: String, ctx: TakerContext, mut strategy: TakerStrategy
             step_stats.accumulate(attempt.stats);
 
             let mut consumed_depth = false;
-            for fill in attempt.fills {
+            for fill in attempt.fills.iter().cloned() {
                 match ctx.submit_fill(&fill).await {
                     Ok(result) => {
+                        strategy.confirm_attempt(&attempt);
+                        step_stats.submitted_children += 1;
                         metrics.observe_execution(&result);
                         consumed_depth = true;
                     }

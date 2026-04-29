@@ -278,12 +278,19 @@ impl TakerStepStats {
 pub struct TakerStep {
     pub fills: Vec<TakerFill>,
     pub stats: TakerStepStats,
+    fill_commit: Option<FillCommit>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
 pub(crate) struct PlannedTick {
     pub attempts: u64,
     pub stats: TakerStepStats,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FillCommit {
+    next_parent_order: Option<ParentOrder>,
+    enters_cooldown: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -436,11 +443,16 @@ impl TakerStrategy {
         let mut step = TakerStep {
             fills: Vec::with_capacity(planned.attempts as usize),
             stats: planned.stats,
+            fill_commit: None,
         };
 
         for _ in 0..planned.attempts {
             let attempt = self.execute_attempt(&snapshot());
             step.stats.accumulate(attempt.stats);
+            if !attempt.fills.is_empty() {
+                self.confirm_attempt(&attempt);
+                step.stats.submitted_children += 1;
+            }
             step.fills.extend(attempt.fills);
         }
 
@@ -561,24 +573,34 @@ impl TakerStrategy {
             .min(visible_depth.max(1));
 
         let planned_levels = planned_levels_for_size(size, &opposing_side.levels);
-        parent.remaining_base = parent.remaining_base.saturating_sub(size);
-        parent.children_remaining = parent.children_remaining.saturating_sub(1);
         let fill = TakerFill {
             side: parent.side,
             size,
             planned_levels,
-            parent_remaining: parent.remaining_base,
+            parent_remaining: parent.remaining_base.saturating_sub(size),
         };
 
+        parent.remaining_base = fill.parent_remaining;
+        parent.children_remaining = parent.children_remaining.saturating_sub(1);
         let parent_done = parent.remaining_base == 0 || parent.children_remaining == 0;
-        self.parent_order = (!parent_done).then_some(parent);
-        if parent_done {
+
+        step.fills.push(fill);
+        step.fill_commit = Some(FillCommit {
+            next_parent_order: (!parent_done).then_some(parent),
+            enters_cooldown: parent_done,
+        });
+        step
+    }
+
+    pub(crate) fn confirm_attempt(&mut self, attempt: &TakerStep) {
+        let Some(commit) = attempt.fill_commit else {
+            return;
+        };
+
+        self.parent_order = commit.next_parent_order;
+        if commit.enters_cooldown {
             self.cooldown_ticks_remaining = self.execution_profile.cooldown_ticks;
         }
-
-        step.stats.submitted_children += 1;
-        step.fills.push(fill);
-        step
     }
 
     fn start_parent_order(
@@ -865,6 +887,89 @@ mod tests {
         }
 
         panic!("expected a multi-fill step to validate refreshed liquidity");
+    }
+
+    fn test_strategy(seed: u64) -> TakerStrategy {
+        let mut interval = tokio::time::interval(Duration::from_millis(1));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+        TakerStrategy::new(
+            ActivityProfile {
+                interval,
+                lambda_quiet: 1.0,
+                lambda_burst: 1.0,
+                burst_entry_prob: 0.0,
+                burst_exit_prob: 1.0,
+            },
+            100,
+            1.1,
+            0.5,
+            ExecutionProfile {
+                parent_multiplier_min: 2.0,
+                parent_multiplier_max: 2.0,
+                child_depth_fraction_min: 0.1,
+                child_depth_fraction_max: 0.1,
+                max_sweep_levels: 3,
+                max_spread_bps: 100.0,
+                cooldown_ticks: 2,
+                parent_slice_count_min: 2,
+                parent_slice_count_max: 2,
+                imbalance_bias: 0.0,
+                patience_ticks: 0,
+            },
+            Some(seed),
+        )
+        .expect("test strategy should be valid")
+    }
+
+    #[tokio::test]
+    async fn failed_submission_keeps_parent_order_open() {
+        let mut strategy = test_strategy(11);
+        let snapshot = MarketSnapshot::synthetic(10_000);
+
+        let attempt = strategy.execute_attempt(&snapshot);
+        let fill = attempt
+            .fills
+            .first()
+            .expect("attempt should plan a child fill");
+        let parent_before_submit = strategy
+            .parent_order
+            .expect("starting a parent order should persist before submission");
+
+        assert_eq!(
+            parent_before_submit.remaining_base,
+            fill.size + fill.parent_remaining
+        );
+        assert_eq!(parent_before_submit.children_remaining, 2);
+    }
+
+    #[tokio::test]
+    async fn successful_submission_commits_parent_progress() {
+        let mut strategy = test_strategy(11);
+        let snapshot = MarketSnapshot::synthetic(10_000);
+
+        let attempt = strategy.execute_attempt(&snapshot);
+        let fill = attempt
+            .fills
+            .first()
+            .cloned()
+            .expect("attempt should plan a child fill");
+
+        strategy.confirm_attempt(&attempt);
+
+        if fill.parent_remaining == 0 {
+            assert!(strategy.parent_order.is_none());
+            assert_eq!(
+                strategy.cooldown_ticks_remaining,
+                strategy.execution_profile.cooldown_ticks
+            );
+        } else {
+            let parent_after_submit = strategy
+                .parent_order
+                .expect("a partially filled parent order should remain open");
+            assert_eq!(parent_after_submit.remaining_base, fill.parent_remaining);
+            assert_eq!(parent_after_submit.children_remaining, 1);
+        }
     }
 
     #[tokio::test(start_paused = true)]
