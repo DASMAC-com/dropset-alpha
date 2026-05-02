@@ -46,7 +46,7 @@ jobs:
       - name: cargo +nightly fmt --check
         run: cargo +nightly fmt --all -- --check
       - name: cargo +nightly clippy -D warnings
-        run: cargo +nightly clippy --workspace --all-targets -- -D warnings
+        run: cargo +nightly clippy --workspace --all-targets --locked -- -D warnings
 
   typecheck-ts:
     name: Typecheck (TS)
@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.86.0
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace --all-targets
+      - run: cargo check --workspace --all-targets --locked
 
   test-ts:
     name: Test (TS)
@@ -102,7 +102,7 @@ jobs:
       # cu-bench-* tests load pre-built .so files via mollusk; they run in the
       # bench workflow with the Solana toolchain installed.
       - run: >
-          cargo test --workspace
+          cargo test --workspace --locked
           --exclude cu-bench-dropset
           --exclude cu-bench-tests
           --exclude cu-bench-pack-orders
