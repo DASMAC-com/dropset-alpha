@@ -96,6 +96,9 @@ export default {
         text: "TypeScript SDK",
         items: [
           { text: "Overview", link: "/sdk/overview" },
+          { text: "Connect to a Market", link: "/sdk/connect-to-market" },
+          { text: "Post an Order", link: "/sdk/post-order" },
+          { text: "Price Utilities", link: "/sdk/price-utils" },
         ],
       },
       {

@@ -7,32 +7,31 @@ The Dropset TypeScript SDK lives in `ts-sdk/` inside the `dropset-alpha` workspa
 ```
 ts-sdk/src/
 ├── generated/          # Auto-generated from Codama IDL — do not edit
-├── dropset-interface/  # Ergonomic wrappers around the generated layer
-├── price/              # Price math — tick/lot conversions
-├── rust-types/         # TypeScript mirrors of Rust types
+├── dropset-interface/  # Hand-written wrappers around the generated layer
+│   └── market-view-all.ts  # toMarketViewAll — read the full book state
+├── price/              # Price math — UI ↔ atoms conversions
+│   ├── client-helpers.ts   # toOrderInfoArgs, atomsToUiAmount, uiPriceToAtomsPrice
+│   ├── decoded-price.ts
+│   ├── encoded-price.ts
+│   └── ...
+├── rust-types/         # TypeScript mirrors of Rust types (U8, U32, U64)
 ├── types/              # Shared TypeScript type definitions
 ├── utils/              # Utility functions
-├── const.ts            # Program ID and constants
+├── const.ts            # Program ID, NIL sentinel, SECTOR_SIZE
 └── index.ts            # Public entry point — import from here
 ```
 
-## Layers explained
+## Two layers
 
-### `generated/`
+The SDK is intentionally split into two layers:
 
-Produced automatically by Codama from the program's IDL. Contains account decoders/encoders and instruction builders for every instruction. **Do not edit files here** — they are overwritten when the IDL is regenerated:
+**Generated layer** (`generated/`) — produced automatically by Codama from the program's IDL. Contains raw instruction builders and account decoders. Do not edit these files — they are overwritten when the IDL is regenerated:
 
 ```bash
 pnpm --filter codama-idl-gen generate
 ```
 
-### `dropset-interface/`
-
-Hand-written TypeScript that wraps the generated layer with a more ergonomic API — resolving accounts, building complete transactions, and handling common patterns.
-
-### `price/`
-
-Ported from the Rust `price` crate. Utilities for converting between raw token amounts and lots, and between decimal prices and ticks.
+**Interface layer** (`dropset-interface/`) — hand-written TypeScript that wraps the generated layer with ergonomic, higher-level APIs. This is where `toMarketViewAll` lives, which gives you a fully structured view of the order book in one call.
 
 ## Building and testing
 
@@ -44,41 +43,8 @@ pnpm --filter ts-sdk build
 pnpm --filter ts-sdk test
 ```
 
-## Basic usage
+## Guides
 
-### Fetch and decode a market
-
-```typescript
-import { getMarketAccountDataDecoder } from "@dropset/ts-sdk";
-
-const accountInfo = await rpc.getAccountInfo(marketAddress).send();
-const market = getMarketAccountDataDecoder().decode(accountInfo.value.data);
-
-console.log("Base mint:", market.baseMint);
-console.log("Quote mint:", market.quoteMint);
-```
-
-### Build a `post_order` instruction
-
-```typescript
-import { getPostOrderInstruction } from "@dropset/ts-sdk";
-
-const ix = getPostOrderInstruction({
-  market: marketAddress,
-  seat: seatAddress,
-  traderBalance: traderBalanceAddress,
-  trader: signer.publicKey,
-  side: "bid",
-  priceInTicks: 1000n,
-  numBaseLots: 10n,
-});
-```
-
-### Price utilities
-
-```typescript
-import { lotsToBaseAtoms, ticksToQuoteAtoms } from "@dropset/ts-sdk";
-
-const baseAmount = lotsToBaseAtoms(numLots, market.baseLotSize);
-const quoteAmount = ticksToQuoteAtoms(priceInTicks, market.tickSize, market.baseLotSize);
-```
+- [Connect to a Market](/sdk/connect-to-market) — fetch and decode a live market, read seats, bids, and asks
+- [Post an Order](/sdk/post-order) — build and send a `post_order` transaction end to end
+- [Price Utilities](/sdk/price-utils) — convert between UI prices and on-chain encoded values

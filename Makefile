@@ -4,13 +4,13 @@
 .PHONY: docs-prettier
 .PHONY: docs-prod
 
-# Build the docs locally for development
+# Build the docs locally 
 docs:
 	cd docs && npm install \
 		&& rm -rf .vitepress/cache .vitepress/dist node_modules/.vite \
 		&& npx vitepress dev --open
 
-# Build the docs for production
+# Build the docs for production 
 docs-build:
 	cd docs \
 		&& rm -rf .vitepress/cache .vitepress/dist node_modules/.vite \
