@@ -35,6 +35,17 @@ use crate::{
     MakerState,
 };
 
+/// Rolling window length (in ticks) used to estimate recent fair-price volatility.
+const RECENT_FAIR_PRICE_WINDOW: usize = 24;
+
+/// Bps denominator (1.0 == 10_000 bps).
+const BPS_DENOM: u64 = 10_000;
+
+/// Max value `buy_pressure` / `sell_pressure` are clamped to when computing
+/// the dynamic half-spread. Used to normalize the pressure component to [0, 1]
+/// of `hit_widening_bps`.
+const MAX_PRESSURE_UNITS: u16 = 4;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct HitSignals {
     ask_was_lifted: bool,
@@ -549,7 +560,7 @@ impl MakerContext {
 
     fn record_fair_price(&mut self, price: Decimal) {
         self.recent_fair_prices.push_back(price);
-        while self.recent_fair_prices.len() > 24 {
+        while self.recent_fair_prices.len() > RECENT_FAIR_PRICE_WINDOW {
             self.recent_fair_prices.pop_front();
         }
     }
@@ -690,15 +701,20 @@ impl MakerContext {
     }
 
     fn dynamic_half_spread(&self) -> Decimal {
+        // Normalize pressure/volatility components to a fraction of `mid`:
+        //   component = mid * widening_bps * units / (BPS_DENOM * MAX_PRESSURE_UNITS)
+        // i.e. pressure of `MAX_PRESSURE_UNITS` adds the full `widening_bps` worth of widening.
+        let denom = Decimal::from(BPS_DENOM * u64::from(MAX_PRESSURE_UNITS));
         let base = half_spread() * self.spread_multiplier;
         let mid = self.effective_mid_price();
-        let pressure_units = u16::from(self.buy_pressure.max(self.sell_pressure)).min(4);
+        let pressure_units =
+            u16::from(self.buy_pressure.max(self.sell_pressure)).min(MAX_PRESSURE_UNITS);
         let pressure_component = mid
             * Decimal::from(u64::from(self.hit_widening_bps) * u64::from(pressure_units))
-            / Decimal::from(40_000u64);
+            / denom;
         let volatility_component = mid
             * Decimal::from(self.recent_volatility_bps().round().clamp(0.0, 100.0) as u64)
-            / Decimal::from(40_000u64);
+            / denom;
 
         base + pressure_component + volatility_component
     }
