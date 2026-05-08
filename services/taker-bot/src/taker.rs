@@ -538,8 +538,14 @@ impl TakerStrategy {
             return step;
         }
 
-        let spread_bps = snapshot.spread_bps.unwrap_or_default();
-        let too_wide = spread_bps > self.execution_profile.max_spread_bps && parent.urgency < 0.85;
+        let too_wide = match snapshot.spread_bps {
+            Some(spread_bps) => {
+                spread_bps > self.execution_profile.max_spread_bps && parent.urgency < 0.85
+            }
+            // Unknown spread (e.g. one side empty) — treat as too wide unless we're already urgent,
+            // so the gate doesn't silently disable itself in exactly the cases it's meant to catch.
+            None => parent.urgency < 0.85,
+        };
         if too_wide {
             if parent.patience_ticks_remaining > 0 {
                 parent.patience_ticks_remaining -= 1;
