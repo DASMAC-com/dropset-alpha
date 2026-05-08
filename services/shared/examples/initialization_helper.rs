@@ -209,8 +209,11 @@ fn write_agent_registry(maker: &Keypair, agents: &[AgentEntry]) -> anyhow::Resul
 
 /// Loads a keypair from `path` if it exists, otherwise generates a new one and
 /// writes it to disk in the same JSON-array format that `solana-keygen` uses.
+///
+/// When `--force` is passed, an existing file is overwritten with a freshly
+/// generated keypair so localnet identities can be reset.
 fn load_or_create_keypair_file(path: &std::path::Path) -> anyhow::Result<Keypair> {
-    if path.exists() {
+    if path.exists() && !should_force_overwrite() {
         return read_keypair_file(path).map_err(|e| {
             anyhow::anyhow!("Couldn't open agent keypair file: {path:#?}, err: ({e})")
         });
