@@ -5,6 +5,38 @@ market. Order arrival is modeled as a Poisson process with two states (quiet /
 burst), and order sizes are drawn from a LogNormal distribution. Intended for
 experimentation and local testing, not production use.
 
+## Multiple agents and archetypes
+
+The taker service runs **one or more agents** in the same process — each
+configured under a `[[agent]]` block in `config.toml` with its own keypair and
+behavior. Each agent picks a named **archetype** preset, and may override
+individual fields on top of the preset's defaults.
+
+| Archetype     | Activity profile                | Execution profile | Median order size | Notes |
+|---------------|---------------------------------|-------------------|-------------------|-------|
+| `passive`     | Slow Poisson arrivals           | `patient`         | 2 000             | Light continuous flow; tolerates wider spreads. |
+| `retail`      | Moderate, occasional bursts     | `balanced`        | 3 000             | Generic background retail-style trader. |
+| `aggressive`  | Fast / bursty arrivals          | `aggressive`      | 5 000             | Sweeps multiple levels, low spread tolerance. |
+| `whale`       | Fast / bursty arrivals          | `aggressive`      | 15 000            | Large parent orders, willing to pay up. |
+| `sniper`      | Slow base, opportunistic spikes | `sniper`          | 3 000             | Sits idle, then fires when conditions align. |
+| `noise`       | High-frequency, low size        | `noise`           | 1 000             | Steady CLOB chatter; no directional bias. |
+
+Each archetype is a *style* preset: it pairs an `ActivityProfile` (Poisson
+rates, burst entry/exit probabilities) with an `ExecutionProfile` (max spread
+tolerated, sweep depth, child-sizing fractions, etc.). See
+`src/archetype.rs` and `src/taker.rs` for the full preset values, and
+`config.toml.example` for the override knobs you can tune per agent.
+
+### Agent registry (`agents.json`)
+
+When you bootstrap localnet via `services/run-services-on-localnet.sh`, the
+`initialization_helper` writes a `services/taker-bot/agents.json` registry of
+the form `[{ name, kind, pubkey }, ...]`. The frontend reads this registry
+through `/api/agents` to label fills in the transaction log by trader
+personality. The file is gitignored — re-running the helper regenerates it,
+and `--force` will overwrite the underlying agent keypairs in `keypairs/` as
+well.
+
 ## Running
 
 1. If you're using Docker Desktop, make sure `Enable host networking` is checked
