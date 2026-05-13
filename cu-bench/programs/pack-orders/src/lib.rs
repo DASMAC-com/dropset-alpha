@@ -19,7 +19,7 @@ program_entrypoint!(process_instruction);
 no_allocator!();
 nostd_panic_handler!();
 
-#[cfg(feature = "borsh-derive")]
+#[cfg(feature = "bench-program-B")]
 use borsh::BorshDeserialize;
 use dropset_interface::state::user_order_sectors::MAX_ORDERS_USIZE;
 use price::OrderInfoArgs;
