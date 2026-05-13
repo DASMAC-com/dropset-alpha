@@ -1,0 +1,60 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  ts:
+    name: TS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # turbo's `test` task dependsOn `build`, which builds the frontend.
+    # next build evaluates env validation, so NEXT_PUBLIC_CLUSTER must be set.
+    env:
+      NEXT_PUBLIC_CLUSTER: localnet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ts
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.86.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          shared-key: rust-stable-${{ runner.os }}
+      # These crates load pre-built .so files via mollusk; they run in the
+      # bench workflow with the Solana toolchain installed.
+      - run: >
+          cargo test --workspace --locked
+          --exclude client
+          --exclude dropset-taker-bot
+          --exclude cu-bench-dropset
+          --exclude cu-bench-tests
+          --exclude cu-bench-pack-orders
+          --exclude cu-bench-to-order-info
