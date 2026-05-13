@@ -82,7 +82,7 @@ pub struct AmountsFilled {
 /// # Safety
 ///
 /// The market account data must not be currently borrowed.
-#[inline(always)]
+#[inline(never)]
 pub unsafe fn fill_market_order<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     event_buffer: &mut EventBuffer,
@@ -201,7 +201,7 @@ fn top_of_book_snapshot<const IS_BUY: bool>(ctx: &'_ MarketOrderContext) -> Opti
 /// user seat sector index must both still point to valid, properly typed sectors in memory.
 ///
 /// The constraint asset remaining must be <= the top order's constraint asset remaining.
-#[inline(always)]
+#[inline(never)]
 unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     event_buffer: &mut EventBuffer,
@@ -211,15 +211,15 @@ unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
 ) -> ProgramResult {
     // 1. Close/remove the order from the orders collection.
     if IS_BUY {
-        ctx.market_account
-            .load_unchecked_mut()
-            .asks()
-            .remove_at(top_order.order_sector);
+        {
+            let mut market = ctx.market_account.load_unchecked_mut();
+            market.asks().remove_at(top_order.order_sector);
+        }
     } else {
-        ctx.market_account
-            .load_unchecked_mut()
-            .bids()
-            .remove_at(top_order.order_sector);
+        {
+            let mut market = ctx.market_account.load_unchecked_mut();
+            market.bids().remove_at(top_order.order_sector);
+        }
     }
 
     // 2. Update the filled maker seat's balance and remove the order from their price to order
@@ -262,7 +262,7 @@ unsafe fn full_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     Ok(())
 }
 
-#[inline(always)]
+#[inline(never)]
 fn partial_fill<const IS_BUY: bool, const BASE_DENOM: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     event_buffer: &mut EventBuffer,
@@ -359,7 +359,7 @@ fn dropset_non_zero_u64(value: u64) -> Result<NonZeroU64, DropsetError> {
 ///
 /// The market account data must not be currently borrowed and the passed order's maker seat sector
 /// index must still point to a valid seat in memory.
-#[inline(always)]
+#[inline(never)]
 unsafe fn update_maker_seat_after_fill<const IS_BUY: bool, const PARTIAL_FILL: bool>(
     ctx: &'_ mut MarketOrderContext<'_>,
     maker_seat_sector: SectorIndex,

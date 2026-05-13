@@ -11,6 +11,7 @@ use crate::{
             NIL,
             PAYLOAD_SIZE,
         },
+        transmutable::Transmutable,
     },
 };
 
@@ -160,16 +161,27 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
         Ok(new_index)
     }
 
-    /// Removes the sector at the non-NIL sector `index` without checking the index validity.
+    /// Removes the sector at the non-NIL sector `index` after checking the index validity.
     ///
     /// # Safety
     ///
     /// Caller guarantees `index` is in-bounds.
     pub unsafe fn remove_at(&mut self, index: SectorIndex) {
+
+        let num_sectors = self.sectors.len() / Sector::LEN;
+        assert!((index as usize) < num_sectors);
         let (prev_index, next_index) = {
             // Safety: Caller guarantees `index` is in-bounds.
             let sector = unsafe { Sector::from_sector_index_mut(self.sectors, index) };
-            (sector.prev(), sector.next())
+            let prev = sector.prev();
+            let next = sector.next();
+            if prev != NIL {
+                assert!((prev as usize) < num_sectors);
+            }
+            if next != NIL {
+                assert!((next as usize) < num_sectors);
+            }
+            (prev, next)
         };
 
         match prev_index {
