@@ -167,7 +167,6 @@ impl<'a, T: LinkedListHeaderOperations> LinkedList<'a, T> {
     ///
     /// Caller guarantees `index` is in-bounds.
     pub unsafe fn remove_at(&mut self, index: SectorIndex) {
-
         let num_sectors = self.sectors.len() / Sector::LEN;
         assert!((index as usize) < num_sectors);
         let (prev_index, next_index) = {
