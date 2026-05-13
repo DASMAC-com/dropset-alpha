@@ -48,6 +48,11 @@ jobs:
         with:
           cache-on-failure: true
           shared-key: rust-stable-${{ runner.os }}
+      # instruction-macros-test-fixtures uses macrotest, which shells out to
+      # `cargo expand` to verify macro output.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-expand
       # These crates load pre-built .so files via mollusk; they run in the
       # bench workflow with the Solana toolchain installed.
       - run: >
