@@ -28,11 +28,12 @@ console.log(usdcUiAmount.toString()); // "5.5"
 ```
 
 **Signature:**
+
 ```typescript
 function atomsToUiAmount(
   atomsAmount: bigint,
   mintDecimals: number | bigint,
-): Decimal
+): Decimal;
 ```
 
 ---
@@ -52,12 +53,13 @@ console.log(atomsPrice.toString()); // "0.0000425" (adjusted for decimal differe
 ```
 
 **Signature:**
+
 ```typescript
 function uiPriceToAtomsPrice(
   uiPrice: Decimal,
   baseDecimals: number | bigint,
   quoteDecimals: number | bigint,
-): Decimal
+): Decimal;
 ```
 
 The formula applied is: `atomsPrice = uiPrice × 10^(quoteDecimals − baseDecimals)`
@@ -92,6 +94,7 @@ console.log(args);
 ```
 
 **Signature:**
+
 ```typescript
 function toOrderInfoArgs(
   price: Decimal,
@@ -101,7 +104,7 @@ function toOrderInfoArgs(
   baseScalar: U64;
   baseExponentBiased: U8;
   quoteExponentBiased: U8;
-}
+};
 ```
 
 ::: warning
@@ -124,8 +127,9 @@ console.log(decodedPrice.toString()); // e.g. "42.5"
 ```
 
 **Signature:**
+
 ```typescript
-function encodedU32ToDecimal(encodedU32: number | bigint): Decimal
+function encodedU32ToDecimal(encodedU32: number | bigint): Decimal;
 ```
 
 ---
@@ -135,7 +139,7 @@ function encodedU32ToDecimal(encodedU32: number | bigint): Decimal
 Low-level utility that converts an unbiased exponent to the biased format the program uses. You generally won't call this directly — `toOrderInfoArgs` handles it internally.
 
 ```typescript
-function toBiasedExponent(unbiased: number): U8
+function toBiasedExponent(unbiased: number): U8;
 ```
 
 Throws `PriceError.InvalidBiasedExponent` if the value is outside the supported range.
@@ -153,12 +157,12 @@ import {
 } from "@dropset/ts-sdk";
 
 // Market config (from market header)
-const BASE_DECIMALS = 9;  // e.g. SOL
+const BASE_DECIMALS = 9; // e.g. SOL
 const QUOTE_DECIMALS = 6; // e.g. USDC
 
 // Step 1 — Define your order parameters in human terms
-const uiPrice = new Decimal("42.50");         // 42.50 USDC per SOL
-const orderSizeBaseAtoms = 1_000_000_000n;    // 1 SOL
+const uiPrice = new Decimal("42.50"); // 42.50 USDC per SOL
+const orderSizeBaseAtoms = 1_000_000_000n; // 1 SOL
 
 // Step 2 — Convert UI price to atoms price
 const atomsPrice = uiPriceToAtomsPrice(uiPrice, BASE_DECIMALS, QUOTE_DECIMALS);

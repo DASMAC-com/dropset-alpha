@@ -11,6 +11,7 @@ Filter by category to focus on a specific area of the protocol.
 **CU** — the approximate compute unit cost of this instruction on a Solana localnet benchmark. See [Benchmarks](/benchmarks/) for full comparisons against Phoenix and Manifest.
 
 **Accounts** — every account the instruction requires, with mutability and signer flags:
+
 - `mut` — the instruction writes to this account
 - `signer` — this account must sign the transaction
 - `PDA` — this is a program-derived address, computed deterministically from seeds
@@ -21,12 +22,12 @@ Filter by category to focus on a specific area of the protocol.
 
 All PDAs in Dropset are derived from seeds defined in `dropset-interface/`, so any client can compute them without fetching first:
 
-| Account | Seeds |
-|---|---|
-| Seat | `[market, trader]` |
-| Trader balance | `[market, trader]` |
-| Base vault | `[market, "base"]` |
-| Quote vault | `[market, "quote"]` |
+| Account        | Seeds               |
+| -------------- | ------------------- |
+| Seat           | `[market, trader]`  |
+| Trader balance | `[market, trader]`  |
+| Base vault     | `[market, "base"]`  |
+| Quote vault    | `[market, "quote"]` |
 
 ## Further reading
 

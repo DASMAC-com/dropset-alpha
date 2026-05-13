@@ -15,10 +15,10 @@ import type { MarketViewAll } from "@dropset/ts-sdk";
 
 ```typescript
 type MarketViewAll = {
-  header: MarketHeader;       // Market config: mints, tick size, lot size
-  seats: MarketSeatView[];    // All registered traders on this market
-  bids: OrderView[];          // All resting buy orders, linked-list order
-  asks: OrderView[];          // All resting sell orders, linked-list order
+  header: MarketHeader; // Market config: mints, tick size, lot size
+  seats: MarketSeatView[]; // All registered traders on this market
+  bids: OrderView[]; // All resting buy orders, linked-list order
+  asks: OrderView[]; // All resting sell orders, linked-list order
   users: Map<Address, MarketUserData>; // Per-trader seat + orders
 };
 ```

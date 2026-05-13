@@ -56,20 +56,20 @@ This gives the team precise control over compute unit usage and avoids Anchor's 
 
 `program/src/` is organized into four folders:
 
-| Folder | Purpose |
-|---|---|
-| `instructions/` | One file per instruction — the handler logic |
-| `context/` | One file per instruction — account validation and loading |
-| `shared/` | Shared utilities used across multiple instructions |
-| `validation/` | Safety contracts and constraint checking |
+| Folder          | Purpose                                                   |
+| --------------- | --------------------------------------------------------- |
+| `instructions/` | One file per instruction — the handler logic              |
+| `context/`      | One file per instruction — account validation and loading |
+| `shared/`       | Shared utilities used across multiple instructions        |
+| `validation/`   | Safety contracts and constraint checking                  |
 
 Plus top-level files:
 
-| File | Purpose |
-|---|---|
-| `entrypoint.rs` | Routes incoming instructions to handlers |
-| `events.rs` | Event type definitions emitted by the program |
-| `lib.rs` | Crate root |
+| File            | Purpose                                       |
+| --------------- | --------------------------------------------- |
+| `entrypoint.rs` | Routes incoming instructions to handlers      |
+| `events.rs`     | Event type definitions emitted by the program |
+| `lib.rs`        | Crate root                                    |
 
 ## The interface crate
 

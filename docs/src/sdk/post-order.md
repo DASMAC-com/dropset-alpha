@@ -27,7 +27,7 @@ const rpc = createSolanaRpc("https://api.devnet.solana.com");
 // Your addresses
 const marketAddress = address("MARKET_ADDRESS");
 const traderAddress = address("TRADER_ADDRESS");
-const seatAddress = address("SEAT_ADDRESS");       // PDA: market + trader
+const seatAddress = address("SEAT_ADDRESS"); // PDA: market + trader
 const balanceAddress = address("BALANCE_ADDRESS"); // PDA: market + trader
 
 // Market decimal configuration
@@ -47,7 +47,7 @@ const ix = getPostOrderInstruction({
   trader: traderAddress,
   seat: seatAddress,
   traderBalance: balanceAddress,
-  side: 0,  // 0 = bid, 1 = ask
+  side: 0, // 0 = bid, 1 = ask
   ...orderArgs,
 });
 
@@ -60,18 +60,18 @@ const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
 ## Order sides
 
-| Value | Side | Meaning |
-|---|---|---|
-| `0` | Bid | Buy order — you're offering quote tokens to buy base tokens |
-| `1` | Ask | Sell order — you're offering base tokens to receive quote tokens |
+| Value | Side | Meaning                                                          |
+| ----- | ---- | ---------------------------------------------------------------- |
+| `0`   | Bid  | Buy order — you're offering quote tokens to buy base tokens      |
+| `1`   | Ask  | Sell order — you're offering base tokens to receive quote tokens |
 
 ## The `post_order` instruction accounts
 
-| Account | Description |
-|---|---|
-| `market` | The market account (writable) |
-| `trader` | The trader's public key (signer) |
-| `seat` | The trader's seat PDA on this market |
+| Account         | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `market`        | The market account (writable)                      |
+| `trader`        | The trader's public key (signer)                   |
+| `seat`          | The trader's seat PDA on this market               |
 | `traderBalance` | The trader's balance PDA on this market (writable) |
 
 ## What happens on-chain

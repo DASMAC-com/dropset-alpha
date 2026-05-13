@@ -83,18 +83,18 @@ Removes processed events from the market's event queue and reclaims space. The q
 
 ## Instruction summary
 
-| Instruction | Description |
-|---|---|
-| `register_market` | Create a new market |
-| `expand_market` | Grow order book capacity |
-| `close_seat` | Close a trader's seat |
-| `deposit` | Deposit base or quote tokens |
-| `withdraw` | Withdraw settled funds |
-| `post_order` | Post a limit order |
-| `cancel_order` | Cancel a resting order |
-| `batch_replace` | Cancel + post atomically |
-| `market_order` | Execute a market order |
-| `flush_events` | Clear processed events |
+| Instruction       | Description                  |
+| ----------------- | ---------------------------- |
+| `register_market` | Create a new market          |
+| `expand_market`   | Grow order book capacity     |
+| `close_seat`      | Close a trader's seat        |
+| `deposit`         | Deposit base or quote tokens |
+| `withdraw`        | Withdraw settled funds       |
+| `post_order`      | Post a limit order           |
+| `cancel_order`    | Cancel a resting order       |
+| `batch_replace`   | Cancel + post atomically     |
+| `market_order`    | Execute a market order       |
+| `flush_events`    | Clear processed events       |
 
 ## Generating internal documentation
 

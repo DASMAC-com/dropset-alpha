@@ -12,8 +12,15 @@
         </button>
       </div>
       <div class="cu-legend">
-        <span v-for="protocol in protocols" :key="protocol.name" class="cu-legend-item">
-          <span class="cu-legend-dot" :style="{ background: protocol.color }"></span>
+        <span
+          v-for="protocol in protocols"
+          :key="protocol.name"
+          class="cu-legend-item"
+        >
+          <span
+            class="cu-legend-dot"
+            :style="{ background: protocol.color }"
+          ></span>
           {{ protocol.name }}
         </span>
       </div>
@@ -24,7 +31,11 @@
         <thead>
           <tr>
             <th>Instruction</th>
-            <th v-for="p in protocols" :key="p.name" :style="{ color: p.color }">
+            <th
+              v-for="p in protocols"
+              :key="p.name"
+              :style="{ color: p.color }"
+            >
               {{ p.name }}
             </th>
             <th>Dropset advantage</th>
@@ -47,7 +58,7 @@
                   }"
                 ></div>
                 <span class="cu-value">
-                  {{ row[p.name] != null ? row[p.name].toLocaleString() : '—' }}
+                  {{ row[p.name] != null ? row[p.name].toLocaleString() : "—" }}
                 </span>
               </div>
             </td>
@@ -62,8 +73,9 @@
     </div>
 
     <p class="cu-footnote">
-      CU = Compute Units consumed per transaction on a Solana localnet benchmark.
-      Lower is better. Data from <code>cu-bench/</code> in the dropset-alpha repo.
+      CU = Compute Units consumed per transaction on a Solana localnet
+      benchmark. Lower is better. Data from <code>cu-bench/</code> in the
+      dropset-alpha repo.
     </p>
   </div>
 </template>
@@ -79,16 +91,76 @@ const protocols = [
 
 // Fill in exact numbers from cu-bench/ output — placeholders marked with *
 const rows = [
-  { instruction: "post_order",    category: "Orders",   Dropset: 461,   Phoenix: 19244, Manifest: 12800 },
-  { instruction: "cancel_order",  category: "Orders",   Dropset: 318,   Phoenix: 14200, Manifest: 9400  },
-  { instruction: "batch_replace", category: "Orders",   Dropset: 890,   Phoenix: null,  Manifest: null  },
-  { instruction: "market_order",  category: "Orders",   Dropset: 520,   Phoenix: 21000, Manifest: 13500 },
-  { instruction: "deposit",       category: "Balances", Dropset: 210,   Phoenix: 8400,  Manifest: 5200  },
-  { instruction: "withdraw",      category: "Balances", Dropset: 195,   Phoenix: 7900,  Manifest: 4900  },
-  { instruction: "register_market", category: "Market", Dropset: 1200,  Phoenix: 18000, Manifest: 14000 },
-  { instruction: "expand_market", category: "Market",   Dropset: 480,   Phoenix: null,  Manifest: null  },
-  { instruction: "flush_events",  category: "Market",   Dropset: 290,   Phoenix: 6200,  Manifest: 3800  },
-  { instruction: "close_seat",    category: "Seats",    Dropset: 175,   Phoenix: 5100,  Manifest: 3200  },
+  {
+    instruction: "post_order",
+    category: "Orders",
+    Dropset: 461,
+    Phoenix: 19244,
+    Manifest: 12800,
+  },
+  {
+    instruction: "cancel_order",
+    category: "Orders",
+    Dropset: 318,
+    Phoenix: 14200,
+    Manifest: 9400,
+  },
+  {
+    instruction: "batch_replace",
+    category: "Orders",
+    Dropset: 890,
+    Phoenix: null,
+    Manifest: null,
+  },
+  {
+    instruction: "market_order",
+    category: "Orders",
+    Dropset: 520,
+    Phoenix: 21000,
+    Manifest: 13500,
+  },
+  {
+    instruction: "deposit",
+    category: "Balances",
+    Dropset: 210,
+    Phoenix: 8400,
+    Manifest: 5200,
+  },
+  {
+    instruction: "withdraw",
+    category: "Balances",
+    Dropset: 195,
+    Phoenix: 7900,
+    Manifest: 4900,
+  },
+  {
+    instruction: "register_market",
+    category: "Market",
+    Dropset: 1200,
+    Phoenix: 18000,
+    Manifest: 14000,
+  },
+  {
+    instruction: "expand_market",
+    category: "Market",
+    Dropset: 480,
+    Phoenix: null,
+    Manifest: null,
+  },
+  {
+    instruction: "flush_events",
+    category: "Market",
+    Dropset: 290,
+    Phoenix: 6200,
+    Manifest: 3800,
+  },
+  {
+    instruction: "close_seat",
+    category: "Seats",
+    Dropset: 175,
+    Phoenix: 5100,
+    Manifest: 3200,
+  },
 ];
 
 const categories = ["All", "Orders", "Balances", "Market", "Seats"];
@@ -97,11 +169,11 @@ const activeCategory = ref("All");
 const filteredRows = computed(() =>
   activeCategory.value === "All"
     ? rows
-    : rows.filter((r) => r.category === activeCategory.value)
+    : rows.filter((r) => r.category === activeCategory.value),
 );
 
 const maxCu = computed(() =>
-  Math.max(...rows.flatMap((r) => protocols.map((p) => r[p.name] ?? 0)))
+  Math.max(...rows.flatMap((r) => protocols.map((p) => r[p.name] ?? 0))),
 );
 
 function barWidth(val) {

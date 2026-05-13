@@ -4,12 +4,12 @@ This guide gets you from zero to running the Dropset program locally against a S
 
 ## Prerequisites
 
-| Tool | Version | Install |
-|---|---|---|
-| Rust | stable | [rustup.rs](https://rustup.rs) |
-| Solana CLI | latest | [solana.com/docs](https://solana.com/docs/intro/installation) |
-| Node.js | see `.nvmrc` | [nodejs.org](https://nodejs.org) |
-| pnpm | latest | `npm install -g pnpm` |
+| Tool       | Version      | Install                                                       |
+| ---------- | ------------ | ------------------------------------------------------------- |
+| Rust       | stable       | [rustup.rs](https://rustup.rs)                                |
+| Solana CLI | latest       | [solana.com/docs](https://solana.com/docs/intro/installation) |
+| Node.js    | see `.nvmrc` | [nodejs.org](https://nodejs.org)                              |
+| pnpm       | latest       | `npm install -g pnpm`                                         |
 
 Check your versions:
 

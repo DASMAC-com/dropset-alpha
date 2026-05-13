@@ -31,10 +31,15 @@
             >
               <span class="obv-price">{{ order.price }}</span>
               <div class="obv-bar-wrap">
-                <div class="obv-bar ask-bar" :style="{ width: order.size * 20 + 'px' }"></div>
+                <div
+                  class="obv-bar ask-bar"
+                  :style="{ width: order.size * 20 + 'px' }"
+                ></div>
               </div>
               <span class="obv-size">{{ order.size }} lots</span>
-              <span v-if="order.state" class="obv-state-tag">{{ order.state }}</span>
+              <span v-if="order.state" class="obv-state-tag">{{
+                order.state
+              }}</span>
             </div>
           </transition-group>
         </div>
@@ -55,19 +60,38 @@
             >
               <span class="obv-price">{{ order.price }}</span>
               <div class="obv-bar-wrap">
-                <div class="obv-bar bid-bar" :style="{ width: order.size * 20 + 'px' }"></div>
+                <div
+                  class="obv-bar bid-bar"
+                  :style="{ width: order.size * 20 + 'px' }"
+                ></div>
               </div>
               <span class="obv-size">{{ order.size }} lots</span>
-              <span v-if="order.state" class="obv-state-tag">{{ order.state }}</span>
+              <span v-if="order.state" class="obv-state-tag">{{
+                order.state
+              }}</span>
             </div>
           </transition-group>
         </div>
       </div>
 
       <div class="obv-nav">
-        <button class="obv-nav-btn" :disabled="activeStep === 0" @click="activeStep--">← Prev</button>
-        <span class="obv-step-count">{{ activeStep + 1 }} / {{ steps.length }}</span>
-        <button class="obv-nav-btn" :disabled="activeStep === steps.length - 1" @click="activeStep++">Next →</button>
+        <button
+          class="obv-nav-btn"
+          :disabled="activeStep === 0"
+          @click="activeStep--"
+        >
+          ← Prev
+        </button>
+        <span class="obv-step-count"
+          >{{ activeStep + 1 }} / {{ steps.length }}</span
+        >
+        <button
+          class="obv-nav-btn"
+          :disabled="activeStep === steps.length - 1"
+          @click="activeStep++"
+        >
+          Next →
+        </button>
       </div>
     </div>
   </div>
@@ -81,7 +105,8 @@ const activeStep = ref(0);
 const steps = [
   {
     instruction: "initial state",
-    description: "The order book starts empty. No bids, no asks. A market must be registered before orders can be posted.",
+    description:
+      "The order book starts empty. No bids, no asks. A market must be registered before orders can be posted.",
     spread: "—",
     book: {
       asks: [],
@@ -90,7 +115,8 @@ const steps = [
   },
   {
     instruction: "post_order (ask)",
-    description: "A market maker posts a sell order at price 102 for 5 lots. It rests on the ask side of the book until filled or cancelled.",
+    description:
+      "A market maker posts a sell order at price 102 for 5 lots. It rests on the ask side of the book until filled or cancelled.",
     spread: "—",
     book: {
       asks: [{ id: "a1", price: "102", size: 5, state: "new" }],
@@ -99,7 +125,8 @@ const steps = [
   },
   {
     instruction: "post_order (bid)",
-    description: "The same maker posts a buy order at price 98 for 5 lots. Now there are resting orders on both sides. The spread is 4 ticks.",
+    description:
+      "The same maker posts a buy order at price 98 for 5 lots. Now there are resting orders on both sides. The spread is 4 ticks.",
     spread: "4 ticks",
     book: {
       asks: [{ id: "a1", price: "102", size: 5, state: "" }],
@@ -108,7 +135,8 @@ const steps = [
   },
   {
     instruction: "post_order (tighter)",
-    description: "A second maker tightens the market, posting a bid at 99 and an ask at 101. The spread narrows to 2 ticks.",
+    description:
+      "A second maker tightens the market, posting a bid at 99 and an ask at 101. The spread narrows to 2 ticks.",
     spread: "2 ticks",
     book: {
       asks: [
@@ -116,14 +144,15 @@ const steps = [
         { id: "a1", price: "102", size: 5, state: "" },
       ],
       bids: [
-        { id: "b2", price: "99",  size: 3, state: "new" },
-        { id: "b1", price: "98",  size: 5, state: "" },
+        { id: "b2", price: "99", size: 3, state: "new" },
+        { id: "b1", price: "98", size: 5, state: "" },
       ],
     },
   },
   {
     instruction: "market_order",
-    description: "A taker sends a market buy order for 3 lots. It matches against the best ask (101) immediately and does not rest on the book. The ask at 101 is fully consumed.",
+    description:
+      "A taker sends a market buy order for 3 lots. It matches against the best ask (101) immediately and does not rest on the book. The ask at 101 is fully consumed.",
     spread: "4 ticks",
     book: {
       asks: [
@@ -131,37 +160,35 @@ const steps = [
         { id: "a1", price: "102", size: 5, state: "" },
       ],
       bids: [
-        { id: "b2", price: "99",  size: 3, state: "" },
-        { id: "b1", price: "98",  size: 5, state: "" },
+        { id: "b2", price: "99", size: 3, state: "" },
+        { id: "b1", price: "98", size: 5, state: "" },
       ],
     },
   },
   {
     instruction: "cancel_order",
-    description: "The first maker cancels their bid at 98. The order is removed from the book and their reserved quote tokens return to their available balance.",
+    description:
+      "The first maker cancels their bid at 98. The order is removed from the book and their reserved quote tokens return to their available balance.",
     spread: "3 ticks",
     book: {
-      asks: [
-        { id: "a1", price: "102", size: 5, state: "" },
-      ],
+      asks: [{ id: "a1", price: "102", size: 5, state: "" }],
       bids: [
-        { id: "b2", price: "99",  size: 3, state: "" },
-        { id: "b1", price: "98",  size: 5, state: "cancelled" },
+        { id: "b2", price: "99", size: 3, state: "" },
+        { id: "b1", price: "98", size: 5, state: "cancelled" },
       ],
     },
   },
   {
     instruction: "batch_replace",
-    description: "The second maker uses batch_replace to cancel their remaining orders and post fresh quotes atomically — new ask at 101 for 4 lots, new bid at 99 for 4 lots. No gap between cancel and post.",
+    description:
+      "The second maker uses batch_replace to cancel their remaining orders and post fresh quotes atomically — new ask at 101 for 4 lots, new bid at 99 for 4 lots. No gap between cancel and post.",
     spread: "2 ticks",
     book: {
       asks: [
         { id: "a3", price: "101", size: 4, state: "new" },
         { id: "a1", price: "102", size: 5, state: "" },
       ],
-      bids: [
-        { id: "b3", price: "99",  size: 4, state: "new" },
-      ],
+      bids: [{ id: "b3", price: "99", size: 4, state: "new" }],
     },
   },
 ];
@@ -283,7 +310,7 @@ const steps = [
 .obv-order.filled {
   opacity: 0.4;
   text-decoration: line-through;
-  border-color: #0EA5E9;
+  border-color: #0ea5e9;
   background: rgba(14, 165, 233, 0.08);
 }
 
@@ -311,8 +338,12 @@ const steps = [
   transition: width 0.3s ease;
 }
 
-.ask-bar { background: rgba(239, 68, 68, 0.5); }
-.bid-bar { background: rgba(34, 197, 94, 0.5); }
+.ask-bar {
+  background: rgba(239, 68, 68, 0.5);
+}
+.bid-bar {
+  background: rgba(34, 197, 94, 0.5);
+}
 
 .obv-size {
   font-size: 12px;
@@ -331,7 +362,7 @@ const steps = [
 
 .obv-order.filled .obv-state-tag {
   background: rgba(14, 165, 233, 0.15);
-  color: #0EA5E9;
+  color: #0ea5e9;
 }
 
 .obv-order.cancelled .obv-state-tag {

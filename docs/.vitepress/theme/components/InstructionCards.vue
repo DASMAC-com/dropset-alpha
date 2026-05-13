@@ -22,7 +22,10 @@
         <div class="iac-card-header">
           <div class="iac-card-top">
             <code class="iac-name">{{ ix.name }}</code>
-            <span class="iac-cat-tag" :style="{ background: catColor(ix.category) }">
+            <span
+              class="iac-cat-tag"
+              :style="{ background: catColor(ix.category) }"
+            >
               {{ ix.category }}
             </span>
           </div>
@@ -35,7 +38,9 @@
             <span class="iac-accounts-count">
               {{ ix.accounts.length }} accounts
             </span>
-            <span class="iac-chevron">{{ expanded === ix.name ? '▲' : '▼' }}</span>
+            <span class="iac-chevron">{{
+              expanded === ix.name ? "▲" : "▼"
+            }}</span>
           </div>
         </div>
 
@@ -43,7 +48,11 @@
           <div class="iac-section">
             <div class="iac-section-label">Accounts</div>
             <div class="iac-accounts">
-              <div v-for="acc in ix.accounts" :key="acc.name" class="iac-account">
+              <div
+                v-for="acc in ix.accounts"
+                :key="acc.name"
+                class="iac-account"
+              >
                 <span class="iac-account-name">
                   <code>{{ acc.name }}</code>
                   <span v-if="acc.writable" class="iac-badge write">mut</span>
@@ -58,7 +67,9 @@
           <div class="iac-section" v-if="ix.events.length">
             <div class="iac-section-label">Emits</div>
             <div class="iac-events">
-              <span v-for="ev in ix.events" :key="ev" class="iac-event">{{ ev }}</span>
+              <span v-for="ev in ix.events" :key="ev" class="iac-event">{{
+                ev
+              }}</span>
             </div>
           </div>
 
@@ -81,11 +92,11 @@ const activeCategory = ref("All");
 const categories = ["All", "Market", "Seats", "Balances", "Orders", "Events"];
 
 const catColors = {
-  Market:   "#7C3AED",
-  Seats:    "#0EA5E9",
+  Market: "#7C3AED",
+  Seats: "#0EA5E9",
   Balances: "#F59E0B",
-  Orders:   "#10B981",
-  Events:   "#EC4899",
+  Orders: "#10B981",
+  Events: "#EC4899",
 };
 
 function catColor(cat) {
@@ -96,149 +107,409 @@ const instructions = [
   {
     name: "register_market",
     category: "Market",
-    summary: "Creates and initializes a new Dropset market. Sets mints, tick size, lot size, and initial order book capacity.",
+    summary:
+      "Creates and initializes a new Dropset market. Sets mints, tick size, lot size, and initial order book capacity.",
     cu: 1200,
     accounts: [
-      { name: "market",       writable: true,  signer: false, pda: false, desc: "The new market account (initialized)" },
-      { name: "base_mint",    writable: false, signer: false, pda: false, desc: "SPL mint for the base token" },
-      { name: "quote_mint",   writable: false, signer: false, pda: false, desc: "SPL mint for the quote token" },
-      { name: "base_vault",   writable: true,  signer: false, pda: true,  desc: "Program-owned token account for base" },
-      { name: "quote_vault",  writable: true,  signer: false, pda: true,  desc: "Program-owned token account for quote" },
-      { name: "authority",    writable: true,  signer: true,  pda: false, desc: "Market authority and fee payer" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The new market account (initialized)",
+      },
+      {
+        name: "base_mint",
+        writable: false,
+        signer: false,
+        pda: false,
+        desc: "SPL mint for the base token",
+      },
+      {
+        name: "quote_mint",
+        writable: false,
+        signer: false,
+        pda: false,
+        desc: "SPL mint for the quote token",
+      },
+      {
+        name: "base_vault",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Program-owned token account for base",
+      },
+      {
+        name: "quote_vault",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Program-owned token account for quote",
+      },
+      {
+        name: "authority",
+        writable: true,
+        signer: true,
+        pda: false,
+        desc: "Market authority and fee payer",
+      },
     ],
     events: [],
-    notes: "Must be called before any other instruction on a market. Lot size and tick size cannot be changed after registration.",
+    notes:
+      "Must be called before any other instruction on a market. Lot size and tick size cannot be changed after registration.",
   },
   {
     name: "expand_market",
     category: "Market",
-    summary: "Increases the order book capacity of an existing market by allocating additional sector storage.",
+    summary:
+      "Increases the order book capacity of an existing market by allocating additional sector storage.",
     cu: 480,
     accounts: [
-      { name: "market",    writable: true,  signer: false, pda: false, desc: "The market to expand (writable)" },
-      { name: "authority", writable: true,  signer: true,  pda: false, desc: "Must match the registered market authority" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market to expand (writable)",
+      },
+      {
+        name: "authority",
+        writable: true,
+        signer: true,
+        pda: false,
+        desc: "Must match the registered market authority",
+      },
     ],
     events: [],
-    notes: "Call this when the book is at capacity and post_order returns an insufficient space error.",
+    notes:
+      "Call this when the book is at capacity and post_order returns an insufficient space error.",
   },
   {
     name: "close_seat",
     category: "Seats",
-    summary: "Closes a trader's seat on a market and reclaims the rent lamports to the authority.",
+    summary:
+      "Closes a trader's seat on a market and reclaims the rent lamports to the authority.",
     cu: 175,
     accounts: [
-      { name: "market",    writable: true,  signer: false, pda: false, desc: "The market the seat belongs to" },
-      { name: "seat",      writable: true,  signer: false, pda: true,  desc: "The seat PDA to close (derived: market + trader)" },
-      { name: "trader",    writable: false, signer: true,  pda: false, desc: "The trader who owns the seat" },
-      { name: "recipient", writable: true,  signer: false, pda: false, desc: "Receives the reclaimed rent lamports" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market the seat belongs to",
+      },
+      {
+        name: "seat",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "The seat PDA to close (derived: market + trader)",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "The trader who owns the seat",
+      },
+      {
+        name: "recipient",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "Receives the reclaimed rent lamports",
+      },
     ],
     events: [],
-    notes: "The seat must have no resting orders before it can be closed. Cancel all open orders first.",
+    notes:
+      "The seat must have no resting orders before it can be closed. Cancel all open orders first.",
   },
   {
     name: "deposit",
     category: "Balances",
-    summary: "Transfers base or quote tokens from a trader's wallet into the program's custody.",
+    summary:
+      "Transfers base or quote tokens from a trader's wallet into the program's custody.",
     cu: 210,
     accounts: [
-      { name: "market",          writable: false, signer: false, pda: false, desc: "The market to deposit into" },
-      { name: "trader_balance",  writable: true,  signer: false, pda: true,  desc: "Trader's balance PDA (derived: market + trader)" },
-      { name: "trader_token_acct", writable: true, signer: false, pda: false, desc: "Trader's SPL token account (source)" },
-      { name: "vault",           writable: true,  signer: false, pda: true,  desc: "Program vault for this mint" },
-      { name: "trader",          writable: false, signer: true,  pda: false, desc: "Owner of the token account" },
+      {
+        name: "market",
+        writable: false,
+        signer: false,
+        pda: false,
+        desc: "The market to deposit into",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Trader's balance PDA (derived: market + trader)",
+      },
+      {
+        name: "trader_token_acct",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "Trader's SPL token account (source)",
+      },
+      {
+        name: "vault",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Program vault for this mint",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Owner of the token account",
+      },
     ],
     events: [],
-    notes: "Funds must be deposited before post_order can reserve them for a resting order.",
+    notes:
+      "Funds must be deposited before post_order can reserve them for a resting order.",
   },
   {
     name: "withdraw",
     category: "Balances",
-    summary: "Transfers settled base or quote tokens from the program back to a trader's wallet.",
+    summary:
+      "Transfers settled base or quote tokens from the program back to a trader's wallet.",
     cu: 195,
     accounts: [
-      { name: "market",          writable: false, signer: false, pda: false, desc: "The market to withdraw from" },
-      { name: "trader_balance",  writable: true,  signer: false, pda: true,  desc: "Trader's balance PDA" },
-      { name: "trader_token_acct", writable: true, signer: false, pda: false, desc: "Trader's SPL token account (destination)" },
-      { name: "vault",           writable: true,  signer: false, pda: true,  desc: "Program vault for this mint" },
-      { name: "trader",          writable: false, signer: true,  pda: false, desc: "Must match balance account owner" },
+      {
+        name: "market",
+        writable: false,
+        signer: false,
+        pda: false,
+        desc: "The market to withdraw from",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Trader's balance PDA",
+      },
+      {
+        name: "trader_token_acct",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "Trader's SPL token account (destination)",
+      },
+      {
+        name: "vault",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Program vault for this mint",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Must match balance account owner",
+      },
     ],
     events: [],
-    notes: "Only settled (not reserved) funds can be withdrawn. Reserved funds are unlocked when orders are cancelled or filled.",
+    notes:
+      "Only settled (not reserved) funds can be withdrawn. Reserved funds are unlocked when orders are cancelled or filled.",
   },
   {
     name: "post_order",
     category: "Orders",
-    summary: "Posts a resting limit order on the bid or ask side of the book at a specified price and size.",
+    summary:
+      "Posts a resting limit order on the bid or ask side of the book at a specified price and size.",
     cu: 461,
     accounts: [
-      { name: "market",         writable: true,  signer: false, pda: false, desc: "The market (order book mutated)" },
-      { name: "seat",           writable: false, signer: false, pda: true,  desc: "Trader's seat — must exist and be valid" },
-      { name: "trader_balance", writable: true,  signer: false, pda: true,  desc: "Funds reserved from available balance" },
-      { name: "trader",         writable: false, signer: true,  pda: false, desc: "Must match seat's recorded trader" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market (order book mutated)",
+      },
+      {
+        name: "seat",
+        writable: false,
+        signer: false,
+        pda: true,
+        desc: "Trader's seat — must exist and be valid",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Funds reserved from available balance",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Must match seat's recorded trader",
+      },
     ],
     events: ["OrderPlaced"],
-    notes: "Uses the price/client-helpers encoding — pass priceMantissa, baseScalar, baseExponentBiased, quoteExponentBiased from toOrderInfoArgs().",
+    notes:
+      "Uses the price/client-helpers encoding — pass priceMantissa, baseScalar, baseExponentBiased, quoteExponentBiased from toOrderInfoArgs().",
   },
   {
     name: "cancel_order",
     category: "Orders",
-    summary: "Removes a resting order from the book by order index. Reserved funds return to available balance.",
+    summary:
+      "Removes a resting order from the book by order index. Reserved funds return to available balance.",
     cu: 318,
     accounts: [
-      { name: "market",         writable: true,  signer: false, pda: false, desc: "The market (order removed from book)" },
-      { name: "seat",           writable: false, signer: false, pda: true,  desc: "Trader's seat" },
-      { name: "trader_balance", writable: true,  signer: false, pda: true,  desc: "Reserved funds returned here" },
-      { name: "trader",         writable: false, signer: true,  pda: false, desc: "Must own the order being cancelled" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market (order removed from book)",
+      },
+      {
+        name: "seat",
+        writable: false,
+        signer: false,
+        pda: true,
+        desc: "Trader's seat",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Reserved funds returned here",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Must own the order being cancelled",
+      },
     ],
     events: ["OrderCancelled"],
-    notes: "Requires the order's sector index — get this from OrderView.index via toMarketViewAll().",
+    notes:
+      "Requires the order's sector index — get this from OrderView.index via toMarketViewAll().",
   },
   {
     name: "batch_replace",
     category: "Orders",
-    summary: "Atomically cancels a set of resting orders and posts new ones in a single transaction.",
+    summary:
+      "Atomically cancels a set of resting orders and posts new ones in a single transaction.",
     cu: 890,
     accounts: [
-      { name: "market",         writable: true,  signer: false, pda: false, desc: "The market" },
-      { name: "seat",           writable: false, signer: false, pda: true,  desc: "Trader's seat" },
-      { name: "trader_balance", writable: true,  signer: false, pda: true,  desc: "Balance updated atomically" },
-      { name: "trader",         writable: false, signer: true,  pda: false, desc: "Must own all orders being cancelled" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market",
+      },
+      {
+        name: "seat",
+        writable: false,
+        signer: false,
+        pda: true,
+        desc: "Trader's seat",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Balance updated atomically",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Must own all orders being cancelled",
+      },
     ],
     events: ["OrderCancelled", "OrderPlaced"],
-    notes: "The primary instruction for market makers. Eliminates the latency gap between cancel and re-quote that would exist with separate transactions.",
+    notes:
+      "The primary instruction for market makers. Eliminates the latency gap between cancel and re-quote that would exist with separate transactions.",
   },
   {
     name: "market_order",
     category: "Orders",
-    summary: "Executes a market order — matches immediately against the best resting orders on the opposite side.",
+    summary:
+      "Executes a market order — matches immediately against the best resting orders on the opposite side.",
     cu: 520,
     accounts: [
-      { name: "market",         writable: true,  signer: false, pda: false, desc: "The market (matched orders removed)" },
-      { name: "seat",           writable: false, signer: false, pda: true,  desc: "Taker's seat" },
-      { name: "trader_balance", writable: true,  signer: false, pda: true,  desc: "Taker's balance updated on fill" },
-      { name: "trader",         writable: false, signer: true,  pda: false, desc: "The taker" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market (matched orders removed)",
+      },
+      {
+        name: "seat",
+        writable: false,
+        signer: false,
+        pda: true,
+        desc: "Taker's seat",
+      },
+      {
+        name: "trader_balance",
+        writable: true,
+        signer: false,
+        pda: true,
+        desc: "Taker's balance updated on fill",
+      },
+      {
+        name: "trader",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "The taker",
+      },
     ],
     events: ["Fill"],
-    notes: "Does not rest on the book. The order is fully or partially filled against resting orders at the best available prices.",
+    notes:
+      "Does not rest on the book. The order is fully or partially filled against resting orders at the best available prices.",
   },
   {
     name: "flush_events",
     category: "Events",
-    summary: "Removes processed events from the market's event queue and reclaims space for new events.",
+    summary:
+      "Removes processed events from the market's event queue and reclaims space for new events.",
     cu: 290,
     accounts: [
-      { name: "market",    writable: true,  signer: false, pda: false, desc: "The market whose event queue is flushed" },
-      { name: "authority", writable: false, signer: true,  pda: false, desc: "Any authorized caller (crank or trader)" },
+      {
+        name: "market",
+        writable: true,
+        signer: false,
+        pda: false,
+        desc: "The market whose event queue is flushed",
+      },
+      {
+        name: "authority",
+        writable: false,
+        signer: true,
+        pda: false,
+        desc: "Any authorized caller (crank or trader)",
+      },
     ],
     events: [],
-    notes: "Call this regularly — either from a dedicated crank service or after each trade. If the event queue fills up, new fills cannot be written.",
+    notes:
+      "Call this regularly — either from a dedicated crank service or after each trade. If the event queue fills up, new fills cannot be written.",
   },
 ];
 
 const filteredInstructions = computed(() =>
   activeCategory.value === "All"
     ? instructions
-    : instructions.filter((ix) => ix.category === activeCategory.value)
+    : instructions.filter((ix) => ix.category === activeCategory.value),
 );
 </script>
 
@@ -282,7 +553,9 @@ const filteredInstructions = computed(() =>
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .iac-card:hover {
@@ -296,7 +569,9 @@ const filteredInstructions = computed(() =>
 }
 
 @media (max-width: 640px) {
-  .iac-card.expanded { grid-column: span 1; }
+  .iac-card.expanded {
+    grid-column: span 1;
+  }
 }
 
 .iac-card-header {
@@ -414,13 +689,31 @@ const filteredInstructions = computed(() =>
   font-family: inherit;
 }
 
-.iac-badge.write { background: rgba(245, 158, 11, 0.15); color: #B45309; }
-.iac-badge.sign  { background: rgba(16, 185, 129, 0.15); color: #047857; }
-.iac-badge.pda   { background: rgba(124, 58, 237, 0.12); color: #6D28D9; }
+.iac-badge.write {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+.iac-badge.sign {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+.iac-badge.pda {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
 
-.dark .iac-badge.write { background: rgba(245, 158, 11, 0.2); color: #FCD34D; }
-.dark .iac-badge.sign  { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
-.dark .iac-badge.pda   { background: rgba(124, 58, 237, 0.2); color: #C4B5FD; }
+.dark .iac-badge.write {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+.dark .iac-badge.sign {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+.dark .iac-badge.pda {
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+}
 
 .iac-account-desc {
   color: var(--vp-c-text-3);
@@ -438,14 +731,14 @@ const filteredInstructions = computed(() =>
   font-size: 12px;
   font-family: var(--vp-font-family-mono);
   background: rgba(236, 72, 153, 0.1);
-  color: #BE185D;
+  color: #be185d;
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .dark .iac-event {
   background: rgba(236, 72, 153, 0.15);
-  color: #F9A8D4;
+  color: #f9a8d4;
 }
 
 .iac-notes {

@@ -49,12 +49,12 @@ Before you can post orders, you deposit base or quote tokens into the program. T
 
 ## Market Order vs. Post Order
 
-|                  | `post_order`           | `market_order`                    |
-| ---------------- | ---------------------- | --------------------------------- |
-| Type             | Limit order            | Market order                      |
-| Rests on book?   | Yes, until filled or cancelled | No — executes immediately |
-| Price control    | Exact price specified  | Fills at best available           |
-| Common use       | Market making          | Taker execution                   |
+|                | `post_order`                   | `market_order`            |
+| -------------- | ------------------------------ | ------------------------- |
+| Type           | Limit order                    | Market order              |
+| Rests on book? | Yes, until filled or cancelled | No — executes immediately |
+| Price control  | Exact price specified          | Fills at best available   |
+| Common use     | Market making                  | Taker execution           |
 
 ## Batch Replace
 

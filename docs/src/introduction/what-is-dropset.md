@@ -19,13 +19,13 @@ Solana's combination of high throughput and low latency makes it one of the few 
 
 Dropset is structured as a Rust workspace with clearly separated concerns:
 
-| Component | What it does |
-|---|---|
-| `dropset-program` | The on-chain Solana program |
-| `dropset-interface` | Client-agnostic instruction schemas and account types |
+| Component            | What it does                                            |
+| -------------------- | ------------------------------------------------------- |
+| `dropset-program`    | The on-chain Solana program                             |
+| `dropset-interface`  | Client-agnostic instruction schemas and account types   |
 | `instruction-macros` | Proc macros that generate typed builders and validators |
-| `dropset-client` | Rust client for local testing and RPC integration |
-| `ts-sdk` | TypeScript SDK for building web and bot clients |
-| `services` | Experimental faucet, maker-bot, and taker-bot |
+| `dropset-client`     | Rust client for local testing and RPC integration       |
+| `ts-sdk`             | TypeScript SDK for building web and bot clients         |
+| `services`           | Experimental faucet, maker-bot, and taker-bot           |
 
 The next section walks through how these pieces connect at the architecture level.
