@@ -52,7 +52,10 @@ fn test_fill_event_tagged_len_matches_written_bytes() {
     let tagged = event.pack_tagged();
 
     assert_eq!(FillEventInstructionData::LEN, 22);
-    assert_eq!(FillEventInstructionData::LEN_WITH_TAG, FillEventInstructionData::LEN + 1);
+    assert_eq!(
+        FillEventInstructionData::LEN_WITH_TAG,
+        FillEventInstructionData::LEN + 1
+    );
     assert_eq!(untagged.len(), FillEventInstructionData::LEN);
     assert_eq!(tagged.len(), FillEventInstructionData::LEN_WITH_TAG);
     assert_eq!(tagged[0], FillEventInstructionData::TAG_BYTE);

@@ -1,0 +1,77 @@
+name: Benchmarks
+
+on:
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "program/**"
+      - "cu-bench/**"
+      - "client/**"
+      - "interface/**"
+      - "instruction-macros/**"
+      - "price/**"
+      - "services/**"
+      - "transaction-parser/**"
+      - ".github/workflows/bench.yml"
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  SOLANA_VERSION: v3.1.9
+
+jobs:
+  bench:
+    name: CU Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@1.86.0
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache Solana toolchain
+        id: solana-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/solana/install
+            ~/.cache/solana
+          key: solana-${{ env.SOLANA_VERSION }}-${{ runner.os }}
+
+      - name: Install Solana CLI
+        if: steps.solana-cache.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
+
+      - name: Add Solana to PATH
+        run: echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - run: solana --version
+
+      - name: Bench dropset
+        run: pnpm bench:dropset
+      - name: Bench manifest
+        run: pnpm bench:manifest
+      - name: Bench phoenix
+        run: pnpm bench:phoenix
+      - name: Bench pack-orders
+        run: pnpm bench:pack-orders
+      - name: Bench to-order-info
+        run: pnpm bench:to-order-info
