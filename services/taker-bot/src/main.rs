@@ -1,25 +1,30 @@
+pub mod archetype;
 pub mod config;
 pub mod taker;
 pub mod taker_context;
 
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
-use client::transactions::{
-    CustomRpcClient,
-    SendTransactionConfig,
-    TransactionSubmitError,
+use client::{
+    context::market::MarketContext,
+    transactions::{CustomRpcClient, SendTransactionConfig, TransactionSubmitError},
 };
 use dropset_interface::error::DropsetError;
-use solana_client::{
-    nonblocking::rpc_client::RpcClient,
-    rpc_config::CommitmentConfig,
-};
+use dropset_services_shared::faucet_client::FaucetClient;
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::CommitmentConfig};
 use spl_token_2022_interface::error::TokenError as Token2022Error;
 use spl_token_interface::error::TokenError;
+use tracing::Instrument;
 use tracing_subscriber::EnvFilter;
+use transaction_parser::events::dropset_event::DropsetEvent;
 
 use crate::{
-    config::get_validated_config,
+    config::{get_validated_config, ValidAgent},
+    taker::{TakerStepStats, TakerStrategy},
     taker_context::TakerContext,
 };
 
@@ -35,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let rpc = CustomRpcClient::new(
+    let rpc = Arc::new(CustomRpcClient::new(
         Some(RpcClient::new_with_commitment(
             cfg.shared.rpc_url.clone().to_string(),
             CommitmentConfig::confirmed(),
@@ -45,45 +50,202 @@ async fn main() -> anyhow::Result<()> {
             debug_logs: Some(cfg.verbose),
             program_id_filter: HashSet::from([dropset_interface::program::ID]),
         }),
-    );
+    ));
 
-    let taker_ctx = TakerContext::init(rpc, cfg.shared).await?;
-    let mut strategy = cfg.taker_strategy;
+    let faucet_client = match FaucetClient::new(&rpc, &cfg.shared).await {
+        Ok(c) => Some(Arc::new(c)),
+        Err(e) => {
+            tracing::warn!(error = %e, "Faucet client is unavailable");
+            None
+        }
+    };
 
+    let market_ctx = Arc::new(MarketContext::new(
+        cfg.shared.base.clone(),
+        cfg.shared.quote.clone(),
+    ));
+
+    tracing::info!(count = cfg.agents.len(), "Launching taker agents");
+
+    let mut handles = Vec::with_capacity(cfg.agents.len());
+    for ValidAgent {
+        name,
+        keypair,
+        strategy,
+    } in cfg.agents
+    {
+        let ctx = TakerContext::new(
+            rpc.clone(),
+            market_ctx.clone(),
+            faucet_client.clone(),
+            keypair,
+        );
+        let span = tracing::info_span!("agent", name = %name);
+        tracing::info!(agent = %name, address = %ctx.address(), "Agent starting");
+        let task = agent_loop(name.clone(), ctx, strategy, cfg.verbose).instrument(span);
+        handles.push((name, tokio::spawn(task)));
+    }
+
+    // Wait for every agent task. If a task panics, log and keep the remaining
+    // agents running — a single misbehaving archetype shouldn't kill the
+    // container. The process exits once the last agent has ended.
+    for (name, handle) in handles {
+        match handle.await {
+            Ok(()) => tracing::warn!(agent = %name, "Agent exited cleanly"),
+            Err(e) if e.is_panic() => {
+                tracing::error!(agent = %name, error = %e, "Agent panicked");
+            }
+            Err(e) => tracing::error!(agent = %name, error = %e, "Agent join error"),
+        }
+    }
+
+    Ok(())
+}
+
+/// Runs a single agent's strategy loop forever. Non-fatal errors (empty book,
+/// out-of-token) are logged and the loop keeps going; a panic is caught by
+/// the `tokio::spawn` `JoinHandle` in `main`.
+async fn agent_loop(name: String, ctx: TakerContext, mut strategy: TakerStrategy, verbose: bool) {
+    let mut metrics = AgentMetrics::new();
     loop {
         strategy.tick().await;
-        for fill in strategy.step() {
-            match taker_ctx.submit_fill(&fill).await {
-                Ok(_) => {}
+        let planned = strategy.begin_tick();
+        let mut step_stats = planned.stats;
+        // Reuse one snapshot across child attempts within a tick; only refetch
+        // after a successful fill submission consumes depth.
+        let mut snapshot: Option<crate::taker::MarketSnapshot> = None;
 
-                // Note that this is a match on the token program error, not a dropset error,
-                // because takers spend with their token balances, not their seat balances.
-                Err(TransactionSubmitError::Token(error)) => match error {
-                    TokenError::InsufficientFunds => {
-                        taker_ctx.submit_faucet_request(fill.side).await?;
+        for _ in 0..planned.attempts {
+            if snapshot.is_none() {
+                match ctx.fetch_market_snapshot().await {
+                    Ok(s) => snapshot = Some(s),
+                    Err(e) => {
+                        tracing::error!(agent = %name, error = %e, "Failed to fetch market snapshot");
+                        break;
                     }
-                    _ => return Err(error.into()),
-                },
-                // Note that this is a match on the token program error, not a dropset error,
-                // because takers spend with their token balances, not their seat balances.
-                Err(TransactionSubmitError::Token2022(error)) => match error {
-                    Token2022Error::InsufficientFunds => {
-                        taker_ctx.submit_faucet_request(fill.side).await?;
+                }
+            }
+            let snap = snapshot.as_ref().expect("snapshot is set above");
+
+            let attempt = strategy.execute_attempt(snap);
+            step_stats.accumulate(attempt.stats);
+
+            let mut consumed_depth = false;
+            for fill in attempt.fills.iter().cloned() {
+                match ctx.submit_fill(&fill).await {
+                    Ok(result) => {
+                        strategy.confirm_attempt(&attempt);
+                        step_stats.submitted_children += 1;
+                        metrics.observe_execution(&result);
+                        consumed_depth = true;
                     }
-                    _ => return Err(error.into()),
-                },
-                Err(TransactionSubmitError::Dropset(err)) => match err {
-                    // Book is dry — most likely there is no liquidity to fill against, skip.
-                    DropsetError::AmountCannotBeZero => {
-                        let log_message = "Fill returned zero amount, book likely empty — skipping";
-                        if cfg.verbose {
-                            tracing::error!("{log_message}");
+
+                    // The taker's ATA is out of the token being spent; ask the
+                    // faucet to top it up so the next tick can trade again.
+                    Err(TransactionSubmitError::Token(TokenError::InsufficientFunds))
+                    | Err(TransactionSubmitError::Token2022(Token2022Error::InsufficientFunds)) => {
+                        metrics.faucet_refills += 1;
+                        if let Err(e) = ctx.submit_faucet_request(fill.side).await {
+                            tracing::error!(agent = %name, error = ?e, "Faucet request failed");
                         }
                     }
-                    _ => return Err(TransactionSubmitError::Dropset(err).into()),
-                },
-                Err(e) => return Err(e.into()),
+
+                    // Book is dry — no liquidity to fill against on this side.
+                    Err(TransactionSubmitError::Dropset(DropsetError::AmountCannotBeZero)) => {
+                        metrics.skipped_empty_book += 1;
+                        if verbose {
+                            tracing::error!(
+                                agent = %name,
+                                "Fill returned zero amount, book likely empty — skipping"
+                            );
+                        }
+                    }
+
+                    Err(e) => {
+                        tracing::error!(agent = %name, error = ?e, "Order submission error");
+                    }
+                }
+            }
+            if consumed_depth {
+                snapshot = None;
             }
         }
+
+        metrics.observe_step(step_stats);
+        metrics.maybe_log(&name);
+    }
+}
+
+struct AgentMetrics {
+    ticks: u64,
+    submitted_children: u64,
+    parent_orders_started: u64,
+    skipped_empty_book: u64,
+    skipped_wide_spread: u64,
+    skipped_cooldown: u64,
+    swept_levels: u64,
+    base_filled: u64,
+    quote_filled: u64,
+    faucet_refills: u64,
+    last_report: Instant,
+}
+
+impl AgentMetrics {
+    fn new() -> Self {
+        Self {
+            ticks: 0,
+            submitted_children: 0,
+            parent_orders_started: 0,
+            skipped_empty_book: 0,
+            skipped_wide_spread: 0,
+            skipped_cooldown: 0,
+            swept_levels: 0,
+            base_filled: 0,
+            quote_filled: 0,
+            faucet_refills: 0,
+            last_report: Instant::now(),
+        }
+    }
+
+    fn observe_step(&mut self, stats: TakerStepStats) {
+        self.ticks += 1;
+        self.submitted_children += stats.submitted_children;
+        self.parent_orders_started += stats.parent_orders_started;
+        self.skipped_empty_book += stats.skipped_empty_book;
+        self.skipped_wide_spread += stats.skipped_wide_spread;
+        self.skipped_cooldown += stats.skipped_cooldown;
+    }
+
+    fn observe_execution(&mut self, result: &client::transactions::ParsedTransactionWithEvents) {
+        for event in &result.events {
+            if let DropsetEvent::Fill(fill) = event {
+                self.swept_levels += 1;
+                self.base_filled += fill.base_filled;
+                self.quote_filled += fill.quote_filled;
+            }
+        }
+    }
+
+    fn maybe_log(&mut self, name: &str) {
+        if self.last_report.elapsed() < Duration::from_secs(15) {
+            return;
+        }
+
+        tracing::info!(
+            agent = %name,
+            ticks = self.ticks,
+            parents = self.parent_orders_started,
+            submitted = self.submitted_children,
+            swept_levels = self.swept_levels,
+            base_filled = self.base_filled,
+            quote_filled = self.quote_filled,
+            skipped_empty_book = self.skipped_empty_book,
+            skipped_wide_spread = self.skipped_wide_spread,
+            skipped_cooldown = self.skipped_cooldown,
+            faucet_refills = self.faucet_refills,
+            "Agent execution stats"
+        );
+
+        self.last_report = Instant::now();
     }
 }

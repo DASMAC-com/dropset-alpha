@@ -1,26 +1,15 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use client::{
     fmt_kv,
-    transactions::{
-        CustomRpcClient,
-        ParsedTransactionWithEvents,
-        TransactionSubmitError,
-    },
+    transactions::{CustomRpcClient, ParsedTransactionWithEvents, TransactionSubmitError},
 };
 use dropset_interface::error::DropsetError;
 use dropset_services_shared::faucet_client::FaucetClient;
 use solana_keypair::Signer;
 use tokio::sync::watch;
 
-use crate::{
-    maker_context::MakerContext,
-    TaskUpdate,
-};
+use crate::{maker_context::MakerContext, TaskUpdate};
 
 /// The indefinite task loop to update orders whenever the [`watch::Receiver`] receives a message
 /// from another task that indicates a [`TaskUpdate`] has occurred. Order submissions are
@@ -36,11 +25,27 @@ pub async fn throttled_order_update(
     faucet_client: Option<FaucetClient>,
 ) -> anyhow::Result<()> {
     loop {
-        // Wait until the value has changed. Not equality wise, but a sender posting a new value.
-        rx.changed().await?;
+        let quote_ttl = maker_ctx.try_borrow()?.quote_ttl();
+        let update = match tokio::time::timeout(quote_ttl, rx.changed()).await {
+            Ok(res) => {
+                res?;
+                Some(*rx.borrow())
+            }
+            Err(_) => None,
+        };
 
-        let update = *rx.borrow();
-        maker_ctx.try_borrow_mut()?.logger.log(update.to_string());
+        {
+            let mut ctx = maker_ctx.try_borrow_mut()?;
+            match update {
+                Some(update) => ctx.logger.log(update.to_string()),
+                None if ctx.should_refresh_quotes() => ctx.logger.log(fmt_kv!(
+                    "Quote TTL",
+                    "refreshing resting liquidity",
+                    client::LogColor::Info,
+                )),
+                None => continue,
+            }
+        }
 
         // Then cancel all orders and post new ones.
         let (maker_keypair, instructions) = {
@@ -59,6 +64,7 @@ pub async fn throttled_order_update(
                     let balance = rpc.client.get_balance(&maker_keypair.pubkey()).await;
                     let mut ctx = maker_ctx.try_borrow_mut()?;
                     ctx.needs_expand = false;
+                    ctx.mark_orders_submitted();
                     if let Ok(balance) = balance {
                         ctx.update_sol_balance(balance);
                     }

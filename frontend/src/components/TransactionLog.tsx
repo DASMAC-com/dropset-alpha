@@ -4,6 +4,8 @@ import type { Address } from "@solana/addresses";
 import { Decimal } from "decimal.js";
 import { Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useAgentRegistry } from "@/lib/hooks/use-agent-registry";
+import type { AgentRegistryEntry } from "@/lib/queries/fetch-agent-registry";
 import { solscanTxUrl } from "@/lib/solana/explorer";
 import { truncateAddress } from "@/lib/solana/format";
 import { useMarketStore } from "@/lib/stores/market-store";
@@ -45,6 +47,8 @@ type FillData = {
   relativeTime: string;
   signature: string;
   accounts: ResolvedAccount[];
+  trader: AgentRegistryEntry | null;
+  signerAddress: Address | null;
   lastFillPrice: Decimal;
   discriminator: number;
   isBuy: boolean;
@@ -55,6 +59,35 @@ type FillData = {
   quoteFilledUi: string;
   encodedPrice: number;
 };
+
+const TAKER_PERSONALITY_COLORS: Record<string, string> = {
+  retail: "border-sky-500/30 bg-sky-500/15 text-sky-400",
+  whale: "border-violet-500/30 bg-violet-500/15 text-violet-400",
+  sniper: "border-amber-500/30 bg-amber-500/15 text-amber-400",
+  noise: "border-zinc-500/30 bg-zinc-500/15 text-zinc-400",
+  passive: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+  aggressive: "border-rose-500/30 bg-rose-500/15 text-rose-400",
+};
+
+const MAKER_BADGE = "border-indigo-500/30 bg-indigo-500/15 text-indigo-400";
+const UNKNOWN_BADGE = "border-border bg-muted/40 text-muted-fg";
+
+function traderBadgeClass(trader: AgentRegistryEntry | null): string {
+  if (!trader) return UNKNOWN_BADGE;
+  if (trader.kind === "maker") return MAKER_BADGE;
+  // Agent names look like `retail-1`, `whale-1`, etc. Color by the archetype prefix.
+  const archetype = trader.name.split("-")[0];
+  return TAKER_PERSONALITY_COLORS[archetype] ?? UNKNOWN_BADGE;
+}
+
+function traderLabel(
+  trader: AgentRegistryEntry | null,
+  signerAddress: Address | null,
+): string {
+  if (trader) return trader.name;
+  if (signerAddress) return truncateAddress(signerAddress);
+  return "unknown";
+}
 
 function FillEntry({
   fill,
@@ -87,6 +120,13 @@ function FillEntry({
       />
       <span className="w-16 shrink-0 font-mono text-muted-fg text-xs tabular-nums">
         {fill.relativeTime}
+      </span>
+
+      <span
+        className={`z-10 w-24 shrink-0 truncate rounded border px-1.5 py-0.5 text-center font-mono text-[10px] uppercase tracking-wider ${traderBadgeClass(fill.trader)}`}
+        title={fill.signerAddress ?? undefined}
+      >
+        {traderLabel(fill.trader, fill.signerAddress)}
       </span>
 
       <span className={`w-20 shrink-0 font-mono text-xs tabular-nums ${color}`}>
@@ -146,12 +186,25 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
   const baseDecimals = market?.base.decimals ?? 0;
   const quoteDecimals = market?.quote.decimals ?? 0;
 
+  const { byPubkey: agentByPubkey } = useAgentRegistry();
+
   const fills: (FillData & { key: string })[] = useMemo(
     () =>
       transactions
         .filter((tx) => !tx.err)
-        .flatMap((tx) =>
-          tx.parsed.dropsetEvents
+        .flatMap((tx) => {
+          // The fill-emitting transaction is a taker market order, so the
+          // first writable signer (i.e. the fee payer) is the trader we want
+          // to label. `parsed.accounts` from `resolveAccounts` is ordered with
+          // writable signers first.
+          const signer =
+            tx.parsed.accounts.find((a) => a.signer && a.writable) ?? null;
+          const signerAddress = signer?.address ?? null;
+          const trader = signerAddress
+            ? (agentByPubkey.get(signerAddress) ?? null)
+            : null;
+
+          return tx.parsed.dropsetEvents
             .filter((e) => e.kind === "fill")
             .map((fill, i) => ({
               ...fill.data,
@@ -159,6 +212,8 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
               relativeTime: tx.blockTime ? relativeTime(tx.blockTime) : "—",
               signature: tx.signature,
               accounts: tx.parsed.accounts,
+              trader,
+              signerAddress,
               lastFillPrice: encodedU32ToDecimal(fill.data.encodedPrice),
               baseFilledUi: new Decimal(fill.data.baseFilled.toString())
                 .div(new Decimal(10).pow(baseDecimals))
@@ -168,9 +223,9 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
                 .div(new Decimal(10).pow(quoteDecimals))
                 .toDecimalPlaces(quoteDecimals)
                 .toString(),
-            })),
-        ),
-    [transactions, baseDecimals, quoteDecimals],
+            }));
+        }),
+    [transactions, baseDecimals, quoteDecimals, agentByPubkey],
   );
 
   return (
@@ -207,6 +262,9 @@ export function TransactionLog({ marketAddress }: { marketAddress: Address }) {
         {fills.length > 0 && (
           <div className="flex items-center gap-3 border-border/50 border-b px-3 py-1.5">
             <span className="w-16 shrink-0 text-muted-fg/60 text-xs">Time</span>
+            <span className="w-24 shrink-0 text-center text-muted-fg/60 text-xs">
+              Trader
+            </span>
             <span className="w-20 shrink-0 text-muted-fg/60 text-xs">
               Price
             </span>

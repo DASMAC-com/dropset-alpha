@@ -4,6 +4,37 @@ A prototype market-making bot implementing a naive version of the
 [Avellaneda-Stoikov model] for a `dropset` market. Intended for
 experimentation and local testing, not production use.
 
+## Quoting model
+
+In addition to the Avellaneda-Stoikov reservation price, the bot adapts its
+quotes to local-book conditions:
+
+- **Effective mid** blends an external fair-value anchor (OANDA `S5`) with a
+  local microprice from the on-chain book, weighted by `local_book_weight_bps`.
+- **Dynamic half-spread** widens with recent local-fair-price volatility and
+  with one-sided "hit pressure" (counted by comparing maker-owned depth across
+  market updates).
+- **Hit detection** flags which side was most recently lifted/hit, applies a
+  per-side refill delay, and skips re-posting at the touch on that side until
+  the delay elapses.
+- **Quote TTL** refreshes resting liquidity even without a websocket-triggered
+  state change, so quotes age out instead of going stale.
+- **Per-level jitter** (size and price) is applied across the ladder so the
+  ladder looks less robotic.
+
+### Style presets
+
+Each maker run picks a `style` preset (overridable per field in `config.toml`):
+
+| Style       | Quote TTL | Refill delay (min–max) | `replenish_ratio_bps` | `hit_widening_bps` | Max quote levels | Spread multiplier |
+|-------------|-----------|------------------------|-----------------------|--------------------|------------------|-------------------|
+| `tight`     | 1 500 ms  | 250–900 ms             | 9 000                 | 10                 | 10               | 0.90× |
+| `balanced`  | 2 500 ms  | 600–2 000 ms           | 7 000                 | 18                 | 8                | 1.20× |
+| `defensive` | 3 500 ms  | 1 200–4 000 ms         | 5 500                 | 28                 | 6                | 1.75× |
+
+See `src/config.rs` (`MakerStyleDefaults`) for the full preset values and
+`config.toml.example` for descriptions of the override knobs.
+
 ## Running
 
 1. If you're using Docker Desktop, make sure `Enable host networking` is checked

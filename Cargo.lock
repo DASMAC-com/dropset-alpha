@@ -1608,6 +1608,7 @@ dependencies = [
  "dropset-services-shared",
  "itertools 0.14.0",
  "price",
+ "rand 0.10.0",
  "reqwest 0.13.2",
  "rust_decimal",
  "serde",
@@ -1675,6 +1676,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "transaction-parser",
 ]
 
 [[package]]

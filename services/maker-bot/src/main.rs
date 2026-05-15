@@ -11,38 +11,21 @@ pub mod order_flow;
 pub mod tasks;
 pub mod utils;
 
-use std::{
-    cell::RefCell,
-    collections::HashSet,
-    fmt,
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashSet, fmt, rc::Rc};
 
-use client::transactions::{
-    CustomRpcClient,
-    SendTransactionConfig,
-};
-use dropset_services_shared::{
-    faucet_client::FaucetClient,
-    oanda_types::CandlestickGranularity,
-};
+use client::transactions::{CustomRpcClient, SendTransactionConfig};
+use dropset_services_shared::{faucet_client::FaucetClient, oanda_types::CandlestickGranularity};
 use maker_state::*;
 use order_flow::*;
 use rust_decimal::Decimal;
-use solana_client::{
-    nonblocking::rpc_client::RpcClient,
-    rpc_config::CommitmentConfig,
-};
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::CommitmentConfig};
 use tokio::sync::watch;
 use tracing_subscriber::EnvFilter;
 
-use crate::{
-    config::get_validated_config,
-    maker_context::MakerContext,
-};
+use crate::{config::get_validated_config, maker_context::MakerContext};
 
-pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::M15;
-pub const NUM_CANDLES: u64 = 1;
+pub const GRANULARITY: CandlestickGranularity = CandlestickGranularity::S5;
+pub const NUM_CANDLES: u64 = 12;
 
 #[derive(Debug, Copy, Clone)]
 pub enum TaskUpdate {
@@ -50,10 +33,7 @@ pub enum TaskUpdate {
     Price(Decimal),
 }
 
-use client::{
-    fmt_kv,
-    LogColor,
-};
+use client::{fmt_kv, LogColor};
 
 impl fmt::Display for TaskUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

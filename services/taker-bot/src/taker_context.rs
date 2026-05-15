@@ -1,63 +1,119 @@
+use std::sync::Arc;
+
 use client::{
     context::market::MarketContext,
-    transactions::{
-        CustomRpcClient,
-        ParsedTransactionWithEvents,
-        TransactionSubmitError,
-    },
+    transactions::{CustomRpcClient, ParsedTransactionWithEvents, TransactionSubmitError},
 };
 use dropset_interface::instructions::MarketOrderInstructionData;
-use dropset_services_shared::{
-    config::ValidSharedConfig,
-    faucet_client::FaucetClient,
-};
+use dropset_services_shared::faucet_client::FaucetClient;
+use price::client_helpers::try_encoded_u32_to_decoded_decimal;
+use rust_decimal::{prelude::ToPrimitive, Decimal};
 use solana_address::Address;
-use solana_keypair::{
-    Keypair,
-    Signer,
-};
+use solana_keypair::{Keypair, Signer};
+use transaction_parser::views::try_market_view_all_from_owner_and_data;
 
-use crate::taker::{
-    Side,
-    TakerFill,
-};
+use crate::taker::{BookLevel, BookSideSnapshot, MarketSnapshot, Side, TakerFill};
 
+/// Per-agent submission context. Each `[[agent]]` in the taker config gets one
+/// of these: its own keypair, sharing the service-wide RPC and faucet clients.
 pub struct TakerContext {
-    pub rpc: CustomRpcClient,
+    pub rpc: Arc<CustomRpcClient>,
     pub keypair: Keypair,
-    pub market_ctx: MarketContext,
-    pub faucet_client: Option<FaucetClient>,
+    pub market_ctx: Arc<MarketContext>,
+    pub faucet_client: Option<Arc<FaucetClient>>,
 }
 
 impl TakerContext {
-    pub async fn init(rpc: CustomRpcClient, shared: ValidSharedConfig) -> anyhow::Result<Self> {
-        let faucet_client = match FaucetClient::new(&rpc, &shared).await {
-            Ok(c) => Some(c),
-            Err(e) => {
-                tracing::warn!(error = %e, "Faucet client is unavailable");
-                None
-            }
-        };
-
-        let ValidSharedConfig {
-            keypair,
-            base,
-            quote,
-            ..
-        } = shared;
-
-        let market_ctx = MarketContext::new(base, quote);
-
-        Ok(Self {
+    pub fn new(
+        rpc: Arc<CustomRpcClient>,
+        market_ctx: Arc<MarketContext>,
+        faucet_client: Option<Arc<FaucetClient>>,
+        keypair: Keypair,
+    ) -> Self {
+        Self {
             rpc,
             keypair,
             market_ctx,
             faucet_client,
-        })
+        }
     }
 
     pub fn address(&self) -> Address {
         self.keypair.pubkey()
+    }
+
+    pub async fn fetch_market_snapshot(&self) -> anyhow::Result<MarketSnapshot> {
+        let market_account = self.rpc.client.get_account(&self.market_ctx.market).await?;
+        let market =
+            try_market_view_all_from_owner_and_data(market_account.owner, &market_account.data)?;
+
+        let decode_side =
+            |orders: &[transaction_parser::views::OrderView]| -> anyhow::Result<BookSideSnapshot> {
+                let levels = orders
+                    .iter()
+                    .map(|order| {
+                        Ok(BookLevel {
+                            price: try_encoded_u32_to_decoded_decimal(
+                                order.encoded_price.as_u32(),
+                            )?,
+                            base_remaining: order.base_remaining,
+                            quote_remaining: order.quote_remaining,
+                        })
+                    })
+                    .collect::<anyhow::Result<Vec<_>>>()?;
+                let total_base_depth = levels.iter().map(|level| level.base_remaining).sum();
+                Ok(BookSideSnapshot {
+                    levels,
+                    total_base_depth,
+                })
+            };
+
+        let bids = decode_side(&market.bids)?;
+        let asks = decode_side(&market.asks)?;
+        let visible_bid = bids.visible_base_depth(3);
+        let visible_ask = asks.visible_base_depth(3);
+        let imbalance_denom = visible_bid + visible_ask;
+        let imbalance = if imbalance_denom == 0 {
+            0.0
+        } else {
+            (visible_bid as f64 - visible_ask as f64) / (imbalance_denom as f64)
+        };
+
+        let best_bid = bids.levels.first();
+        let best_ask = asks.levels.first();
+        let mid_price = match (best_bid, best_ask) {
+            (Some(bid), Some(ask)) => Some((bid.price + ask.price) / Decimal::from(2u8)),
+            _ => None,
+        };
+        let spread_bps = match (best_bid, best_ask, mid_price) {
+            (Some(bid), Some(ask), Some(mid)) if mid > Decimal::ZERO => {
+                let spread = ask.price - bid.price;
+                let bps = spread
+                    .checked_mul(Decimal::from(10_000u64))
+                    .and_then(|scaled| scaled.checked_div(mid))
+                    .and_then(|res| res.to_f64());
+                bps
+            }
+            _ => None,
+        };
+        let microprice = match (best_bid, best_ask) {
+            (Some(bid), Some(ask)) if bid.base_remaining + ask.base_remaining > 0 => {
+                let bid_weight = Decimal::from(bid.base_remaining);
+                let ask_weight = Decimal::from(ask.base_remaining);
+                let numerator = ask.price * bid_weight + bid.price * ask_weight;
+                numerator.checked_div(bid_weight + ask_weight)
+            }
+            _ => None,
+        };
+
+        Ok(MarketSnapshot {
+            bids,
+            asks,
+            spread_bps,
+            mid_price,
+            microprice,
+            imbalance,
+        })
     }
 
     /// Submits a market order for a fill produced by [`crate::taker::TakerStrategy::step`].

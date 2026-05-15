@@ -1,2 +1,9 @@
 config.toml
 keypair.json
+# Per-agent keypair directory written by `services/shared/examples/initialization_helper.rs`
+# when bootstrapping localnet (one file per taker agent). Regenerate by re-running the
+# helper; pass `--force` to overwrite existing files.
+keypairs/
+# Generated agent registry (`{name, kind, pubkey}` array) consumed by the frontend
+# for fill labeling. Written by the same initialization_helper run that funds the agents.
+taker-bot/agents.json
